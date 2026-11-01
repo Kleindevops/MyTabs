@@ -1,0 +1,55 @@
+{
+  "manifest_version": 3,
+  "name": "MyTabs - 极简智能新标签页与多功能工作台",
+  "version": "1.0.0",
+  "description": "集美观新标签页、资源嗅探、AI侧边栏辅助、私密加密目录、防痕浏览与OneDrive本地备份于一体的高效浏览器扩展。",
+  "permissions": [
+    "storage",
+    "unlimitedStorage",
+    "sidePanel",
+    "contextMenus",
+    "activeTab",
+    "scripting",
+    "webRequest",
+    "downloads",
+    "history",
+    "tabs",
+    "webNavigation",
+    "favicon"
+  ],
+  "incognito": "spanning",
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "MyTabs 资源嗅探与快捷工作台",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "chrome_url_overrides": {
+    "newtab": "newtab.html"
+  },
+  "side_panel": {
+    "default_path": "sidepanel.html"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}

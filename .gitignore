@@ -1,0 +1,6 @@
+node_modules
+dist
+MyTabs.zip
+*.log
+.DS_Store
+Thumbs.db
