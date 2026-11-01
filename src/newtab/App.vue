@@ -47,7 +47,11 @@
       @open-settings="showSettings = true"
       @open-sidepanel="openSidePanel"
       @open-onedrive="openSettingsTab('onedrive')"
+      @toggle-todo="handleToggleTodo"
     />
+
+    <!-- Floating Draggable & Collapsible Obsidian Todo Widget -->
+    <ObsidianTodoWidget ref="obsidianTodoRef" />
 
     <!-- Floating Draggable & Collapsible Hot News Widget -->
     <HotNewsWidget />
@@ -127,6 +131,7 @@
 import { ref, computed, onMounted } from 'vue'
 import ClockWidget from './components/ClockWidget.vue'
 import HotNewsWidget from './components/HotNewsWidget.vue'
+import ObsidianTodoWidget from './components/ObsidianTodoWidget.vue'
 import SearchBar from './components/SearchBar.vue'
 import BookmarkGrid from './components/BookmarkGrid.vue'
 import WindowsTaskbar from './components/WindowsTaskbar.vue'
@@ -171,7 +176,12 @@ const selectedBookmark = ref<BookmarkItem | null>(null)
 
 const vaultModalRef = ref<any>(null)
 const changePasswordModalRef = ref<any>(null)
+const obsidianTodoRef = ref<any>(null)
 let pendingCategoryId: string | null = null
+
+function handleToggleTodo() {
+  obsidianTodoRef.value?.toggleCollapse()
+}
 
 const wallpaperStyle = computed(() => {
   const wp = settings.value?.wallpaper || DEFAULT_SETTINGS.wallpaper

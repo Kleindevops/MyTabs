@@ -155,6 +155,16 @@
 
     <!-- Right: Windows System Tray (OneDrive, AI, Clock, Settings) -->
     <div class="flex items-center space-x-1.5 sm:space-x-2 shrink-0">
+      <!-- Obsidian Todo Pill -->
+      <button
+        @click="$emit('toggle-todo')"
+        title="打开/收起 Obsidian 待办 (关联 dashboard.md)"
+        class="p-1.5 sm:px-2.5 sm:py-1 rounded-xl bg-white/10 hover:bg-white/20 text-white/90 transition-all flex items-center space-x-1 text-xs"
+      >
+        <CheckSquare class="w-3.5 h-3.5 text-indigo-400" />
+        <span class="hidden lg:inline text-[11px]">待办</span>
+      </button>
+
       <!-- OneDrive Sync Pill -->
       <button
         @click="$emit('open-onedrive')"
@@ -199,7 +209,7 @@
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import {
   LayoutGrid, ChevronLeft, ChevronRight, Plus, X, Check,
-  Cloud, Sparkles, Settings
+  Cloud, Sparkles, Settings, CheckSquare
 } from 'lucide-vue-next'
 import type { CategoryItem, BookmarkItem, AppSettings } from '../../shared/types'
 
@@ -219,6 +229,7 @@ const emit = defineEmits<{
   (e: 'open-settings'): void
   (e: 'open-sidepanel'): void
   (e: 'open-onedrive'): void
+  (e: 'toggle-todo'): void
 }>()
 
 const showStartMenu = ref(false)
