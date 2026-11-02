@@ -7,6 +7,7 @@
     "dev": "vite",
     "build": "vite build && npm run build:scripts",
     "build:scripts": "node scripts/build-scripts.js",
+    "zip": "powershell -Command \"Compress-Archive -Path 'dist/*' -DestinationPath 'MyTabs.zip' -Force\"",
     "preview": "vite preview"
   },
   "dependencies": {
