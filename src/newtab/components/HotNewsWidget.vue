@@ -27,6 +27,13 @@
       >
         <Maximize2 class="w-3 h-3" />
       </button>
+      <button
+        @click.stop="$emit('close')"
+        class="p-1 rounded-full text-white/50 hover:text-rose-300 hover:bg-white/20 transition-colors"
+        title="关闭并隐藏热搜榜"
+      >
+        <X class="w-3 h-3" />
+      </button>
     </div>
 
     <!-- 2. Expanded State: Full Draggable Card -->
@@ -77,6 +84,13 @@
             class="p-1 rounded-lg text-white/60 hover:text-white hover:bg-white/10 transition-colors"
           >
             <Minus class="w-3.5 h-3.5" />
+          </button>
+          <button
+            @click.stop="$emit('close')"
+            title="关闭并隐藏热搜榜"
+            class="p-1 rounded-lg text-white/60 hover:text-rose-400 hover:bg-white/10 transition-colors"
+          >
+            <X class="w-3.5 h-3.5" />
           </button>
         </div>
       </div>
@@ -135,7 +149,11 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { RotateCw, Loader2, Minus, Maximize2, GripHorizontal, Flame } from 'lucide-vue-next'
+import { RotateCw, Loader2, Minus, Maximize2, GripHorizontal, Flame, X } from 'lucide-vue-next'
+
+defineEmits<{
+  (e: 'close'): void
+}>()
 
 interface HotNewsItem {
   title: string

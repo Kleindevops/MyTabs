@@ -1,9 +1,12 @@
 <template>
-  <div class="flex flex-col items-center justify-center select-none py-4 transition-all duration-300">
+  <div
+    @dblclick="$emit('enter-vault')"
+    class="flex flex-col items-center justify-center select-none py-4 px-8 rounded-3xl transition-all duration-300 cursor-default"
+  >
     <!-- Time display with soft glow -->
     <div class="text-6xl md:text-7xl font-extralight tracking-tight text-white drop-shadow-[0_4px_16px_rgba(0,0,0,0.4)] flex items-baseline">
       <span>{{ hours }}</span>
-      <span class="animate-pulse mx-1 text-white/70">:</span>
+      <span class="mx-1 text-white/70">:</span>
       <span>{{ minutes }}</span>
       <span class="text-xl md:text-2xl font-light text-white/60 ml-2 tracking-normal">{{ seconds }}</span>
     </div>
@@ -21,6 +24,10 @@
 
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue'
+
+defineEmits<{
+  (e: 'enter-vault'): void
+}>()
 
 const hours = ref('00')
 const minutes = ref('00')

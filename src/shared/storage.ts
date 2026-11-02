@@ -99,7 +99,9 @@ export const DEFAULT_SETTINGS: AppSettings = {
   oneDrive: {
     hasDirectory: false,
     autoSync: true
-  }
+  },
+  showHotNews: true,
+  vaultAutoLockMinutes: 5
 }
 
 const STORAGE_KEY = 'mytabs_app_settings'
@@ -152,14 +154,21 @@ function mergeSettings(loaded: any): AppSettings {
     return b
   })
 
+  let wallpaper = { ...DEFAULT_SETTINGS.wallpaper, ...(loaded.wallpaper || {}) }
+  if (wallpaper.isPinned) {
+    wallpaper.type = 'custom'
+  }
+
   return {
     ...DEFAULT_SETTINGS,
     ...loaded,
     categories,
     bookmarks,
-    wallpaper: { ...DEFAULT_SETTINGS.wallpaper, ...(loaded.wallpaper || {}) },
+    wallpaper,
+    showHotNews: loaded.showHotNews !== false,
     ai: { ...DEFAULT_SETTINGS.ai, ...(loaded.ai || {}) },
     oneDrive: { ...DEFAULT_SETTINGS.oneDrive, ...(loaded.oneDrive || {}) },
+    vaultAutoLockMinutes: typeof loaded.vaultAutoLockMinutes === 'number' ? loaded.vaultAutoLockMinutes : 5,
     privacyRules: Array.isArray(loaded.privacyRules) ? loaded.privacyRules : DEFAULT_SETTINGS.privacyRules
   }
 }

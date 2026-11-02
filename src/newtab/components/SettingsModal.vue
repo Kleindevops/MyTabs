@@ -1,6 +1,6 @@
 <template>
-  <div class="fixed inset-0 z-50 bg-black/60 backdrop-blur-md flex items-center justify-center p-4">
-    <div class="w-full max-w-3xl h-[620px] rounded-3xl glass-panel shadow-2xl flex flex-col overflow-hidden border border-white/15 animate-in fade-in zoom-in-95">
+  <div class="fixed inset-0 z-50 bg-slate-950/75 flex items-center justify-center p-4">
+    <div class="w-full max-w-3xl h-[620px] rounded-3xl modal-surface shadow-2xl flex flex-col overflow-hidden border border-white/15">
       <!-- Header -->
       <div class="flex items-center justify-between px-6 py-4 border-b border-white/10 shrink-0">
         <h2 class="text-base font-semibold text-white flex items-center gap-2">
@@ -95,7 +95,7 @@
 
                   <!-- Quick Jump Button -->
                   <button
-                    v-if="item.targetTab"
+                    v-if="item.targetTab && (item.targetTab !== 'vault' || isVaultActive)"
                     @click="activeTab = item.targetTab"
                     class="text-[11px] text-blue-400 hover:text-blue-300 flex items-center space-x-1 px-2.5 py-1 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 transition-colors shrink-0"
                     title="点击前往对应设置面板"
@@ -250,7 +250,7 @@
                   <div class="font-medium text-slate-200">个人空间密码保护状态</div>
                   <div class="text-emerald-400 mt-0.5 flex items-center gap-1">
                     <ShieldCheck class="w-3.5 h-3.5" />
-                    <span>{{ settings.vaultVerifier ? '已启用主密码保护' : '尚未初始化密码' }}</span>
+                    <span>{{ settings.vaultVerifier ? '已启用主密码保护' : '当前为空密码（双击桌面时间即可直接进入）' }}</span>
                   </div>
                 </div>
                 <div class="flex items-center space-x-2">
@@ -262,11 +262,18 @@
                     修改密码
                   </button>
                   <button
-                    v-else
+                    v-if="settings.vaultVerifier"
+                    @click="$emit('clear-vault-password')"
+                    class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-rose-300 font-medium text-xs transition-colors"
+                  >
+                    清除密码
+                  </button>
+                  <button
+                    v-if="!settings.vaultVerifier"
                     @click="$emit('open-vault-setup')"
                     class="px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-semibold text-xs transition-colors"
                   >
-                    立即设置密码
+                    设置密码
                   </button>
                   <button
                     @click="$emit('lock-vault')"
@@ -274,6 +281,58 @@
                   >
                     立即上锁
                   </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Auto-Lock Timeout Setting (解开后再次锁上的时间限制) -->
+            <div class="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 space-y-3.5 text-xs">
+              <div class="flex items-center justify-between">
+                <div>
+                  <div class="font-medium text-slate-200 flex items-center gap-1.5">
+                    <Clock class="w-4 h-4 text-amber-400" />
+                    <span>解锁后自动重新锁上的时间限制</span>
+                  </div>
+                  <div class="text-[11px] text-slate-400 mt-0.5">
+                    解开个人空间后，超过设定的时间将自动重新锁上并返回公共分类，防止离开电脑时泄露隐私。
+                  </div>
+                </div>
+                <div class="font-mono text-xs font-semibold text-amber-300 shrink-0">
+                  {{ (settings.vaultAutoLockMinutes ?? 5) > 0 ? `${settings.vaultAutoLockMinutes ?? 5} 分钟后锁定` : '关闭页面时锁定' }}
+                </div>
+              </div>
+
+              <!-- Preset Duration Options -->
+              <div class="grid grid-cols-3 sm:grid-cols-6 gap-2 pt-1">
+                <button
+                  v-for="opt in autoLockOptions"
+                  :key="opt.value"
+                  type="button"
+                  @click="setAutoLockMinutes(opt.value)"
+                  class="py-2 px-1 rounded-xl border text-center transition-all text-xs font-medium"
+                  :class="[
+                    (settings.vaultAutoLockMinutes ?? 5) === opt.value
+                      ? 'bg-amber-500/20 border-amber-500/80 text-amber-300 shadow-sm'
+                      : 'bg-white/5 border-white/5 text-slate-400 hover:text-white hover:bg-white/10'
+                  ]"
+                >
+                  {{ opt.label }}
+                </button>
+              </div>
+
+              <!-- Custom Minute Input Slider/Input for Flexibility -->
+              <div class="pt-2 border-t border-slate-800/80 flex items-center justify-between text-[11px]">
+                <span class="text-slate-400">自定义时间限制 (分钟):</span>
+                <div class="flex items-center space-x-2">
+                  <input
+                    type="number"
+                    min="1"
+                    max="180"
+                    :value="settings.vaultAutoLockMinutes ?? 5"
+                    @change="onCustomAutoLockInput"
+                    class="w-16 px-2.5 py-1 rounded-lg bg-slate-950 border border-slate-700 text-white font-mono text-center text-xs focus:outline-none focus:border-amber-400"
+                  />
+                  <span class="text-slate-400">分钟 (0 = 仅关闭页面时锁定)</span>
                 </div>
               </div>
             </div>
@@ -298,82 +357,6 @@
                   <span><b class="text-slate-300">强制无痕隔离模式</b>：个人空间内的所有网址点击时一律强制自动拉起 Chrome 原生【无痕隐私窗口】打开，底层物理零历史记录（Ctrl+H 绝无蛛丝马迹），关窗即刻销毁 Cookie 与缓存，退出浏览器自动恢复密码锁定。</span>
                 </li>
               </ul>
-            </div>
-          </div>
-
-          <!-- 3. 无痕浏览与隐私规则 (不留历史) -->
-          <div v-else-if="activeTab === 'privacy'" class="space-y-4">
-            <div>
-              <h3 class="text-sm font-semibold text-white flex items-center gap-1.5">
-                <Shield class="w-4 h-4 text-emerald-400" />
-                指定网址不留痕迹
-              </h3>
-              <p class="text-xs text-slate-400 mt-1">
-                配置特定网址规则，访问后立即从浏览器历史记录中物理删除，或自动分流至无痕窗口打开。
-              </p>
-            </div>
-
-            <!-- Add new rule input -->
-            <div class="p-3 rounded-2xl bg-slate-900/80 border border-slate-800 space-y-2.5">
-              <div class="text-xs font-medium text-slate-200">添加防护规则</div>
-              <div class="flex items-center space-x-2">
-                <input
-                  type="text"
-                  v-model="newRulePattern"
-                  placeholder="如: *bad-site.com* 或 *.secret.org/*"
-                  class="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 font-mono"
-                />
-                <select
-                  v-model="newRuleAction"
-                  class="bg-slate-950 border border-slate-800 rounded-xl px-2.5 py-2 text-xs text-slate-200 focus:outline-none focus:border-blue-500"
-                >
-                  <option value="delete_history">访问后清除历史</option>
-                  <option value="incognito">转无痕窗口打开</option>
-                </select>
-                <button
-                  @click="addRule"
-                  :disabled="!newRulePattern.trim()"
-                  class="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 text-white font-medium text-xs transition-colors shrink-0"
-                >
-                  添加
-                </button>
-              </div>
-            </div>
-
-            <!-- Rules List -->
-            <div class="space-y-2">
-              <div
-                v-for="rule in settings.privacyRules"
-                :key="rule.id"
-                class="flex items-center justify-between p-3 rounded-xl bg-slate-900/50 border border-slate-800 text-xs"
-              >
-                <div class="flex items-center space-x-2.5 truncate mr-2">
-                  <span
-                    :class="[
-                      'px-2 py-0.5 rounded font-medium text-[10px]',
-                      rule.action === 'delete_history' ? 'bg-rose-500/15 text-rose-400 border border-rose-500/30' : 'bg-purple-500/15 text-purple-400 border border-purple-500/30'
-                    ]"
-                  >
-                    {{ rule.action === 'delete_history' ? '抹除历史' : '无痕分流' }}
-                  </span>
-                  <span class="font-mono text-slate-200 truncate">{{ rule.pattern }}</span>
-                </div>
-
-                <div class="flex items-center space-x-2 shrink-0">
-                  <input
-                    type="checkbox"
-                    v-model="rule.enabled"
-                    @change="saveChanges"
-                    class="w-3.5 h-3.5 text-blue-600 accent-blue-600 cursor-pointer"
-                  />
-                  <button
-                    @click="deleteRule(rule.id)"
-                    class="p-1 text-slate-500 hover:text-rose-400 transition-colors"
-                  >
-                    <Trash2 class="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              </div>
             </div>
           </div>
 
@@ -523,7 +506,7 @@
                   </div>
                   <button
                     @click="triggerFileInput"
-                    class="px-2.5 py-1 rounded-lg bg-white/20 hover:bg-white/30 text-white text-[11px] backdrop-blur-md transition-all"
+                    class="px-2.5 py-1 rounded-lg bg-white/20 hover:bg-white/30 text-white text-[11px] transition-all"
                   >
                     更换图片
                   </button>
@@ -620,7 +603,7 @@
                     alt="Bing Daily"
                     class="w-full h-full object-cover"
                   />
-                  <div class="absolute bottom-2 left-2 right-2 px-2.5 py-1 bg-black/75 rounded-lg text-[10px] text-white backdrop-blur-md flex items-center justify-between">
+                  <div class="absolute bottom-2 left-2 right-2 px-2.5 py-1 bg-black/85 rounded-lg text-[10px] text-white flex items-center justify-between">
                     <span class="truncate">{{ bingCopyright || '今日微软 Bing 封面' }}</span>
                     <span class="shrink-0 text-white/50 ml-2 font-mono">1920 × 1080</span>
                   </div>
@@ -703,6 +686,29 @@
                 />
               </div>
             </div>
+
+            <!-- 桌面小组件与功能开关 -->
+            <div class="pt-4 border-t border-slate-800 space-y-3 text-xs">
+              <div class="text-xs font-semibold text-slate-200">桌面小组件与性能</div>
+
+              <div class="flex items-center justify-between p-3.5 rounded-2xl bg-slate-900/60 border border-slate-800">
+                <div class="space-y-0.5 pr-2">
+                  <div class="font-medium text-slate-200 flex items-center gap-1.5">
+                    <Flame class="w-3.5 h-3.5 text-amber-400" />
+                    <span>显示实时热搜榜卡片</span>
+                  </div>
+                  <div class="text-[11px] text-slate-400">
+                    开启后在主桌面显示可拖动热搜小组件；关闭后彻底卸载浮动层合成，显著降低 GPU 显卡开销。
+                  </div>
+                </div>
+                <input
+                  type="checkbox"
+                  v-model="settings.showHotNews"
+                  @change="saveChanges"
+                  class="w-4 h-4 rounded text-blue-600 accent-blue-600 cursor-pointer shrink-0"
+                />
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -713,22 +719,25 @@
 <script setup lang="ts">
 import { ref, watch, computed, onMounted } from 'vue'
 import {
-  Settings, X, Cloud, Lock, Shield, ShieldCheck, Sparkles, Palette,
+  Settings, X, Cloud, Lock, ShieldCheck, Sparkles, Palette,
   FolderSync, RefreshCw, Download, Upload, Trash2, Check, Pin,
-  BookOpen, Compass, Video, LayoutGrid, Lightbulb, ArrowRight
+  BookOpen, Compass, Video, LayoutGrid, Lightbulb, ArrowRight, Calendar, Clock, Flame
 } from 'lucide-vue-next'
 import { AI_PRESETS } from '../../shared/ai-client'
 import { pickOneDriveDirectory, writeBackupToOneDrive, readBackupFromOneDrive } from '../../shared/onedrive'
 import { exportSettingsAsJSON, importSettingsFromJSON, saveSettings } from '../../shared/storage'
+import { fetchBingDailyInfo, pinCurrentWallpaperService, resumeBingDailyService } from '../../shared/wallpaper'
 import type { AppSettings } from '../../shared/types'
 
 const props = withDefaults(
   defineProps<{
     settings: AppSettings
     initialTab?: string
+    currentCategoryId?: string
   }>(),
   {
-    initialTab: 'guide'
+    initialTab: 'guide',
+    currentCategoryId: 'cat-common'
   }
 )
 
@@ -737,13 +746,38 @@ const emit = defineEmits<{
   (e: 'update-settings', s: AppSettings): void
   (e: 'open-vault-setup'): void
   (e: 'open-change-password'): void
+  (e: 'clear-vault-password'): void
   (e: 'lock-vault'): void
 }>()
 
+const isVaultActive = computed(() => {
+  return props.currentCategoryId === 'cat-vault'
+})
+
 const activeTab = ref(props.initialTab || 'guide')
 const isSyncing = ref(false)
-const newRulePattern = ref('')
-const newRuleAction = ref<'delete_history' | 'incognito'>('delete_history')
+
+// Vault Auto-Lock Options & Handlers
+const autoLockOptions = [
+  { label: '1 分钟', value: 1 },
+  { label: '3 分钟', value: 3 },
+  { label: '5 分钟', value: 5 },
+  { label: '10 分钟', value: 10 },
+  { label: '15 分钟', value: 15 },
+  { label: '永不超时', value: 0 }
+]
+
+function setAutoLockMinutes(val: number) {
+  props.settings.vaultAutoLockMinutes = val
+  saveChanges()
+}
+
+function onCustomAutoLockInput(e: Event) {
+  const val = parseInt((e.target as HTMLInputElement).value, 10)
+  if (!isNaN(val) && val >= 0) {
+    setAutoLockMinutes(val)
+  }
+}
 
 // Wallpaper Subtabs & State
 const wallpaperSubTabs = [
@@ -754,25 +788,24 @@ const wallpaperSubTabs = [
 ]
 
 const isBingDailyActive = computed(() => {
-  return props.settings.wallpaper?.type === 'bing'
+  return props.settings.wallpaper?.type === 'bing' && !props.settings.wallpaper?.isPinned
 })
 
 const isBingPinned = computed(() => {
   const wp = props.settings.wallpaper
   if (!wp) return false
-  return wp.type === 'custom' && (wp.value?.includes('bing.com') || wp.value?.includes('bing.biturl.top'))
+  return Boolean(wp.isPinned || (wp.type === 'custom' && wp.value && !wp.value.startsWith('data:image') && (wp.value.includes('th?id=') || wp.value.includes('bing.com'))))
 })
 
 function inferInitialSubTab(): string {
-  const type = props.settings.wallpaper?.type
-  const val = props.settings.wallpaper?.value || ''
-  if (type === 'bing' || (type === 'custom' && (val.includes('bing.com') || val.includes('bing.biturl.top')))) {
+  const wp = props.settings.wallpaper
+  if (!wp) return 'bing'
+  if (wp.type === 'bing' || isBingPinned.value) {
     return 'bing'
   }
-  if (type === 'custom') return 'custom'
-  if (type === 'unsplash') return 'curated'
-  if (type === 'color') return 'color'
-  return 'bing'
+  if (wp.type === 'unsplash') return 'curated'
+  if (wp.type === 'color') return 'color'
+  return 'custom'
 }
 
 const activeWallpaperSubTab = ref(inferInitialSubTab())
@@ -791,14 +824,26 @@ watch(() => props.initialTab, (newTab) => {
   if (newTab) activeTab.value = newTab
 })
 
-const tabs = [
-  { id: 'guide', name: '功能介绍', icon: BookOpen },
-  { id: 'onedrive', name: 'OneDrive 备份', icon: Cloud },
-  { id: 'vault', name: '个人空间锁', icon: Lock },
-  { id: 'privacy', name: '无痕历史管理', icon: Shield },
-  { id: 'ai', name: 'AI 助手模型', icon: Sparkles },
-  { id: 'wallpaper', name: '壁纸个性化', icon: Palette }
-]
+watch(() => props.currentCategoryId, () => {
+  if (!isVaultActive.value && activeTab.value === 'vault') {
+    activeTab.value = 'guide'
+  }
+})
+
+// Tab navigation list: vault settings is strictly exclusive to 个人空间
+const tabs = computed(() => {
+  const allTabs = [
+    { id: 'guide', name: '功能介绍', icon: BookOpen },
+    { id: 'onedrive', name: 'OneDrive 备份', icon: Cloud },
+    { id: 'vault', name: '个人空间锁', icon: Lock },
+    { id: 'ai', name: 'AI 助手模型', icon: Sparkles },
+    { id: 'wallpaper', name: '壁纸个性化', icon: Palette }
+  ]
+  if (!isVaultActive.value) {
+    return allTabs.filter(t => t.id !== 'vault')
+  }
+  return allTabs
+})
 
 // Guide State & Data
 const selectedGuideCategory = ref('all')
@@ -806,7 +851,6 @@ const selectedGuideCategory = ref('all')
 const guideCategories = [
   { id: 'all', name: '全部功能' },
   { id: 'desktop', name: '常用桌面' },
-  { id: 'vault', name: '个人空间' },
   { id: 'onedrive', name: '云端备份' },
   { id: 'ai', name: 'AI 助手' },
   { id: 'wallpaper', name: '壁纸美化' },
@@ -833,32 +877,9 @@ const guideItems = [
       '添加网址：点击桌面上的【+ 添加】按钮，输入网址（如 github.com），系统会自动识别官方图标与网站标题，选择分类后点击保存。',
       '切换透明底色：鼠标右键点击任意卡片选择【编辑图标】，选择最左侧的“透明底色”按钮，即可消除外框，呈现自然透明图标。',
       '右键管理：右键点击任意书签，可呼出菜单随时修改网站标题、URL、更换图标，或选择“在无痕模式打开”及“删除”。',
-      '多场景分类切换：点击顶部常用推荐、开发者、办公、个人空间等标签，轻松隔离不同场景的工作与生活网站。'
+      '多场景分类切换：点击任务栏常用推荐、开发者、效率办公等分类，轻松隔离不同场景的工作与生活网站。'
     ],
     tips: '若网站自带圆角白底（如 Linux.do），选择透明底色后卡片将与壁纸融为一体，无任何多余黑边框。'
-  },
-  {
-    id: 'g-vault',
-    category: 'vault',
-    categoryName: '个人空间与物理防窥隔离',
-    title: '个人空间（独立密码锁与物理无痕）',
-    badge: '极致物理防窥',
-    badgeColor: 'bg-purple-500/20 text-purple-300 border-purple-500/30',
-    icon: Lock,
-    iconColor: 'text-purple-400',
-    targetTab: 'vault',
-    whatIsIt: [
-      '专属的独立加密防窥私密空间，专为私人网盘、个人项目与私密站点打造。',
-      '采用 PBKDF2 + SHA-256 工业级不可逆高强度哈希算法加密校验，主密码零上传、无法被反编译破解。',
-      '独家强制无痕物理隔离：空间内的书签受内核级隔离保护，开启即强制在无痕浏览器中运行，关闭即焚，底层物理零历史痕迹。'
-    ],
-    howToUse: [
-      '初次初始化：首次点击顶部“个人空间”分类或右下角锁定图标，设置 6 位以上专属解锁密码。',
-      '解锁浏览：点击个人空间分类，输入密码一键解锁，所有私密书签即刻呈现。',
-      '一键上锁防窥：离席或离开电脑前，点击分类旁的【立即上锁】按钮，私密卡片瞬间隐匿消失。',
-      '同一个无痕窗口访问：在个人空间中点击任何网站，系统会自动在同一个独立无痕窗口中以新标签打开，既不外泄又不会让桌面弹出一大堆散乱的无痕窗口。'
-    ],
-    tips: '为了使无痕隔离更顺畅，建议在 Chrome 扩展管理（chrome://extensions）中为 MyTabs 开启“允许在无痕模式下启用”。'
   },
   {
     id: 'g-onedrive',
@@ -882,27 +903,6 @@ const guideItems = [
       '离线 JSON 导出导入：随时可点击【导出 JSON 配置文件】将数据下载至本地，或随时【导入 JSON 配置文件】。'
     ],
     tips: '即使电脑离线或断网，扩展依然能在本地正常读写，重新连网后 OneDrive 会自动推送最新版本至云端。'
-  },
-  {
-    id: 'g-privacy',
-    category: 'vault',
-    categoryName: '智能无痕与历史记录清理',
-    title: '无痕历史管理与私密域名保护',
-    badge: '智能痕迹擦除',
-    badgeColor: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
-    icon: Shield,
-    iconColor: 'text-emerald-400',
-    targetTab: 'privacy',
-    whatIsIt: [
-      '全方位无痕隐私防护系统，防止敏感站点的访问记录残留在浏览器的常规历史记录中。',
-      '支持设置域名防护规则，访问敏感网址后自动进行会话级痕迹深度清除。'
-    ],
-    howToUse: [
-      '添加域名规则：在左侧【无痕历史管理】中输入保护域名（如 *.secret.com），点击【添加规则】。',
-      '后台自动清理：当匹配的受保护站点被常规窗口访问后，扩展会自动擦除该会话的历史记录、下载记录与缓存。',
-      '一键彻底清除：遇到紧急情况，可点击【立即清理全部历史记录】，瞬间清空全部浏览器历史。'
-    ],
-    tips: '搭配“个人空间”强制无痕模式使用，双重保障物理防窥。'
   },
   {
     id: 'g-ai',
@@ -1095,24 +1095,6 @@ async function importJSON(e: Event) {
   }
 }
 
-function addRule() {
-  const pat = newRulePattern.value.trim()
-  if (!pat) return
-  props.settings.privacyRules.push({
-    id: `pr-${Date.now()}`,
-    pattern: pat,
-    action: newRuleAction.value,
-    enabled: true
-  })
-  newRulePattern.value = ''
-  saveChanges()
-}
-
-function deleteRule(id: string) {
-  props.settings.privacyRules = props.settings.privacyRules.filter((r) => r.id !== id)
-  saveChanges()
-}
-
 function onAIProviderChange() {
   const preset = AI_PRESETS[props.settings.ai.provider]
   if (preset) {
@@ -1135,11 +1117,10 @@ function setWallpaperSubTab(subId: string) {
 
 async function fetchTodayBingInfo() {
   try {
-    const res = await fetch('https://bing.biturl.top/?resolution=1920&format=json&index=0&mkt=zh-CN')
-    const data = await res.json()
-    if (data) {
-      if (data.copyright) bingCopyright.value = data.copyright
-      if (data.url) todayBingUrl.value = data.url
+    const info = await fetchBingDailyInfo()
+    if (info) {
+      bingCopyright.value = info.copyright
+      todayBingUrl.value = info.url
     }
   } catch (err) {
     console.warn('Failed to fetch Bing info:', err)
@@ -1149,19 +1130,14 @@ async function fetchTodayBingInfo() {
 async function pinCurrentBingWallpaper() {
   isPinningBing.value = true
   try {
-    if (!todayBingUrl.value) {
-      const res = await fetch('https://bing.biturl.top/?resolution=1920&format=json&index=0&mkt=zh-CN')
-      const data = await res.json()
-      if (data?.url) {
-        todayBingUrl.value = data.url
-        if (data.copyright) bingCopyright.value = data.copyright
-      }
+    const { settings: nextSettings, info } = await pinCurrentWallpaperService(props.settings)
+    emit('update-settings', nextSettings)
+    if (info) {
+      bingCopyright.value = info.copyright
+      todayBingUrl.value = info.url
     }
-    const permanentUrl = todayBingUrl.value || 'https://bing.biturl.top/?resolution=1920&format=image&index=0&mkt=zh-CN'
-    props.settings.wallpaper.type = 'custom'
-    props.settings.wallpaper.value = permanentUrl
-    await saveChanges()
   } catch (err) {
+    console.error('Failed to pin wallpaper:', err)
     alert('固定壁纸失败，请重试')
   } finally {
     isPinningBing.value = false
@@ -1169,9 +1145,12 @@ async function pinCurrentBingWallpaper() {
 }
 
 async function resumeBingDaily() {
-  props.settings.wallpaper.type = 'bing'
-  props.settings.wallpaper.value = 'https://bing.biturl.top/?resolution=1920&format=image&index=0&mkt=zh-CN'
-  await saveChanges()
+  try {
+    const nextSettings = await resumeBingDailyService(props.settings)
+    emit('update-settings', nextSettings)
+  } catch (err) {
+    console.error('Failed to resume daily wallpaper:', err)
+  }
 }
 
 function triggerFileInput() {

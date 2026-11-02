@@ -1,6 +1,6 @@
 <template>
   <footer
-    class="fixed bottom-0 left-0 right-0 h-16 z-30 select-none glass-panel border-t border-white/10 shadow-[0_-8px_30px_rgba(0,0,0,0.5)] px-3 md:px-6 flex items-center justify-between backdrop-blur-2xl"
+    class="fixed bottom-0 left-0 right-0 h-16 z-30 select-none glass-panel border-t border-white/10 shadow-[0_-8px_30px_rgba(0,0,0,0.5)] px-3 md:px-6 flex items-center justify-between"
     style="background: rgba(15, 23, 42, 0.75);"
   >
     <!-- Left: Start Menu & Category Switcher (Windows Start style) -->
@@ -21,7 +21,7 @@
       <!-- Category Pills (Quick switch on taskbar) -->
       <div class="hidden md:flex items-center space-x-1 bg-black/20 p-1 rounded-xl border border-white/5">
         <button
-          v-for="cat in categories"
+          v-for="cat in displayedCategories"
           :key="cat.id"
           @click="$emit('select-category', cat); showStartMenu = false"
           :class="[
@@ -44,7 +44,7 @@
           书签分类目录
         </div>
         <button
-          v-for="cat in categories"
+          v-for="cat in displayedCategories"
           :key="cat.id"
           @click="$emit('select-category', cat); showStartMenu = false"
           :class="[
@@ -155,16 +155,6 @@
 
     <!-- Right: Windows System Tray (OneDrive, AI, Clock, Settings) -->
     <div class="flex items-center space-x-1.5 sm:space-x-2 shrink-0">
-      <!-- Obsidian Todo Pill -->
-      <button
-        @click="$emit('toggle-todo')"
-        title="打开/收起 Obsidian 待办 (关联 dashboard.md)"
-        class="p-1.5 sm:px-2.5 sm:py-1 rounded-xl bg-white/10 hover:bg-white/20 text-white/90 transition-all flex items-center space-x-1 text-xs"
-      >
-        <CheckSquare class="w-3.5 h-3.5 text-indigo-400" />
-        <span class="hidden lg:inline text-[11px]">待办</span>
-      </button>
-
       <!-- OneDrive Sync Pill -->
       <button
         @click="$emit('open-onedrive')"
@@ -209,7 +199,7 @@
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import {
   LayoutGrid, ChevronLeft, ChevronRight, Plus, X, Check,
-  Cloud, Sparkles, Settings, CheckSquare
+  Cloud, Sparkles, Settings
 } from 'lucide-vue-next'
 import type { CategoryItem, BookmarkItem, AppSettings } from '../../shared/types'
 
@@ -229,12 +219,16 @@ const emit = defineEmits<{
   (e: 'open-settings'): void
   (e: 'open-sidepanel'): void
   (e: 'open-onedrive'): void
-  (e: 'toggle-todo'): void
 }>()
 
 const showStartMenu = ref(false)
 const currentPage = ref(1)
 const pageSize = ref(8) // Number of bookmark icons per page on taskbar
+
+// Visible categories on taskbar (exclude private vault category)
+const displayedCategories = computed(() => {
+  return props.categories.filter((c) => !c.isPrivate && c.id !== 'cat-vault')
+})
 
 const trayTime = ref('12:00')
 const trayDate = ref('2026/11/01')

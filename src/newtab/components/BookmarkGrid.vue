@@ -15,8 +15,8 @@
           class="w-14 h-14 md:w-16 md:h-16 rounded-2xl md:rounded-3xl flex items-center justify-center transition-all duration-300 relative overflow-hidden"
           :class="[
             !bm.bgColor || bm.bgColor === 'transparent'
-              ? (bm.icon ? 'bg-transparent border border-transparent hover:bg-white/10 hover:border-white/20' : 'bg-white/10 hover:bg-white/20 border border-white/20 backdrop-blur-md shadow-lg')
-              : 'border border-white/20 backdrop-blur-md shadow-lg group-hover:shadow-2xl'
+              ? (bm.icon ? 'bg-transparent border border-transparent hover:bg-white/10 hover:border-white/20' : 'bg-white/10 hover:bg-white/20 border border-white/20 shadow-lg')
+              : 'border border-white/20 shadow-lg group-hover:shadow-2xl'
           ]"
           :style="bm.bgColor && bm.bgColor !== 'transparent' ? { backgroundColor: bm.bgColor } : { backgroundColor: 'transparent' }"
         >
@@ -54,7 +54,7 @@
         class="group flex flex-col items-center cursor-pointer w-20 transition-transform duration-200 hover:scale-105 active:scale-95"
         title="添加网站"
       >
-        <div class="w-14 h-14 md:w-16 md:h-16 rounded-2xl md:rounded-3xl bg-white/10 hover:bg-white/20 flex items-center justify-center border border-white/20 transition-all duration-300 shadow-md backdrop-blur-md">
+        <div class="w-14 h-14 md:w-16 md:h-16 rounded-2xl md:rounded-3xl bg-white/10 hover:bg-white/20 flex items-center justify-center border border-white/20 transition-all duration-300 shadow-md">
           <Plus class="w-6 h-6 text-white/70 group-hover:text-white transition-colors" />
         </div>
         <span class="mt-2 text-xs font-medium text-white/70 group-hover:text-white drop-shadow-[0_1px_4px_rgba(0,0,0,0.8)] text-center">

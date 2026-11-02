@@ -15,7 +15,9 @@
     "history",
     "tabs",
     "webNavigation",
-    "favicon"
+    "favicon",
+    "notifications",
+    "alarms"
   ],
   "incognito": "spanning",
   "host_permissions": [

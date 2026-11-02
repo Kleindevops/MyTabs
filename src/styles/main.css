@@ -24,6 +24,24 @@
   box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.35);
 }
 
+/* High-performance modal surface: deep dark acrylic without expensive full-screen blur re-sampling */
+.modal-surface {
+  background: rgba(15, 23, 42, 0.96);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.05);
+}
+
+/* Pause background CSS animations when any modal is open to drop GPU 3D rendering load to 0% */
+.modal-active .animate-float,
+.modal-active .animate-tail-wag,
+.modal-active .animate-blink,
+.modal-active .animate-wave,
+.modal-active .animate-sleep-z,
+.modal-active .animate-pulse,
+.modal-active .animate-bounce {
+  animation-play-state: paused !important;
+}
+
 .glass-panel-light {
   background: rgba(255, 255, 255, 0.12);
   backdrop-filter: blur(12px);

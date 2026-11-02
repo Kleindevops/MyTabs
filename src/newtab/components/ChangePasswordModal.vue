@@ -1,8 +1,8 @@
 <template>
-  <div class="fixed inset-0 z-50 bg-black/75 backdrop-blur-md flex items-center justify-center p-4">
+  <div class="fixed inset-0 z-50 bg-slate-950/75 flex items-center justify-center p-4">
     <div
       :class="[
-        'w-full max-w-sm rounded-3xl glass-panel p-6 shadow-2xl space-y-5 border border-white/15 transition-transform',
+        'w-full max-w-sm rounded-3xl modal-surface p-6 shadow-2xl space-y-5 border border-white/15 transition-transform',
         hasError ? 'animate-shake' : ''
       ]"
     >

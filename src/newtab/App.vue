@@ -1,5 +1,8 @@
 <template>
-  <div class="relative h-screen w-screen overflow-hidden flex flex-col font-sans select-none text-slate-100">
+  <div
+    class="relative h-screen w-screen overflow-hidden flex flex-col font-sans select-none text-slate-100"
+    :class="{ 'modal-active': hasActiveModal }"
+  >
     <!-- Dynamic Wallpaper Layer -->
     <div
       class="fixed inset-0 bg-cover bg-center bg-no-repeat transition-all duration-700 pointer-events-none -z-20"
@@ -15,7 +18,7 @@
     <!-- Main Workspace Content (Centered & Immersive Desktop) -->
     <main class="flex-1 flex flex-col items-center justify-center max-w-5xl w-full mx-auto px-4 z-10 pb-20">
       <!-- Minimalist Clock & Date (Center Aligned, Elegant Balance) -->
-      <ClockWidget />
+      <ClockWidget @enter-vault="handleClockDoubleClicked" />
 
       <!-- Centered Multi-Engine Search Bar -->
       <div class="w-full my-3 md:my-5 max-w-2xl">
@@ -47,14 +50,13 @@
       @open-settings="showSettings = true"
       @open-sidepanel="openSidePanel"
       @open-onedrive="openSettingsTab('onedrive')"
-      @toggle-todo="handleToggleTodo"
     />
 
-    <!-- Floating Draggable & Collapsible Obsidian Todo Widget -->
-    <ObsidianTodoWidget ref="obsidianTodoRef" />
-
     <!-- Floating Draggable & Collapsible Hot News Widget -->
-    <HotNewsWidget />
+    <HotNewsWidget
+      v-if="settings.showHotNews !== false"
+      @close="handleCloseHotNews"
+    />
 
     <!-- Custom Right-Click Context Menu for Bookmarks -->
     <BookmarkContextMenu
@@ -75,14 +77,14 @@
       v-if="showSettings"
       :settings="settings"
       :initialTab="settingsInitialTab"
+      :currentCategoryId="activeCategoryId"
       @close="showSettings = false"
       @update-settings="onSettingsUpdated"
       @open-vault-setup="handleOpenVaultSetup"
       @open-change-password="handleOpenChangePassword"
+      @clear-vault-password="handleClearVaultPassword"
       @lock-vault="handleLockVault"
     />
-
-    <!-- 2. Vault Unlock Modal -->
     <VaultLockModal
       ref="vaultModalRef"
       v-if="showVaultModal"
@@ -128,10 +130,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import ClockWidget from './components/ClockWidget.vue'
 import HotNewsWidget from './components/HotNewsWidget.vue'
-import ObsidianTodoWidget from './components/ObsidianTodoWidget.vue'
 import SearchBar from './components/SearchBar.vue'
 import BookmarkGrid from './components/BookmarkGrid.vue'
 import WindowsTaskbar from './components/WindowsTaskbar.vue'
@@ -170,18 +171,22 @@ const showAddBookmark = ref(false)
 const showEditIconModal = ref(false)
 const showEditBookmarkModal = ref(false)
 
+const hasActiveModal = computed(() => {
+  return showSettings.value ||
+    showVaultModal.value ||
+    showChangePasswordModal.value ||
+    showAddBookmark.value ||
+    showEditIconModal.value ||
+    showEditBookmarkModal.value
+})
+
 const contextMenuVisible = ref(false)
 const contextMenuPos = ref({ x: 0, y: 0 })
 const selectedBookmark = ref<BookmarkItem | null>(null)
 
 const vaultModalRef = ref<any>(null)
 const changePasswordModalRef = ref<any>(null)
-const obsidianTodoRef = ref<any>(null)
 let pendingCategoryId: string | null = null
-
-function handleToggleTodo() {
-  obsidianTodoRef.value?.toggleCollapse()
-}
 
 const wallpaperStyle = computed(() => {
   const wp = settings.value?.wallpaper || DEFAULT_SETTINGS.wallpaper
@@ -277,13 +282,93 @@ function handleSaveEditBookmark(updatedBm: BookmarkItem) {
   showEditBookmarkModal.value = false
 }
 
+let vaultAutoLockTimer: number | null = null
+
+function startVaultAutoLockTimer() {
+  stopVaultAutoLockTimer()
+  const minutes = settings.value?.vaultAutoLockMinutes ?? 5
+  if (minutes <= 0) {
+    return
+  }
+
+  let remaining = minutes * 60
+  vaultAutoLockTimer = window.setInterval(() => {
+    if (remaining > 1) {
+      remaining--
+    } else {
+      // Auto-lock when countdown expires
+      stopVaultAutoLockTimer()
+      handleLockVault()
+    }
+  }, 1000)
+}
+
+function stopVaultAutoLockTimer() {
+  if (vaultAutoLockTimer) {
+    clearInterval(vaultAutoLockTimer)
+    vaultAutoLockTimer = null
+  }
+}
+
+onUnmounted(() => {
+  stopVaultAutoLockTimer()
+})
+
+function handleCloseHotNews() {
+  settings.value.showHotNews = false
+  saveSettings(settings.value)
+}
+
 function handleCategorySelect(cat: CategoryItem) {
   if (cat.isPrivate && !isVaultUnlocked.value) {
+    if (!settings.value.vaultVerifier) {
+      isVaultUnlocked.value = true
+      activeCategoryId.value = cat.id
+      startVaultAutoLockTimer()
+      return
+    }
     pendingCategoryId = cat.id
     showVaultModal.value = true
     return
   }
   activeCategoryId.value = cat.id
+}
+
+function handleClockDoubleClicked() {
+  // If currently inside vault, double-clicking toggles back to normal first category
+  if (activeCategoryId.value === 'cat-vault') {
+    if (settings.value.categories && settings.value.categories.length > 0) {
+      activeCategoryId.value = settings.value.categories[0].id
+    }
+    return
+  }
+
+  // If already unlocked, navigate directly
+  if (isVaultUnlocked.value) {
+    activeCategoryId.value = 'cat-vault'
+    startVaultAutoLockTimer()
+    return
+  }
+
+  // If initial password is empty (no verifier set), open directly
+  if (!settings.value.vaultVerifier) {
+    isVaultUnlocked.value = true
+    activeCategoryId.value = 'cat-vault'
+    startVaultAutoLockTimer()
+    return
+  }
+
+  // Password configured and locked: show unlock modal
+  pendingCategoryId = 'cat-vault'
+  showVaultModal.value = true
+}
+
+async function handleClearVaultPassword() {
+  if (confirm('确定要清除个人空间密码吗？清除后将恢复为空密码，双击时间即可直接进入。')) {
+    settings.value.vaultVerifier = undefined
+    settings.value.salt = undefined
+    await saveSettings(settings.value)
+  }
 }
 
 async function handleVaultUnlock(password: string) {
@@ -296,6 +381,7 @@ async function handleVaultUnlock(password: string) {
     await saveSettings(settings.value)
     isVaultUnlocked.value = true
     showVaultModal.value = false
+    startVaultAutoLockTimer()
     if (pendingCategoryId) {
       activeCategoryId.value = pendingCategoryId
       pendingCategoryId = null
@@ -308,6 +394,7 @@ async function handleVaultUnlock(password: string) {
   if (valid) {
     isVaultUnlocked.value = true
     showVaultModal.value = false
+    startVaultAutoLockTimer()
     if (pendingCategoryId) {
       activeCategoryId.value = pendingCategoryId
       pendingCategoryId = null
@@ -365,6 +452,7 @@ async function handleChangePassword(payload: { oldPwd: string; newPwd: string })
 }
 
 function handleLockVault() {
+  stopVaultAutoLockTimer()
   isVaultUnlocked.value = false
   // If user is currently looking at private category, navigate back to first category
   const currentCat = settings.value.categories.find(c => c.id === activeCategoryId.value)
@@ -372,7 +460,6 @@ function handleLockVault() {
     activeCategoryId.value = settings.value.categories[0].id
   }
   showSettings.value = false
-  alert('个人空间已重新上锁')
 }
 
 function handleAddCategory() {
@@ -419,6 +506,11 @@ function handleDeleteBookmark(id: string) {
 
 function onSettingsUpdated(newSettings: AppSettings) {
   settings.value = { ...newSettings }
+}
+
+function onSettingsUpdatedAndSaved(newSettings: AppSettings) {
+  settings.value = { ...newSettings }
+  saveSettings(newSettings)
 }
 
 function openSettingsTab(tabId: string) {

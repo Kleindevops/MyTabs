@@ -1,6 +1,6 @@
 <template>
-  <div class="fixed inset-0 z-50 bg-black/60 backdrop-blur-md flex items-center justify-center p-4">
-    <div class="w-full max-w-md rounded-3xl glass-panel p-6 shadow-2xl space-y-4 border border-white/15 animate-in fade-in zoom-in-95">
+  <div class="fixed inset-0 z-50 bg-slate-950/75 flex items-center justify-center p-4">
+    <div class="w-full max-w-md rounded-3xl modal-surface p-6 shadow-2xl space-y-4 border border-white/15">
       <div class="flex items-center justify-between pb-2 border-b border-white/10">
         <h3 class="text-sm font-semibold text-white flex items-center space-x-2">
           <span>编辑网站主页信息</span>
@@ -37,7 +37,7 @@
             v-model="categoryId"
             class="w-full bg-slate-900 border border-slate-700/80 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-blue-500"
           >
-            <option v-for="c in categories" :key="c.id" :value="c.id">
+            <option v-for="c in availableCategories" :key="c.id" :value="c.id">
               {{ c.name }}
             </option>
           </select>
@@ -128,6 +128,13 @@ const url = ref(props.bookmark.url)
 const categoryId = ref(props.bookmark.categoryId)
 const bgColor = ref(props.bookmark.bgColor || 'transparent')
 const openInIncognito = ref(props.bookmark.openInIncognito || false)
+
+const availableCategories = computed(() => {
+  if (props.bookmark.categoryId === 'cat-vault') {
+    return props.categories
+  }
+  return props.categories.filter(c => !c.isPrivate && c.id !== 'cat-vault')
+})
 
 const colorPickerValue = computed({
   get: () => (bgColor.value && bgColor.value !== 'transparent' ? bgColor.value : '#2563eb'),

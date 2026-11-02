@@ -12,7 +12,7 @@ export default defineConfig({
   },
   build: {
     outDir: 'dist',
-    emptyOutDir: false, // keep background/content built by esbuild
+    emptyOutDir: true,
     rollupOptions: {
       input: {
         newtab: resolve(__dirname, 'newtab.html'),
