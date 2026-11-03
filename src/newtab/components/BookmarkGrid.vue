@@ -4,9 +4,19 @@
     <div class="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-7 lg:grid-cols-8 gap-y-5 gap-x-3 md:gap-x-5 justify-items-center">
       <!-- Bookmark Cards -->
       <div
-        v-for="bm in bookmarks"
+        v-for="(bm, index) in bookmarks"
         :key="bm.id"
-        class="group relative flex flex-col items-center cursor-pointer w-20 transition-transform duration-200 hover:scale-105 active:scale-95"
+        :draggable="true"
+        @dragstart="handleDragStart($event, bm, index)"
+        @dragend="handleDragEnd"
+        @dragover.prevent="handleDragOver($event, bm)"
+        @dragleave="handleDragLeave($event, bm)"
+        @drop="handleDrop($event, bm)"
+        class="group relative flex flex-col items-center cursor-pointer cursor-grab active:cursor-grabbing w-20 transition-transform duration-200 hover:scale-105 active:scale-95"
+        :class="[
+          draggingBmId === bm.id ? 'opacity-30 scale-90' : '',
+          dragOverBmId === bm.id && draggingBmId !== bm.id ? 'scale-110 ring-2 ring-blue-400/80 rounded-2xl bg-blue-500/15 shadow-xl' : ''
+        ]"
         @click="openBookmark(bm)"
         @contextmenu.prevent="$emit('contextmenu', $event, bm)"
       >
@@ -15,17 +25,26 @@
           class="w-14 h-14 md:w-16 md:h-16 rounded-2xl md:rounded-3xl flex items-center justify-center transition-all duration-300 relative overflow-hidden"
           :class="[
             !bm.bgColor || bm.bgColor === 'transparent'
-              ? (bm.icon ? 'bg-transparent border border-transparent hover:bg-white/10 hover:border-white/20' : 'bg-white/10 hover:bg-white/20 border border-white/20 shadow-lg')
+              ? (isSmallIcon(bm)
+                  ? 'bg-white/15 hover:bg-white/25 border border-white/20 shadow-md backdrop-blur-md'
+                  : (bm.icon ? 'bg-transparent border border-transparent hover:bg-white/10 hover:border-white/20' : 'bg-white/10 hover:bg-white/20 border border-white/20 shadow-lg')
+                )
               : 'border border-white/20 shadow-lg group-hover:shadow-2xl'
           ]"
-          :style="bm.bgColor && bm.bgColor !== 'transparent' ? { backgroundColor: bm.bgColor } : { backgroundColor: 'transparent' }"
+          :style="bm.bgColor && bm.bgColor !== 'transparent' ? { backgroundColor: bm.bgColor } : {}"
         >
           <!-- Favicon or Initial Character -->
           <img
             v-if="bm.icon"
             :src="bm.icon"
             :alt="bm.title"
-            class="w-10 h-10 md:w-12 md:h-12 rounded-xl object-contain drop-shadow-md transition-transform group-hover:scale-110"
+            :class="[
+              'object-contain transition-transform group-hover:scale-110',
+              isSmallIcon(bm)
+                ? 'w-7 h-7 sm:w-8 sm:h-8 max-w-[32px] max-h-[32px] drop-shadow-sm'
+                : 'w-10 h-10 md:w-12 md:h-12 rounded-xl'
+            ]"
+            @load="handleIconLoaded(bm.id, $event)"
             @error="bm.icon = undefined"
           />
           <span v-else class="text-xl md:text-2xl font-bold text-white tracking-wider drop-shadow-md">
@@ -66,18 +85,84 @@
 </template>
 
 <script setup lang="ts">
+import { ref } from 'vue'
 import { Plus } from 'lucide-vue-next'
 import type { BookmarkItem, CategoryItem } from '../../shared/types'
+import { isSmallFavicon } from '../../shared/favicon'
 
 const props = defineProps<{
   bookmarks: BookmarkItem[]
   categories?: CategoryItem[]
 }>()
 
-defineEmits<{
+const emit = defineEmits<{
   (e: 'add-bookmark'): void
   (e: 'contextmenu', ev: MouseEvent, bm: BookmarkItem): void
+  (e: 'drag-start', bm: BookmarkItem): void
+  (e: 'drag-end'): void
+  (e: 'reorder', payload: { fromId: string; toId: string }): void
 }>()
+
+const draggingBmId = ref<string | null>(null)
+const dragOverBmId = ref<string | null>(null)
+const smallIconMap = ref<Record<string, boolean>>({})
+
+function handleIconLoaded(id: string, ev: Event) {
+  const img = ev.target as HTMLImageElement
+  if (img && img.naturalWidth > 0 && img.naturalWidth <= 48) {
+    smallIconMap.value[id] = true
+  }
+}
+
+function isSmallIcon(bm: BookmarkItem): boolean {
+  if (smallIconMap.value[bm.id]) return true
+  return isSmallFavicon(bm.icon)
+}
+
+function handleDragStart(e: DragEvent, bm: BookmarkItem, index: number) {
+  draggingBmId.value = bm.id
+  if (e.dataTransfer) {
+    e.dataTransfer.effectAllowed = 'move'
+    e.dataTransfer.setData('application/json', JSON.stringify({
+      bookmarkId: bm.id,
+      sourceCategoryId: bm.categoryId,
+      index
+    }))
+    e.dataTransfer.setData('text/plain', bm.id)
+  }
+  emit('drag-start', bm)
+}
+
+function handleDragEnd() {
+  draggingBmId.value = null
+  dragOverBmId.value = null
+  emit('drag-end')
+}
+
+function handleDragOver(e: DragEvent, bm: BookmarkItem) {
+  if (draggingBmId.value && draggingBmId.value !== bm.id) {
+    dragOverBmId.value = bm.id
+    if (e.dataTransfer) {
+      e.dataTransfer.dropEffect = 'move'
+    }
+  }
+}
+
+function handleDragLeave(e: DragEvent, bm: BookmarkItem) {
+  if (dragOverBmId.value === bm.id) {
+    dragOverBmId.value = null
+  }
+}
+
+function handleDrop(e: DragEvent, targetBm: BookmarkItem) {
+  const sourceId = draggingBmId.value
+  dragOverBmId.value = null
+  draggingBmId.value = null
+
+  if (sourceId && sourceId !== targetBm.id) {
+    emit('reorder', { fromId: sourceId, toId: targetBm.id })
+  }
+}
 
 function isPrivateBookmark(bm: BookmarkItem): boolean {
   if (bm.openInIncognito) return true

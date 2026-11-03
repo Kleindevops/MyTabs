@@ -68,7 +68,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
     // 效率办公
     { id: 'bm-off-1', title: 'Notion', url: 'https://www.notion.so', bgColor: '#000000', categoryId: 'cat-office', icon: PRESET_SITE_ICONS['notion.so']?.icon },
     { id: 'bm-off-2', title: '飞书', url: 'https://www.feishu.cn', bgColor: '#00d6b9', categoryId: 'cat-office', icon: PRESET_SITE_ICONS['feishu.cn']?.icon },
-    { id: 'bm-off-3', title: '腾讯文档', url: 'https://docs.qq.com', bgColor: '#1e6ceb', categoryId: 'cat-office' },
+    { id: 'bm-off-3', title: '腾讯文档', url: 'https://docs.qq.com', bgColor: '#1e6ceb', categoryId: 'cat-office', icon: PRESET_SITE_ICONS['docs.qq.com']?.icon },
     { id: 'bm-off-4', title: 'DeepL 翻译', url: 'https://www.deepl.com', bgColor: '#0f2b46', categoryId: 'cat-office', icon: PRESET_SITE_ICONS['deepl.com']?.icon },
 
     // 影音视听
@@ -98,7 +98,8 @@ export const DEFAULT_SETTINGS: AppSettings = {
   ],
   oneDrive: {
     hasDirectory: false,
-    autoSync: true
+    autoSync: true,
+    backupFileName: 'mytabs_backup.json'
   },
   showHotNews: true,
   vaultAutoLockMinutes: 5
@@ -135,15 +136,24 @@ function mergeSettings(loaded: any): AppSettings {
     if (b.categoryId === 'cat-vault') {
       b = { ...b, openInIncognito: true }
     }
-    // Auto upgrade known presets to official authentic high-res icons
+    // Auto upgrade known presets to official authentic high-res vector icons
     if (b.url) {
       const hostname = extractHostname(b.url)
       const preset = findPresetForDomain(hostname)
-      if (preset && (hostname === 'weread.qq.com' || hostname === 'google.com' || !b.icon)) {
-        b = { ...b, icon: preset.icon, bgColor: preset.bgColor }
-      } else if (!b.icon) {
+      if (preset) {
+        const isUserUpload = b.icon?.startsWith('data:image/png') || b.icon?.startsWith('data:image/jpeg')
+        if (!isUserUpload) {
+          b = {
+            ...b,
+            icon: preset.icon,
+            bgColor: (b.bgColor && b.bgColor !== 'transparent' && b.bgColor !== '#181717') ? b.bgColor : preset.bgColor
+          }
+        }
+      } else if (!b.icon || b.icon.includes('size=32')) {
         const candidates = getFaviconCandidates(b.url)
-        b = { ...b, icon: candidates[0] }
+        if (candidates.length > 0) {
+          b = { ...b, icon: candidates[0] }
+        }
       }
     }
     // Migration: If bookmark had the old default black '#181717' (except official GitHub bm-2)
@@ -199,6 +209,10 @@ export async function loadSettings(): Promise<AppSettings> {
 }
 
 export async function saveSettings(settings: AppSettings, triggerOneDrive = true): Promise<void> {
+  if (!settings.oneDrive) {
+    settings.oneDrive = { hasDirectory: false, autoSync: true, backupFileName: 'mytabs_backup.json' }
+  }
+  settings.oneDrive.lastModifiedTime = Date.now()
   const plainData = JSON.parse(JSON.stringify(settings))
   return new Promise((resolve) => {
     if (typeof chrome !== 'undefined' && chrome.storage?.local) {
@@ -210,12 +224,20 @@ export async function saveSettings(settings: AppSettings, triggerOneDrive = true
       resolve()
     }
   }).then(async () => {
-    // If OneDrive auto-sync is enabled and directory is bound, write backup asynchronously
+    // If auto-sync is enabled and directory is bound, write backup asynchronously
     if (triggerOneDrive && plainData.oneDrive?.autoSync && plainData.oneDrive?.hasDirectory) {
       try {
-        await writeBackupToOneDrive(plainData)
+        const res = await writeBackupToOneDrive(plainData, plainData.oneDrive?.backupFileName)
+        if (res.success && res.timestamp) {
+          settings.oneDrive.lastSyncTime = res.timestamp
+          if (typeof chrome !== 'undefined' && chrome.storage?.local) {
+            chrome.storage.local.set({ [STORAGE_KEY]: JSON.parse(JSON.stringify(settings)) })
+          } else {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(settings))
+          }
+        }
       } catch (err) {
-        console.warn('Auto sync to OneDrive failed:', err)
+        console.warn('Auto sync to backup file failed:', err)
       }
     }
   })

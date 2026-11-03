@@ -69,7 +69,9 @@ export interface SniffedResource {
 export interface OneDriveSyncConfig {
   hasDirectory: boolean
   directoryName?: string
-  lastSyncTime?: number
+  backupFileName?: string // 自定义备份文件名，默认 'mytabs_backup.json'
+  lastSyncTime?: number   // 上次同步/备份落盘时间
+  lastModifiedTime?: number // 本地配置最后修改时间
   autoSync: boolean
 }
 

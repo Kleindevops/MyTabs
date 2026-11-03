@@ -23,7 +23,7 @@
             v-if="icon"
             :src="icon"
             :alt="bookmark.title"
-            class="w-11 h-11 rounded-lg object-contain drop-shadow"
+            class="w-11 h-11 rounded-lg object-contain"
             @error="onImageError"
           />
           <span v-else class="text-2xl font-bold text-white tracking-wider drop-shadow-md">

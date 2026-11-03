@@ -14,7 +14,10 @@
           class="w-14 h-14 rounded-2xl flex items-center justify-center relative overflow-hidden shrink-0 transition-all"
           :class="[
             bgColor === 'transparent'
-              ? (icon ? 'bg-transparent border border-transparent' : 'bg-white/15 border border-white/20 shadow-lg')
+              ? (isSmallFavicon(icon)
+                  ? 'bg-white/15 border border-white/20 shadow-md backdrop-blur-md'
+                  : (icon ? 'bg-transparent border border-transparent' : 'bg-white/15 border border-white/20 shadow-lg')
+                )
               : 'border border-white/20 shadow-lg'
           ]"
           :style="bgColor !== 'transparent' ? { backgroundColor: bgColor } : { backgroundColor: 'transparent' }"
@@ -23,7 +26,10 @@
             v-if="icon"
             :src="icon"
             :alt="title || 'Preview'"
-            class="w-9 h-9 rounded-lg object-contain drop-shadow"
+            :class="[
+              'object-contain',
+              isSmallFavicon(icon) ? 'w-6 h-6 max-w-[24px] max-h-[24px]' : 'w-9 h-9 rounded-lg'
+            ]"
             @error="handleIconLoadError"
           />
           <span v-else class="text-xl font-bold text-white tracking-wider drop-shadow-md">
@@ -176,7 +182,8 @@ import {
   findPresetForDomain,
   getFaviconCandidates,
   guessBrandColor,
-  suggestTitleFromUrl
+  suggestTitleFromUrl,
+  isSmallFavicon
 } from '../../shared/favicon'
 
 const props = defineProps<{

@@ -25,6 +25,45 @@
         <SearchBar />
       </div>
 
+      <!-- Floating Category Drag & Drop Target Bar (visible when dragging an icon) -->
+      <transition
+        enter-active-class="transition duration-200 ease-out"
+        enter-from-class="transform -translate-y-2 opacity-0"
+        enter-to-class="transform translate-y-0 opacity-100"
+        leave-active-class="transition duration-150 ease-in"
+        leave-from-class="transform translate-y-0 opacity-100"
+        leave-to-class="transform -translate-y-2 opacity-0"
+      >
+        <div
+          v-if="isDraggingBookmark"
+          class="w-full max-w-2xl mx-auto my-1.5 p-2 rounded-2xl glass-panel border border-emerald-400/40 bg-slate-900/90 shadow-2xl flex items-center justify-center space-x-2 text-xs z-30"
+        >
+          <span class="text-emerald-300 font-medium flex items-center space-x-1.5 shrink-0 pl-1">
+            <FolderInput class="w-3.5 h-3.5" />
+            <span>拖拽移动至分类：</span>
+          </span>
+          <div class="flex items-center space-x-1.5 overflow-x-auto py-0.5">
+            <button
+              v-for="cat in availableMoveCategories"
+              :key="cat.id"
+              @dragover.prevent="dragOverFloatingCatId = cat.id"
+              @dragleave="dragOverFloatingCatId = null"
+              @drop="handleFloatingDrop($event, cat)"
+              :class="[
+                'px-3 py-1.5 rounded-xl font-medium transition-all shrink-0',
+                dragOverFloatingCatId === cat.id
+                  ? 'bg-emerald-600 text-white ring-2 ring-emerald-300 scale-105 shadow-lg'
+                  : activeCategoryId === cat.id
+                    ? 'bg-white/20 text-white/90'
+                    : 'bg-white/10 hover:bg-white/15 text-white/80'
+              ]"
+            >
+              {{ cat.name }}
+            </button>
+          </div>
+        </div>
+      </transition>
+
       <!-- Desktop Bookmarks Grid (Interactive desktop icons with labels, matching iTab) -->
       <div class="w-full mt-1 max-w-4xl">
         <BookmarkGrid
@@ -32,6 +71,9 @@
           :categories="settings.categories || []"
           @add-bookmark="showAddBookmark = true"
           @contextmenu="handleBookmarkContextMenu"
+          @drag-start="handleBookmarkDragStart"
+          @drag-end="handleBookmarkDragEnd"
+          @reorder="handleBookmarkReorder"
         />
       </div>
     </main>
@@ -50,6 +92,7 @@
       @open-settings="showSettings = true"
       @open-sidepanel="openSidePanel"
       @open-onedrive="openSettingsTab('onedrive')"
+      @move-bookmark="handleMoveBookmark"
     />
 
     <!-- Floating Draggable & Collapsible Hot News Widget -->
@@ -65,11 +108,31 @@
       :x="contextMenuPos.x"
       :y="contextMenuPos.y"
       :bookmark="selectedBookmark"
+      :categories="settings.categories || []"
       @close="contextMenuVisible = false"
       @edit-icon="onContextEditIcon"
       @edit-bookmark="onContextEditBookmark"
       @delete="onContextDelete"
+      @move-to-category="handleContextMenuMoveBookmark"
     />
+
+    <!-- Toast Feedback Notification -->
+    <transition
+      enter-active-class="transition duration-300 ease-out"
+      enter-from-class="transform translate-y-4 opacity-0"
+      enter-to-class="transform translate-y-0 opacity-100"
+      leave-active-class="transition duration-200 ease-in"
+      leave-from-class="transform translate-y-0 opacity-100"
+      leave-to-class="transform translate-y-4 opacity-0"
+    >
+      <div
+        v-if="toastMessage"
+        class="fixed bottom-20 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-2xl bg-slate-900/95 text-white text-xs font-medium border border-white/15 shadow-2xl backdrop-blur-xl flex items-center space-x-2 pointer-events-none"
+      >
+        <CheckCircle2 class="w-4 h-4 text-emerald-400 shrink-0" />
+        <span>{{ toastMessage }}</span>
+      </div>
+    </transition>
 
     <!-- Modals -->
     <!-- 1. Settings Modal -->
@@ -131,6 +194,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { FolderInput, CheckCircle2 } from 'lucide-vue-next'
 import ClockWidget from './components/ClockWidget.vue'
 import HotNewsWidget from './components/HotNewsWidget.vue'
 import SearchBar from './components/SearchBar.vue'
@@ -183,6 +247,30 @@ const hasActiveModal = computed(() => {
 const contextMenuVisible = ref(false)
 const contextMenuPos = ref({ x: 0, y: 0 })
 const selectedBookmark = ref<BookmarkItem | null>(null)
+
+// Dragging & Moving state
+const isDraggingBookmark = ref(false)
+const draggedBookmarkItem = ref<BookmarkItem | null>(null)
+const dragOverFloatingCatId = ref<string | null>(null)
+const toastMessage = ref<string | null>(null)
+let toastTimer: any = null
+
+function showToast(msg: string) {
+  toastMessage.value = msg
+  if (toastTimer) clearTimeout(toastTimer)
+  toastTimer = setTimeout(() => {
+    toastMessage.value = null
+  }, 2500)
+}
+
+const availableMoveCategories = computed(() => {
+  const currentCatId = activeCategoryId.value
+  return (settings.value.categories || []).filter((c) => {
+    if (c.id === currentCatId) return false
+    if (c.isPrivate && currentCatId !== 'cat-vault') return false
+    return true
+  })
+})
 
 const vaultModalRef = ref<any>(null)
 const changePasswordModalRef = ref<any>(null)
@@ -280,6 +368,75 @@ function handleSaveEditBookmark(updatedBm: BookmarkItem) {
     saveSettings(settings.value)
   }
   showEditBookmarkModal.value = false
+}
+
+function handleBookmarkDragStart(bm: BookmarkItem) {
+  isDraggingBookmark.value = true
+  draggedBookmarkItem.value = bm
+}
+
+function handleBookmarkDragEnd() {
+  isDraggingBookmark.value = false
+  draggedBookmarkItem.value = null
+  dragOverFloatingCatId.value = null
+}
+
+function handleFloatingDrop(e: DragEvent, targetCat: CategoryItem) {
+  e.preventDefault()
+  dragOverFloatingCatId.value = null
+  isDraggingBookmark.value = false
+  try {
+    const raw = e.dataTransfer?.getData('application/json')
+    const data = raw ? JSON.parse(raw) : null
+    const bmId = data?.bookmarkId || draggedBookmarkItem.value?.id
+    if (bmId) {
+      handleMoveBookmark({ bookmarkId: bmId, targetCategoryId: targetCat.id })
+    }
+  } catch (err) {
+    if (draggedBookmarkItem.value) {
+      handleMoveBookmark({ bookmarkId: draggedBookmarkItem.value.id, targetCategoryId: targetCat.id })
+    }
+  }
+}
+
+function handleMoveBookmark(payload: { bookmarkId: string; targetCategoryId: string }) {
+  if (!settings.value.bookmarks) return
+  const idx = settings.value.bookmarks.findIndex(b => b.id === payload.bookmarkId)
+  if (idx === -1) return
+
+  const targetCat = settings.value.categories?.find(c => c.id === payload.targetCategoryId)
+  const bm = settings.value.bookmarks[idx]
+  if (bm.categoryId === payload.targetCategoryId) return
+
+  const isTargetPrivate = targetCat?.isPrivate || payload.targetCategoryId === 'cat-vault'
+
+  settings.value.bookmarks[idx] = {
+    ...bm,
+    categoryId: payload.targetCategoryId,
+    isPrivate: isTargetPrivate ? true : bm.isPrivate,
+    openInIncognito: isTargetPrivate ? true : bm.openInIncognito
+  }
+
+  saveSettings(settings.value)
+  const catName = targetCat?.name || '目标分类'
+  showToast(`已将“${bm.title}”移动到「${catName}」分类`)
+}
+
+function handleContextMenuMoveBookmark(bm: BookmarkItem, targetCatId: string) {
+  handleMoveBookmark({ bookmarkId: bm.id, targetCategoryId: targetCatId })
+}
+
+function handleBookmarkReorder(payload: { fromId: string; toId: string }) {
+  if (!settings.value.bookmarks) return
+  const list = [...settings.value.bookmarks]
+  const fromIndex = list.findIndex(b => b.id === payload.fromId)
+  const toIndex = list.findIndex(b => b.id === payload.toId)
+  if (fromIndex !== -1 && toIndex !== -1 && fromIndex !== toIndex) {
+    const [moved] = list.splice(fromIndex, 1)
+    list.splice(toIndex, 0, moved)
+    settings.value.bookmarks = list
+    saveSettings(settings.value)
+  }
 }
 
 let vaultAutoLockTimer: number | null = null

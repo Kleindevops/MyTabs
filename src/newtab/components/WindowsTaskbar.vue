@@ -18,18 +18,25 @@
         <span class="text-xs font-semibold hidden sm:inline">分类</span>
       </button>
 
-      <!-- Category Pills (Quick switch on taskbar) -->
+      <!-- Category Pills (Quick switch on taskbar & drag drop targets) -->
       <div class="hidden md:flex items-center space-x-1 bg-black/20 p-1 rounded-xl border border-white/5">
         <button
           v-for="cat in displayedCategories"
           :key="cat.id"
           @click="$emit('select-category', cat); showStartMenu = false"
+          @dragover.prevent="onCategoryDragOver($event, cat)"
+          @dragenter.prevent="onCategoryDragOver($event, cat)"
+          @dragleave="onCategoryDragLeave($event, cat)"
+          @drop="onCategoryDrop($event, cat)"
           :class="[
             'px-2.5 py-1 rounded-lg text-xs font-medium transition-all truncate max-w-[90px]',
-            activeCategoryId === cat.id
-              ? 'bg-white/25 text-white shadow-sm'
-              : 'text-white/60 hover:text-white hover:bg-white/10'
+            dragOverCatId === cat.id
+              ? 'bg-emerald-600 text-white ring-2 ring-emerald-300 scale-105 shadow-md'
+              : activeCategoryId === cat.id
+                ? 'bg-white/25 text-white shadow-sm'
+                : 'text-white/60 hover:text-white hover:bg-white/10'
           ]"
+          :title="`分类：${cat.name} (可拖拽网址图标至此处移动分类)`"
         >
           {{ cat.name }}
         </button>
@@ -47,11 +54,17 @@
           v-for="cat in displayedCategories"
           :key="cat.id"
           @click="$emit('select-category', cat); showStartMenu = false"
+          @dragover.prevent="onCategoryDragOver($event, cat)"
+          @dragenter.prevent="onCategoryDragOver($event, cat)"
+          @dragleave="onCategoryDragLeave($event, cat)"
+          @drop="onCategoryDrop($event, cat)"
           :class="[
             'w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium transition-all text-left',
-            activeCategoryId === cat.id
-              ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30'
-              : 'text-slate-300 hover:text-white hover:bg-white/10'
+            dragOverCatId === cat.id
+              ? 'bg-emerald-600 text-white ring-2 ring-emerald-300'
+              : activeCategoryId === cat.id
+                ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30'
+                : 'text-slate-300 hover:text-white hover:bg-white/10'
           ]"
         >
           <span>{{ cat.name }}</span>
@@ -101,16 +114,25 @@
               class="w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center relative overflow-hidden transition-all"
               :class="[
                 !bm.bgColor || bm.bgColor === 'transparent'
-                  ? (bm.icon ? 'bg-transparent border border-transparent hover:bg-white/15' : 'bg-white/15 border border-white/20 backdrop-blur-md shadow-md')
+                  ? (isSmallIcon(bm)
+                      ? 'bg-white/15 border border-white/20 backdrop-blur-md shadow-md hover:bg-white/25'
+                      : (bm.icon ? 'bg-transparent border border-transparent hover:bg-white/15' : 'bg-white/15 border border-white/20 backdrop-blur-md shadow-md')
+                    )
                   : 'border border-white/20 backdrop-blur-md shadow-md'
               ]"
-              :style="bm.bgColor && bm.bgColor !== 'transparent' ? { backgroundColor: bm.bgColor } : { backgroundColor: 'transparent' }"
+              :style="bm.bgColor && bm.bgColor !== 'transparent' ? { backgroundColor: bm.bgColor } : {}"
             >
               <img
                 v-if="bm.icon"
                 :src="bm.icon"
                 :alt="bm.title"
-                class="w-7 h-7 sm:w-8 sm:h-8 rounded-md object-contain"
+                :class="[
+                  'object-contain transition-transform group-hover:scale-110',
+                  isSmallIcon(bm)
+                    ? 'w-5 h-5 sm:w-6 sm:h-6 max-w-[24px] max-h-[24px] drop-shadow-sm'
+                    : 'w-7 h-7 sm:w-8 sm:h-8 rounded-md'
+                ]"
+                @load="handleIconLoaded(bm.id, $event)"
                 @error="bm.icon = undefined"
               />
               <span v-else class="text-sm font-bold text-white drop-shadow-sm">
@@ -155,53 +177,58 @@
 
     <!-- Right: Windows System Tray (OneDrive, AI, Clock, Settings) -->
     <div class="flex items-center space-x-1.5 sm:space-x-2 shrink-0">
-      <!-- OneDrive Sync Pill -->
+      <!-- Data Sync / Backup Pill -->
       <button
         @click="$emit('open-onedrive')"
-        :title="settings.oneDrive?.hasDirectory ? 'OneDrive 备份已关联' : '未关联 OneDrive，点击配置'"
-        class="p-1.5 sm:px-2.5 sm:py-1 rounded-xl bg-white/10 hover:bg-white/20 text-white/90 transition-all flex items-center space-x-1 text-xs"
+        title="数据备份与同步状态 (点击管理)"
+        class="flex items-center space-x-1.5 px-2 sm:px-2.5 py-1.5 rounded-xl bg-white/5 hover:bg-white/15 border border-white/10 text-white/80 hover:text-white transition-all text-xs"
       >
-        <Cloud class="w-3.5 h-3.5" :class="settings.oneDrive?.hasDirectory ? 'text-sky-400' : 'text-slate-400'" />
-        <span class="hidden lg:inline text-[11px]">{{ settings.oneDrive?.hasDirectory ? '已同步' : '未备份' }}</span>
+        <Cloud class="w-3.5 h-3.5 text-sky-400" />
+        <span class="hidden lg:inline text-[11px] font-medium">数据备份</span>
       </button>
 
-      <!-- AI Assistant -->
+      <!-- AI Copilot Side Panel Toggle -->
       <button
         @click="$emit('open-sidepanel')"
-        title="打开 AI 侧边栏"
-        class="p-1.5 sm:px-2.5 sm:py-1 rounded-xl bg-white/10 hover:bg-white/20 text-white/90 transition-all flex items-center space-x-1 text-xs"
+        title="打开 AI 侧边栏助手"
+        class="p-2 rounded-xl bg-gradient-to-r from-blue-600/30 to-purple-600/30 hover:from-blue-600/50 hover:to-purple-600/50 border border-blue-400/30 text-white transition-all hover:scale-105 active:scale-95 shadow-sm"
       >
-        <Sparkles class="w-3.5 h-3.5 text-indigo-400" />
-        <span class="hidden lg:inline text-[11px]">AI</span>
+        <Sparkles class="w-3.5 h-3.5 text-amber-300 transition-transform group-hover:rotate-12" />
       </button>
 
-      <!-- Settings -->
+      <!-- Settings Gear -->
       <button
         @click="$emit('open-settings')"
-        title="系统设置"
-        class="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white/80 hover:text-white transition-all"
+        title="打开系统设置"
+        class="p-2 rounded-xl bg-white/5 hover:bg-white/15 border border-white/10 text-white/80 hover:text-white transition-all hover:scale-105 active:scale-95"
       >
-        <Settings class="w-4 h-4" />
+        <Settings class="w-3.5 h-3.5" />
       </button>
 
-      <!-- Windows Tray Clock -->
+      <!-- Digital Clock & Date (Windows tray bottom right) -->
       <div
-        class="hidden sm:flex flex-col items-end justify-center px-2 py-0.5 text-right font-mono text-white/90 border-l border-white/10 pl-2.5"
+        class="hidden sm:flex flex-col items-end justify-center px-2 py-0.5 rounded-xl text-right cursor-default hover:bg-white/5 transition-colors"
+        title="当前时间"
       >
-        <span class="text-xs font-semibold leading-tight">{{ trayTime }}</span>
-        <span class="text-[10px] text-white/50 leading-tight">{{ trayDate }}</span>
+        <span class="text-xs font-semibold tracking-wider font-mono text-white/90 leading-tight">
+          {{ trayTime }}
+        </span>
+        <span class="text-[9px] text-white/50 font-mono leading-tight">
+          {{ trayDate }}
+        </span>
       </div>
     </div>
   </footer>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import {
-  LayoutGrid, ChevronLeft, ChevronRight, Plus, X, Check,
+  LayoutGrid, ChevronLeft, ChevronRight, Plus, Check,
   Cloud, Sparkles, Settings
 } from 'lucide-vue-next'
 import type { CategoryItem, BookmarkItem, AppSettings } from '../../shared/types'
+import { isSmallFavicon } from '../../shared/favicon'
 
 const props = defineProps<{
   categories: CategoryItem[]
@@ -219,11 +246,28 @@ const emit = defineEmits<{
   (e: 'open-settings'): void
   (e: 'open-sidepanel'): void
   (e: 'open-onedrive'): void
+  (e: 'move-bookmark', payload: { bookmarkId: string; targetCategoryId: string }): void
 }>()
+
+const smallIconMap = ref<Record<string, boolean>>({})
+
+function handleIconLoaded(id: string, ev: Event) {
+  const img = ev.target as HTMLImageElement
+  if (img && img.naturalWidth > 0 && img.naturalWidth <= 48) {
+    smallIconMap.value[id] = true
+  }
+}
+
+function isSmallIcon(bm: BookmarkItem): boolean {
+  if (smallIconMap.value[bm.id]) return true
+  return isSmallFavicon(bm.icon)
+}
 
 const showStartMenu = ref(false)
 const currentPage = ref(1)
 const pageSize = ref(8) // Number of bookmark icons per page on taskbar
+const dragOverCatId = ref<string | null>(null)
+let hoverCategoryTimer: any = null
 
 // Visible categories on taskbar (exclude private vault category)
 const displayedCategories = computed(() => {
@@ -274,6 +318,7 @@ onMounted(() => {
 onUnmounted(() => {
   if (clockTimer) clearInterval(clockTimer)
   window.removeEventListener('resize', updatePageSizeByWidth)
+  if (hoverCategoryTimer) clearTimeout(hoverCategoryTimer)
 })
 
 function updatePageSizeByWidth() {
@@ -311,6 +356,49 @@ function handleWheel(e: WheelEvent) {
     nextPage()
   } else if (e.deltaY < 0) {
     prevPage()
+  }
+}
+
+function onCategoryDragOver(e: DragEvent, cat: CategoryItem) {
+  e.preventDefault()
+  dragOverCatId.value = cat.id
+  if (e.dataTransfer) {
+    e.dataTransfer.dropEffect = 'move'
+  }
+  if (!hoverCategoryTimer) {
+    hoverCategoryTimer = setTimeout(() => {
+      emit('select-category', cat)
+    }, 550)
+  }
+}
+
+function onCategoryDragLeave(e: DragEvent, cat: CategoryItem) {
+  if (dragOverCatId.value === cat.id) {
+    dragOverCatId.value = null
+  }
+  if (hoverCategoryTimer) {
+    clearTimeout(hoverCategoryTimer)
+    hoverCategoryTimer = null
+  }
+}
+
+function onCategoryDrop(e: DragEvent, cat: CategoryItem) {
+  e.preventDefault()
+  dragOverCatId.value = null
+  if (hoverCategoryTimer) {
+    clearTimeout(hoverCategoryTimer)
+    hoverCategoryTimer = null
+  }
+  try {
+    const raw = e.dataTransfer?.getData('application/json')
+    if (raw) {
+      const data = JSON.parse(raw)
+      if (data.bookmarkId) {
+        emit('move-bookmark', { bookmarkId: data.bookmarkId, targetCategoryId: cat.id })
+      }
+    }
+  } catch (err) {
+    console.error('Error handling category drop:', err)
   }
 }
 

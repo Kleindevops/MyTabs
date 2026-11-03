@@ -143,56 +143,129 @@
             </div>
           </div>
 
-          <!-- 1. OneDrive 备份与同步 -->
+          <!-- 1. 数据备份与云盘同步 (自定义目录与文件) -->
           <div v-if="activeTab === 'onedrive'" class="space-y-4">
             <div>
               <h3 class="text-sm font-semibold text-white flex items-center gap-1.5">
                 <Cloud class="w-4 h-4 text-sky-400" />
-                OneDrive 本地文件夹直存同步
+                本地文件夹 / 云盘目录同步备份
               </h3>
               <p class="text-xs text-slate-400 mt-1">
-                授权一次您的本地 OneDrive 同步文件夹，配置文件变更后会自动静默保存至该目录，Windows OneDrive 客户端将实时为您备份至云端。
+                支持自由指定电脑上的任意文件夹（如 OneDrive、坚果云、本地磁盘等）及自定义备份文件名。插件本体与备份文件完全物理隔离，您可以将插件放置于任何目录运行。
               </p>
             </div>
 
             <!-- Folder Binding Status Card -->
-            <div class="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 space-y-3">
+            <div class="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 space-y-4">
+              <!-- Folder Selection Row -->
               <div class="flex items-center justify-between">
                 <div>
-                  <div class="text-xs font-medium text-slate-200">当前同步目录</div>
-                  <div class="text-xs text-sky-400 font-mono mt-0.5">
-                    {{ settings.oneDrive?.directoryName || '尚未选择 OneDrive 文件夹' }}
+                  <div class="text-xs font-medium text-slate-200">当前同步文件夹</div>
+                  <div class="text-xs text-sky-400 font-mono mt-0.5 flex items-center gap-1.5">
+                    <FolderSync class="w-3.5 h-3.5 shrink-0" />
+                    <span>{{ settings.oneDrive?.directoryName || '尚未选择同步文件夹' }}</span>
                   </div>
                 </div>
-                <button
-                  @click="handlePickOneDrive"
-                  class="px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-medium shadow-md shadow-blue-600/20 transition-all flex items-center space-x-1.5"
-                >
-                  <FolderSync class="w-3.5 h-3.5" />
-                  <span>{{ settings.oneDrive?.hasDirectory ? '更换授权目录' : '选择 OneDrive 文件夹' }}</span>
-                </button>
+                <div class="flex items-center gap-2">
+                  <button
+                    @click="handlePickOneDrive"
+                    class="px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-medium shadow-md shadow-blue-600/20 transition-all flex items-center space-x-1.5"
+                  >
+                    <FolderSync class="w-3.5 h-3.5" />
+                    <span>{{ settings.oneDrive?.hasDirectory ? '更换授权目录' : '选择存储文件夹' }}</span>
+                  </button>
+                  <button
+                    v-if="settings.oneDrive?.hasDirectory"
+                    @click="handleUnbindOneDrive"
+                    title="解除目录授权绑定"
+                    class="p-1.5 rounded-xl bg-slate-800 hover:bg-rose-900/50 text-slate-400 hover:text-rose-300 transition-colors"
+                  >
+                    <Trash2 class="w-3.5 h-3.5" />
+                  </button>
+                </div>
               </div>
 
-              <!-- Last sync info & sync now -->
-              <div v-if="settings.oneDrive?.hasDirectory" class="pt-2 border-t border-slate-800/80 flex items-center justify-between text-xs">
-                <span class="text-slate-400">
-                  上次备份时间: {{ formatTime(settings.oneDrive?.lastSyncTime) }}
-                </span>
-                <div class="flex items-center space-x-2">
-                  <button
-                    @click="handleManualSyncToOneDrive"
-                    :disabled="isSyncing"
-                    class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 transition-colors flex items-center space-x-1"
-                  >
-                    <RefreshCw class="w-3 h-3" :class="{ 'animate-spin': isSyncing }" />
-                    <span>备份到云盘</span>
-                  </button>
-                  <button
-                    @click="handleRestoreFromOneDrive"
-                    class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-amber-300 transition-colors"
-                  >
-                    从云盘恢复
-                  </button>
+              <!-- Custom Backup File Name -->
+              <div class="pt-3 border-t border-slate-800/80 flex items-center justify-between text-xs">
+                <div>
+                  <div class="font-medium text-slate-200">指定备份文件名</div>
+                  <div class="text-[11px] text-slate-400 mt-0.5">默认在所选目录下读写此 JSON 文件</div>
+                </div>
+                <div class="flex items-center gap-1.5">
+                  <input
+                    type="text"
+                    v-model="settings.oneDrive.backupFileName"
+                    @blur="handleBackupFileNameChange"
+                    @keyup.enter="handleBackupFileNameChange"
+                    placeholder="mytabs_backup.json"
+                    class="w-48 px-2.5 py-1 rounded-lg bg-slate-800/90 border border-slate-700 text-white text-xs font-mono focus:outline-none focus:border-blue-500 transition-colors"
+                  />
+                </div>
+              </div>
+
+              <!-- Status Pill & Actions -->
+              <div v-if="settings.oneDrive?.hasDirectory" class="pt-3 border-t border-slate-800/80 space-y-3">
+                <!-- Status Badge -->
+                <div class="flex items-center justify-between text-xs flex-wrap gap-2">
+                  <div class="flex items-center gap-2">
+                    <span class="text-slate-400">同步状态:</span>
+                    <!-- 1. Remote Newer -->
+                    <span v-if="syncState === 'remote_newer'" class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-sky-500/10 border border-sky-500/30 text-sky-300 text-[11px] font-medium animate-pulse">
+                      <span class="w-1.5 h-1.5 rounded-full bg-sky-400"></span>
+                      检测到外部文件更新 (可同步)
+                    </span>
+                    <!-- 2. Local Newer -->
+                    <span v-else-if="syncState === 'local_newer'" class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-300 text-[11px] font-medium">
+                      <span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
+                      浏览器有新修改 (待备份)
+                    </span>
+                    <!-- 3. Synced -->
+                    <span v-else class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-[11px] font-medium">
+                      <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                      已同步至指定文件 (最新)
+                    </span>
+                  </div>
+
+                  <span class="text-[11px] text-slate-500">
+                    上次落盘: {{ formatTime(settings.oneDrive?.lastSyncTime) }}
+                  </span>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="flex items-center justify-between pt-1 flex-wrap gap-2">
+                  <div class="text-[11px] text-slate-400">
+                    <span v-if="syncState === 'remote_newer'">
+                      外部文件更新于 {{ formatTime(remoteUpdateInfo.remoteModified) }}，包含 {{ remoteUpdateInfo.bookmarkCount }} 个书签
+                    </span>
+                    <span v-else-if="syncState === 'local_newer'">
+                      本地产生新的修改，可点击备份或等待自动保存
+                    </span>
+                    <span v-else>
+                      本地浏览器与磁盘备份数据完全一致
+                    </span>
+                  </div>
+
+                  <div class="flex items-center space-x-2">
+                    <!-- Backup Button -->
+                    <button
+                      @click="() => handleManualSyncToOneDrive(true)"
+                      :disabled="isSyncing"
+                      class="px-2.5 py-1 rounded-lg text-xs font-medium transition-colors flex items-center space-x-1"
+                      :class="syncState === 'local_newer' ? 'bg-amber-600 hover:bg-amber-500 text-white shadow-sm' : 'bg-slate-800 hover:bg-slate-700 text-slate-200'"
+                    >
+                      <RefreshCw class="w-3 h-3" :class="{ 'animate-spin': isSyncing }" />
+                      <span>立即备份到文件</span>
+                    </button>
+
+                    <!-- Restore Button -->
+                    <button
+                      @click="handleRestoreFromOneDrive"
+                      class="px-2.5 py-1 rounded-lg text-xs font-medium transition-colors"
+                      :class="syncState === 'remote_newer' ? 'bg-sky-600 hover:bg-sky-500 text-white shadow-sm' : 'bg-slate-800 hover:bg-slate-700 text-amber-300'"
+                    >
+                      从文件同步恢复
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -200,8 +273,8 @@
             <!-- Auto Sync Toggle -->
             <div class="flex items-center justify-between p-3.5 rounded-2xl bg-slate-900/50 border border-slate-800 text-xs">
               <div>
-                <div class="font-medium text-slate-200">修改配置时自动同步</div>
-                <div class="text-[11px] text-slate-400 mt-0.5">添加网址或调整布局后自动写入备份文件</div>
+                <div class="font-medium text-slate-200">修改配置时自动备份</div>
+                <div class="text-[11px] text-slate-400 mt-0.5">添加网址、调整分类或更换壁纸后，系统静默写入指定备份文件</div>
               </div>
               <input
                 type="checkbox"
@@ -721,10 +794,19 @@ import { ref, watch, computed, onMounted } from 'vue'
 import {
   Settings, X, Cloud, Lock, ShieldCheck, Sparkles, Palette,
   FolderSync, RefreshCw, Download, Upload, Trash2, Check, Pin,
-  BookOpen, Compass, Video, LayoutGrid, Lightbulb, ArrowRight, Calendar, Clock, Flame
+  BookOpen, Compass, Video, LayoutGrid, Lightbulb, ArrowRight, Calendar, Clock, Flame,
+  AlertCircle, CheckCircle2
 } from 'lucide-vue-next'
 import { AI_PRESETS } from '../../shared/ai-client'
-import { pickOneDriveDirectory, writeBackupToOneDrive, readBackupFromOneDrive } from '../../shared/onedrive'
+import {
+  pickOneDriveDirectory,
+  writeBackupToOneDrive,
+  readBackupFromOneDrive,
+  checkExternalUpdate,
+  removeOneDriveBinding,
+  DEFAULT_BACKUP_FILENAME,
+  getEffectiveFileName
+} from '../../shared/onedrive'
 import { exportSettingsAsJSON, importSettingsFromJSON, saveSettings } from '../../shared/storage'
 import { fetchBingDailyInfo, pinCurrentWallpaperService, resumeBingDailyService } from '../../shared/wallpaper'
 import type { AppSettings } from '../../shared/types'
@@ -756,6 +838,40 @@ const isVaultActive = computed(() => {
 
 const activeTab = ref(props.initialTab || 'guide')
 const isSyncing = ref(false)
+const remoteUpdateInfo = ref<{ hasUpdate: boolean; remoteModified?: number; bookmarkCount?: number }>({ hasUpdate: false })
+
+const syncState = computed<'unbound' | 'remote_newer' | 'local_newer' | 'synced'>(() => {
+  if (!props.settings.oneDrive?.hasDirectory) return 'unbound'
+  if (remoteUpdateInfo.value.hasUpdate) return 'remote_newer'
+  const lastSync = props.settings.oneDrive?.lastSyncTime || 0
+  const lastMod = props.settings.oneDrive?.lastModifiedTime || 0
+  if (lastMod > lastSync + 1000) return 'local_newer'
+  return 'synced'
+})
+
+async function checkSyncStatus() {
+  if (props.settings.oneDrive?.hasDirectory) {
+    const res = await checkExternalUpdate(
+      props.settings.oneDrive?.lastSyncTime,
+      props.settings.oneDrive?.backupFileName
+    )
+    remoteUpdateInfo.value = res
+  } else {
+    remoteUpdateInfo.value = { hasUpdate: false }
+  }
+}
+
+watch(() => activeTab.value, (tab) => {
+  if (tab === 'onedrive') {
+    checkSyncStatus()
+  }
+})
+
+onMounted(() => {
+  if (activeTab.value === 'onedrive' || props.settings.oneDrive?.hasDirectory) {
+    checkSyncStatus()
+  }
+})
 
 // Vault Auto-Lock Options & Handlers
 const autoLockOptions = [
@@ -834,7 +950,7 @@ watch(() => props.currentCategoryId, () => {
 const tabs = computed(() => {
   const allTabs = [
     { id: 'guide', name: '功能介绍', icon: BookOpen },
-    { id: 'onedrive', name: 'OneDrive 备份', icon: Cloud },
+    { id: 'onedrive', name: '数据备份同步', icon: Cloud },
     { id: 'vault', name: '个人空间锁', icon: Lock },
     { id: 'ai', name: 'AI 助手模型', icon: Sparkles },
     { id: 'wallpaper', name: '壁纸个性化', icon: Palette }
@@ -851,7 +967,7 @@ const selectedGuideCategory = ref('all')
 const guideCategories = [
   { id: 'all', name: '全部功能' },
   { id: 'desktop', name: '常用桌面' },
-  { id: 'onedrive', name: '云端备份' },
+  { id: 'onedrive', name: '数据备份同步' },
   { id: 'ai', name: 'AI 助手' },
   { id: 'wallpaper', name: '壁纸美化' },
   { id: 'sniffer', name: '视频嗅探' }
@@ -884,25 +1000,25 @@ const guideItems = [
   {
     id: 'g-onedrive',
     category: 'onedrive',
-    categoryName: 'OneDrive 本地文件夹直存同步',
-    title: 'OneDrive 本地直存云端备份与恢复',
+    categoryName: '自定义本地/云盘同步与备份',
+    title: '自定义目录与云盘同步备份',
     badge: '100% 数据归您所有',
     badgeColor: 'bg-sky-500/20 text-sky-300 border-sky-500/30',
     icon: Cloud,
     iconColor: 'text-sky-400',
     targetTab: 'onedrive',
     whatIsIt: [
-      '创新的本地直存型云端同步方案，基于 Chrome 官方 File System Access 授权协议。',
-      '数据以标准 JSON 直接写入您本地电脑的 OneDrive 目录，借由 Windows 官方 OneDrive 客户端实时自动上传到微软云端。',
-      '零信任、零第三方服务器中转：无需注册第三方账号，所有书签、分类、密码哈希与壁纸配置完全存放在您自己的微软云盘中。'
+      '自由指定电脑上的任意文件夹（如 OneDrive、坚果云、本地磁盘等）及自定义备份文件名。',
+      '插件本体与备份文件完全物理隔离，您可以将插件放置于任何磁盘目录运行。',
+      '零信任、零第三方服务器中转：所有书签与配置完全存放在您自己指定的本地或云盘文件中。'
     ],
     howToUse: [
-      '首次绑定目录：进入左侧【OneDrive 备份】，点击【选择 OneDrive 文件夹】（或更换授权目录），选中电脑上的 OneDrive 文件夹（如 OneDrive/MyTabs）。',
-      '自动静默同步：勾选“修改配置时自动同步”，添加或修改网址、调整图标后，系统均在后台 1 秒内静默写入备份。',
-      '换新机/重装恢复：在另一台电脑或重装浏览器后，同样授权该 OneDrive 目录，点击【从云盘恢复】，全部个性化配置瞬间还原！',
-      '离线 JSON 导出导入：随时可点击【导出 JSON 配置文件】将数据下载至本地，或随时【导入 JSON 配置文件】。'
+      '自定义绑定目录：进入左侧【数据备份同步】，点击【选择存储文件夹】，选中电脑上的任意目录。',
+      '智能防覆盖机制：首次绑定若发现已有备份，会自动弹窗提示您选择从文件还原或覆盖，换新机绝不丢数据。',
+      '自动静默同步：勾选“修改配置时自动备份”，添加网址或调整布局后，系统在后台静默写入备份文件。',
+      '跨设备更新感知：当检测到文件夹内的备份文件在其他电脑有更新时，界面会主动提示一键拉取同步。'
     ],
-    tips: '即使电脑离线或断网，扩展依然能在本地正常读写，重新连网后 OneDrive 会自动推送最新版本至云端。'
+    tips: '插件解压在任何目录都能在浏览器中加载运行，备份文件随时支持手动导出与导入。'
   },
   {
     id: 'g-ai',
@@ -1044,37 +1160,73 @@ function formatTime(timestamp?: number) {
 }
 
 async function handlePickOneDrive() {
-  const res = await pickOneDriveDirectory()
-  if (res.success && res.dirName) {
-    props.settings.oneDrive.hasDirectory = true
-    props.settings.oneDrive.directoryName = res.dirName
-    await handleManualSyncToOneDrive()
-  } else if (res.error) {
-    alert(res.error)
+  const targetFile = props.settings.oneDrive.backupFileName || DEFAULT_BACKUP_FILENAME
+  const res = await pickOneDriveDirectory(targetFile)
+  if (!res.success) {
+    if (res.error && res.error !== '用户取消了选择') {
+      alert(res.error)
+    }
+    return
   }
+
+  const dirName = res.dirName || '已选文件夹'
+
+  props.settings.oneDrive.hasDirectory = true
+  props.settings.oneDrive.directoryName = dirName
+  props.settings.oneDrive.backupFileName = targetFile
+  await saveSettings(props.settings, false)
+  alert(`已成功绑定同步文件夹【${dirName}】！`)
+  await checkSyncStatus()
 }
 
-async function handleManualSyncToOneDrive() {
+async function handleUnbindOneDrive() {
+  if (!confirm('确定要解除当前同步文件夹的绑定吗？（不会删除您磁盘上的备份文件）')) return
+  await removeOneDriveBinding()
+  props.settings.oneDrive.hasDirectory = false
+  props.settings.oneDrive.directoryName = undefined
+  await saveSettings(props.settings, false)
+  remoteUpdateInfo.value = { hasUpdate: false }
+}
+
+async function handleBackupFileNameChange() {
+  props.settings.oneDrive.backupFileName = getEffectiveFileName(props.settings.oneDrive.backupFileName)
+  await saveSettings(props.settings, false)
+  await checkSyncStatus()
+}
+
+async function handleManualSyncToOneDrive(showAlert = true) {
   isSyncing.value = true
-  const res = await writeBackupToOneDrive(props.settings)
+  const res = await writeBackupToOneDrive(props.settings, props.settings.oneDrive.backupFileName)
   isSyncing.value = false
   if (res.success && res.timestamp) {
     props.settings.oneDrive.lastSyncTime = res.timestamp
     await saveSettings(props.settings, false)
-    alert('已成功备份到云盘！')
+    await checkSyncStatus()
+    if (showAlert) {
+      alert('已成功备份到指定文件！')
+    }
   } else {
     alert(`备份失败: ${res.error}`)
   }
 }
 
 async function handleRestoreFromOneDrive() {
-  if (!confirm('从 OneDrive 恢复备份将覆盖当前的所有设置与书签，确定继续吗？')) return
-  const res = await readBackupFromOneDrive()
+  const fileName = props.settings.oneDrive.backupFileName || DEFAULT_BACKUP_FILENAME
+  if (!confirm(`从文件【${fileName}】同步恢复将覆盖当前的所有设置与书签，确定继续吗？`)) return
+  const res = await readBackupFromOneDrive(fileName)
   if (res.success && res.data) {
+    res.data.oneDrive = {
+      ...res.data.oneDrive,
+      hasDirectory: true,
+      directoryName: props.settings.oneDrive.directoryName,
+      backupFileName: fileName,
+      lastSyncTime: res.lastModified || Date.now()
+    }
     emit('update-settings', res.data)
-    alert('已成功从 OneDrive 恢复配置！')
+    await checkSyncStatus()
+    alert('已成功从备份文件同步恢复配置！')
   } else {
-    alert(`恢复失败: ${res.error}`)
+    alert(`同步恢复失败: ${res.error}`)
   }
 }
 

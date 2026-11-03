@@ -43,17 +43,6 @@ async function buildAll() {
     cpSync('public/icons', 'dist/icons', { recursive: true })
     console.log('✓ Icons copied.')
   }
-
-  // 5. Auto sync ready-to-run build to OneDrive for instant install on new PCs
-  const oneDriveTarget = 'D:/OneDrive/备份/MyTabs/MyTabs-App'
-  try {
-    if (existsSync('D:/OneDrive/备份/MyTabs')) {
-      cpSync('dist', oneDriveTarget, { recursive: true })
-      console.log('✓ Auto-synced ready-to-run app to OneDrive/备份/MyTabs/MyTabs-App')
-    }
-  } catch (err) {
-    // Ignore if path not available
-  }
 }
 
 buildAll().catch((err) => {
