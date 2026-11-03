@@ -1,4 +1,5 @@
-# MyTabs - 绝密私密暗门与桌面级多功能新标签页
+# MyTabs - 私人隐藏暗门与桌面级多功能新标签页
+
 
 <div align="center">
 
