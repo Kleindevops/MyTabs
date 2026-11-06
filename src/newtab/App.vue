@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div
     class="relative h-screen w-screen overflow-hidden flex flex-col font-sans select-none text-slate-100"
     :class="{ 'modal-active': hasActiveModal }"
@@ -65,10 +65,11 @@
       </transition>
 
       <!-- Desktop Bookmarks Grid (Interactive desktop icons with labels, matching iTab) -->
-      <div class="w-full mt-1 max-w-4xl">
+      <div class="w-full mt-1 max-w-5xl relative">
         <BookmarkGrid
           :bookmarks="displayedBookmarks"
           :categories="settings.categories || []"
+          :activeCategoryId="activeCategoryId"
           @add-bookmark="showAddBookmark = true"
           @contextmenu="handleBookmarkContextMenu"
           @drag-start="handleBookmarkDragStart"

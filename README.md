@@ -6,7 +6,7 @@
 > **为极致隐私与高效工作流而生。**  
 > 独创「桌面隐形暗门·密码锁私人收藏夹」，外表是优雅极简的 iTab / Windows 风格高颜值新标签页，暗藏端到端加密私密空间；全网盘本地直存云同步、原生流媒体资源嗅探、侧边栏 AI 智能副驾驶一应俱全。
 
-[![Version](https://img.shields.io/badge/Version-v1.0.4-blue.svg)](package.json)
+[![Version](https://img.shields.io/badge/Version-v1.0.5-blue.svg)](package.json)
 [![Chrome Extension](https://img.shields.io/badge/Chrome-Extension-4285F4?style=flat&logo=googlechrome&logoColor=white)](https://developer.chrome.com/docs/extensions/)
 [![Edge Addon](https://img.shields.io/badge/Microsoft%20Edge-Supported-0078D7?style=flat&logo=microsoftedge&logoColor=white)](https://microsoftedge.microsoft.com/)
 [![Encryption](https://img.shields.io/badge/Crypto-AES--256--GCM-success?style=flat&logo=securityscorecard&logoColor=white)](#1-核心杀手锏绝密隐形暗门私人收藏夹)
@@ -109,7 +109,7 @@
 
 ### 1. Windows 任务栏风格底栏（Dock）
 * **开始菜单与快速分类**：仿 Windows 11 开始菜单与任务栏药丸，支持在常用推荐、办公效率、影音视听、技术开发等分类间丝滑切换。
-* **滚轮滑动翻页**：中间书签 Dock 区域支持**鼠标滚轮横向翻页**与翻页按钮，单分类支持容纳海量图标，干净利落。
+* **桌面 24 槽位智能分页与 Dock 联动**：主桌面图标网格支持每页标准 3 行 × 8 列 = 24 个槽位（含新增卡片）独立分页，支持滚轮滚动翻页、左右浮动翻页导航键、键盘左右方向键及拖拽悬停跨页；底栏中间书签 Dock 区域同样支持**鼠标滚轮横向翻页**与翻页按钮，单分类支持容纳海量图标，干净利落。
 
 ### 2. 高清图标与纯透明通透底色
 * **官方高清图标识别**：输入网址自动精准提取 Apple Touch Icon 及高清 Favicon。
