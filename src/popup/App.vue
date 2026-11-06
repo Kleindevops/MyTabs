@@ -1,5 +1,31 @@
 <template>
-  <div class="flex flex-col w-[440px] h-[560px] bg-slate-950 text-slate-100 font-sans select-none overflow-hidden">
+  <div class="flex flex-col w-[440px] h-[560px] bg-slate-950 text-slate-100 font-sans select-none overflow-hidden relative">
+    <!-- Floating Toast Notification -->
+    <transition
+      enter-active-class="transition duration-200 ease-out"
+      enter-from-class="opacity-0 -translate-y-2 scale-95"
+      enter-to-class="opacity-100 translate-y-0 scale-100"
+      leave-active-class="transition duration-150 ease-in"
+      leave-from-class="opacity-100 translate-y-0 scale-100"
+      leave-to-class="opacity-0 -translate-y-2 scale-95"
+    >
+      <div
+        v-if="toastMessage"
+        class="absolute top-14 left-3 right-3 z-50 px-3 py-2 rounded-xl bg-slate-900/95 border border-purple-500/40 shadow-2xl backdrop-blur-md flex items-center justify-between text-xs animate-in"
+      >
+        <div class="flex items-center space-x-2 text-purple-200 min-w-0">
+          <Sparkles class="w-4 h-4 text-amber-400 shrink-0" />
+          <span class="text-[11px] leading-snug font-medium break-all">{{ toastMessage }}</span>
+        </div>
+        <button
+          @click="toastMessage = null"
+          class="text-slate-400 hover:text-white ml-2 text-xs p-0.5 rounded transition-colors shrink-0"
+          title="关闭提示"
+        >
+          ✕
+        </button>
+      </div>
+    </transition>
     <!-- Header -->
     <header class="flex items-center justify-between px-4 py-3 bg-slate-900/90 border-b border-slate-800 backdrop-blur-md shrink-0">
       <div class="flex items-center space-x-2">
@@ -237,35 +263,51 @@
               <Sparkles class="w-3.5 h-3.5 text-amber-400" />
               <span>HLS 完整切片源 (含 AES 加密)</span>
             </span>
-
-            <div class="flex items-center space-x-1.5">
-              <!-- Method 1: Copy Direct Link -->
-              <button
-                @click="copyUrl(item.url, item.id)"
-                class="px-2.5 py-1 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-medium transition-all shadow-sm flex items-center space-x-1 active:scale-95"
-                title="复制纯净 M3U8 视频直链"
-              >
-                <Check v-if="copiedId === item.id" class="w-3 h-3 text-emerald-300" />
-                <Copy v-else class="w-3 h-3" />
-                <span>{{ copiedId === item.id ? '已复制直链' : '复制直链' }}</span>
-              </button>
-
-              <!-- Method 2: Copy FFmpeg Download Command -->
-              <button
-                @click="copyFFmpegCommand(item.url, item.id)"
-                class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-[10px] font-medium transition-colors flex items-center space-x-1 active:scale-95"
-                title="复制 FFmpeg 单行无损合并下载命令"
-              >
-                <Check v-if="copiedCmdId === item.id" class="w-3 h-3 text-emerald-400" />
-                <Terminal v-else class="w-3 h-3 text-emerald-400" />
-                <span>{{ copiedCmdId === item.id ? '已复制命令' : '复制下载命令' }}</span>
-              </button>
-            </div>
+            <span class="text-[9.5px] text-purple-400/80 font-mono">命令行工具</span>
           </div>
 
-          <div class="p-2 rounded-xl bg-purple-500/10 border border-purple-500/20 text-[10px] text-purple-200/90 leading-relaxed">
+          <!-- 3-Column Command Actions -->
+          <div class="grid grid-cols-3 gap-1.5">
+            <!-- Method 1: Copy Direct Link -->
+            <button
+              @click="copyUrl(item.url, item.id)"
+              class="px-2 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-medium transition-all shadow-sm flex items-center justify-center space-x-1 active:scale-95"
+              title="复制纯净 M3U8 视频直链"
+            >
+              <Check v-if="copiedId === item.id" class="w-3 h-3 text-emerald-300" />
+              <Copy v-else class="w-3 h-3" />
+              <span>{{ copiedId === item.id ? '已复制' : '复制直链' }}</span>
+            </button>
+
+            <!-- Method 2: Copy FFmpeg Download Command -->
+            <button
+              @click="copyFFmpegCommand(item.url, item.id)"
+              class="px-2 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-[10px] font-medium transition-colors flex items-center justify-center space-x-1 active:scale-95 border border-slate-700/80"
+              title="复制 FFmpeg 单行无损合并下载命令"
+            >
+              <Check v-if="copiedCmdId === item.id" class="w-3 h-3 text-emerald-400" />
+              <Terminal v-else class="w-3 h-3 text-emerald-400" />
+              <span>{{ copiedCmdId === item.id ? '已复制' : 'FFmpeg 命令' }}</span>
+            </button>
+
+            <!-- Method 3: Copy N_m3u8DL-RE Download Command -->
+            <button
+              @click="copyNm3u8dlCommand(item.url, item.id)"
+              class="px-2 py-1.5 rounded-lg bg-purple-900/60 hover:bg-purple-800/80 border border-purple-500/40 text-purple-200 text-[10px] font-medium transition-all shadow-sm flex items-center justify-center space-x-1 active:scale-95"
+              title="复制 N_m3u8DL-RE 下载命令（提示：要在软件目录下执行命令）"
+            >
+              <Check v-if="copiedNm3u8Id === item.id" class="w-3 h-3 text-emerald-300" />
+              <Terminal v-else class="w-3 h-3 text-purple-300" />
+              <span>{{ copiedNm3u8Id === item.id ? '已复制' : 'N_m3u8DL-RE' }}</span>
+            </button>
+          </div>
+
+          <div class="p-2 rounded-xl bg-purple-500/10 border border-purple-500/20 text-[10px] text-purple-200/90 leading-relaxed space-y-1">
             <div class="text-slate-300">
-              <code>.m3u8</code> 为流媒体切片索引文件（本身约 100 字节）。可直接点击「<b>复制直链</b>」使用播放器播放，或点击「<b>复制下载命令</b>」使用 FFmpeg 合并为 MP4。
+              <code>.m3u8</code> 为流媒体切片索引。可点击「<b>复制直链</b>」使用播放器播放，或点击「<b>FFmpeg</b>」/「<b>N_m3u8DL-RE</b>」复制命令行合并下载为 MP4。
+            </div>
+            <div class="text-amber-300/95 flex items-center gap-1 font-mono text-[9.5px]">
+              <span>💡 提示：要在 <b>N_m3u8DL-RE.exe</b> 软件目录下执行命令。</span>
             </div>
           </div>
         </div>
@@ -322,6 +364,9 @@ const hideChunksInVideos = ref(true)
 const activePreviewId = ref<string | null>(null)
 const copiedId = ref<string | null>(null)
 const copiedCmdId = ref<string | null>(null)
+const copiedNm3u8Id = ref<string | null>(null)
+const toastMessage = ref<string | null>(null)
+let toastTimer: any = null
 let activeTabId = -1
 
 const filters = computed(() => {
@@ -444,10 +489,19 @@ function openInNewTab(url: string) {
   window.open(unwrapMediaUrl(url), '_blank')
 }
 
+function showToast(msg: string, duration = 3000) {
+  toastMessage.value = msg
+  if (toastTimer) clearTimeout(toastTimer)
+  toastTimer = setTimeout(() => {
+    toastMessage.value = null
+  }, duration)
+}
+
 function copyUrl(url: string, id: string) {
   const cleanUrl = unwrapMediaUrl(url)
   navigator.clipboard.writeText(cleanUrl)
   copiedId.value = id
+  showToast('已复制 M3U8 直链到剪贴板', 1800)
   setTimeout(() => {
     if (copiedId.value === id) copiedId.value = null
   }, 1800)
@@ -458,9 +512,21 @@ function copyFFmpegCommand(url: string, id: string) {
   const cmd = `ffmpeg -i "${cleanUrl}" -c copy "video.mp4"`
   navigator.clipboard.writeText(cmd)
   copiedCmdId.value = id
+  showToast('已复制 FFmpeg 下载命令', 2000)
   setTimeout(() => {
     if (copiedCmdId.value === id) copiedCmdId.value = null
   }, 1800)
+}
+
+function copyNm3u8dlCommand(url: string, id: string) {
+  const cleanUrl = unwrapMediaUrl(url)
+  const cmd = `N_m3u8DL-RE.exe "${cleanUrl}" --auto-select --save-dir "D:\\download" --save-name "outlook.MP4"`
+  navigator.clipboard.writeText(cmd)
+  copiedNm3u8Id.value = id
+  showToast('已复制 N_m3u8DL-RE 命令！（提示：要在软件目录下执行命令）', 3800)
+  setTimeout(() => {
+    if (copiedNm3u8Id.value === id) copiedNm3u8Id.value = null
+  }, 2000)
 }
 
 function downloadResource(item: SniffedResource) {
