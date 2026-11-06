@@ -118,6 +118,22 @@ export interface FixedReminderItem {
   completedAt?: string // 上次标记完成时间
 }
 
+export interface PopupBlockerStats {
+  totalBlocked: number
+  todayBlocked: number
+  lastDate: string // YYYY-MM-DD
+}
+
+export interface PopupBlockerConfig {
+  enabled: boolean
+  blockNewTabPopups: boolean       // 拦截未经许可的后台标签与弹出式广告 (Pop-ups & Pop-unders)
+  blockModalOverlays: boolean      // 拦截页面内流氓遮罩与强制弹窗 (In-Page Modal Overlays)
+  blockClickjacking: boolean       // 拦截透明全屏点击劫持 (Clickjacking)
+  restoreScroll: boolean           // 页面被弹窗锁死时自动恢复滚动条
+  whitelist: string[]              // 允许弹窗的站点域名白名单
+  stats: PopupBlockerStats         // 拦截计数统计
+}
+
 export interface AppSettings {
   version: string
   categories: CategoryItem[]
@@ -126,6 +142,7 @@ export interface AppSettings {
   ai: AISettings
   privacyRules: PrivacyRule[]
   oneDrive: OneDriveSyncConfig
+  popupBlocker?: PopupBlockerConfig
   showHotNews?: boolean
   salt?: string // PBKDF2 salt for private vault
   vaultVerifier?: string // Encrypted test string to verify unlock password

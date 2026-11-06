@@ -807,9 +807,9 @@ import {
   DEFAULT_BACKUP_FILENAME,
   getEffectiveFileName
 } from '../../shared/onedrive'
-import { exportSettingsAsJSON, importSettingsFromJSON, saveSettings } from '../../shared/storage'
+import { exportSettingsAsJSON, importSettingsFromJSON, saveSettings, DEFAULT_POPUP_BLOCKER } from '../../shared/storage'
 import { fetchBingDailyInfo, pinCurrentWallpaperService, resumeBingDailyService } from '../../shared/wallpaper'
-import type { AppSettings } from '../../shared/types'
+import type { AppSettings, PopupBlockerConfig } from '../../shared/types'
 
 const props = withDefaults(
   defineProps<{
@@ -837,6 +837,64 @@ const isVaultActive = computed(() => {
 })
 
 const activeTab = ref(props.initialTab || 'guide')
+const isIncognitoAllowed = ref(false)
+const newWhitelistDomain = ref('')
+
+const popupConfig = computed<PopupBlockerConfig>(() => {
+  if (!props.settings.popupBlocker) {
+    props.settings.popupBlocker = JSON.parse(JSON.stringify(DEFAULT_POPUP_BLOCKER))
+  }
+  return props.settings.popupBlocker
+})
+
+function checkIncognitoStatus() {
+  if (typeof chrome !== 'undefined' && chrome.extension?.isAllowedIncognitoAccess) {
+    chrome.extension.isAllowedIncognitoAccess((allowed) => {
+      isIncognitoAllowed.value = !!allowed
+    })
+  } else {
+    isIncognitoAllowed.value = false
+  }
+}
+
+function openExtensionsManager() {
+  const url = 'chrome://extensions/?id=' + (typeof chrome !== 'undefined' && chrome.runtime?.id ? chrome.runtime.id : '')
+  if (typeof chrome !== 'undefined' && chrome.tabs?.create) {
+    chrome.tabs.create({ url }).catch(() => window.open(url, '_blank'))
+  } else {
+    window.open(url, '_blank')
+  }
+}
+
+function addWhitelistDomain() {
+  const domain = newWhitelistDomain.value.trim().toLowerCase()
+  if (!domain) return
+  if (!props.settings.popupBlocker) {
+    props.settings.popupBlocker = JSON.parse(JSON.stringify(DEFAULT_POPUP_BLOCKER))
+  }
+  if (!props.settings.popupBlocker.whitelist.includes(domain)) {
+    props.settings.popupBlocker.whitelist.push(domain)
+    saveChanges()
+  }
+  newWhitelistDomain.value = ''
+}
+
+function removeWhitelistDomain(domain) {
+  if (!props.settings.popupBlocker) return
+  props.settings.popupBlocker.whitelist = props.settings.popupBlocker.whitelist.filter(d => d !== domain)
+  saveChanges()
+}
+
+function resetStats() {
+  if (!props.settings.popupBlocker) return
+  props.settings.popupBlocker.stats = {
+    totalBlocked: 0,
+    todayBlocked: 0,
+    lastDate: new Date().toISOString().slice(0, 10)
+  }
+  saveChanges()
+}
+
 const isSyncing = ref(false)
 const remoteUpdateInfo = ref<{ hasUpdate: boolean; remoteModified?: number; bookmarkCount?: number }>({ hasUpdate: false })
 
@@ -974,6 +1032,31 @@ const guideCategories = [
 ]
 
 const guideItems = [
+  {
+    id: 'g-security',
+    category: 'security',
+    categoryName: '智能安全与弹窗拦截',
+    title: '智能弹窗拦截与隐私模式防御',
+    badge: '安全增强',
+    badgeColor: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
+    icon: ShieldCheck,
+    iconColor: 'text-emerald-400',
+    targetTab: 'security',
+    whatIsIt: [
+      '智能识别并封堵恶意网站偷偷打开的后台标签页（Pop-under）与弹窗广告轰炸。',
+      '自动清理网页内部的强制居中遮罩、全屏登录诱导层及流氓广告弹窗，解除页面滚动限制。',
+      '识别并粉碎全屏透明点击陷阱（Clickjacking），防止误触空白区域触发流氓跳转。',
+      '【无痕模式原生就绪】：当在 Chrome 扩展中开启“在无痕模式下允许”后，防御机制在隐私窗口同样生效，且严格遵守零知识防痕规范，绝不记录任何无痕浏览轨迹。'
+    ],
+    howToUse: [
+      '开启拦截：前往【设置】->【安全与弹窗拦截】，确保总开关保持开启即可全自动防御。',
+      '自定义防护细项：可自由启闭后台弹窗拦截、页面内遮罩清理、透明点击防劫持、以及滚动条恢复等开关。',
+      '管理站点白名单：若遇到某些特定网银、开发工具或内网系统需要正常弹窗，可将域名添加至白名单中一键放行。',
+      '隐私模式激活：点击面板中的无痕授权状态提示，在浏览器扩展管理页中勾选“在无痕模式下允许”，即可全方位保护无痕浏览。'
+    ],
+    tips: '在无痕模式下拦截弹窗时，系统仅进行匿名拦截计数，绝不会将无痕模式下的敏感网址明文存入任何本地数据库，百分之百保障私密安全。'
+  },
+
   {
     id: 'g-desktop',
     category: 'desktop',

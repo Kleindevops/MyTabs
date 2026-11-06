@@ -2,12 +2,14 @@ import { setupSniffer, getTabResources, clearTabResources, addDOMMediaResource }
 import { setupHistoryCleaner, updatePrivacyRules } from './history-cleaner'
 import { setupContextMenus } from './context-menu'
 import { fetchSiteMetadata } from './site-meta'
+import { setupPopupBlocker } from './popup-blocker'
 import { loadSettings } from '../shared/storage'
 
 // Initialize core background modules
 setupSniffer()
 setupHistoryCleaner()
 setupContextMenus()
+setupPopupBlocker()
 
 // Load privacy rules into memory on launch
 loadSettings().then((settings) => {

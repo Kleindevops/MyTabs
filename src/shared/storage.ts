@@ -1,4 +1,4 @@
-import type { AppSettings, SearchEngine } from './types'
+import type { AppSettings, SearchEngine, PopupBlockerConfig, PopupBlockerStats } from './types'
 import { writeBackupToOneDrive } from './onedrive'
 import { PRESET_SITE_ICONS, extractHostname, findPresetForDomain, getFaviconCandidates, suggestTitleFromUrl } from './favicon'
 
@@ -39,6 +39,25 @@ export const DEFAULT_SEARCH_ENGINES: SearchEngine[] = [
     placeholder: '哔哩哔哩 (゜-゜)つロ 干杯~'
   }
 ]
+
+export const DEFAULT_POPUP_BLOCKER: PopupBlockerConfig = {
+  enabled: true,
+  blockNewTabPopups: true,
+  blockModalOverlays: true,
+  blockClickjacking: true,
+  restoreScroll: true,
+  whitelist: [
+    'login.live.com',
+    'accounts.google.com',
+    'github.com',
+    'alipay.com'
+  ],
+  stats: {
+    totalBlocked: 0,
+    todayBlocked: 0,
+    lastDate: new Date().toISOString().slice(0, 10)
+  }
+}
 
 export const DEFAULT_SETTINGS: AppSettings = {
   version: '1.0.0',
@@ -101,6 +120,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
     autoSync: true,
     backupFileName: 'mytabs_backup.json'
   },
+  popupBlocker: DEFAULT_POPUP_BLOCKER,
   showHotNews: true,
   vaultAutoLockMinutes: 5
 }
@@ -169,12 +189,25 @@ function mergeSettings(loaded: any): AppSettings {
     wallpaper.type = 'custom'
   }
 
+  const popupBlocker: PopupBlockerConfig = {
+    ...DEFAULT_POPUP_BLOCKER,
+    ...(loaded.popupBlocker || {}),
+    stats: {
+      ...DEFAULT_POPUP_BLOCKER.stats,
+      ...(loaded.popupBlocker?.stats || {})
+    },
+    whitelist: Array.isArray(loaded.popupBlocker?.whitelist)
+      ? loaded.popupBlocker.whitelist
+      : DEFAULT_POPUP_BLOCKER.whitelist
+  }
+
   return {
     ...DEFAULT_SETTINGS,
     ...loaded,
     categories,
     bookmarks,
     wallpaper,
+    popupBlocker,
     showHotNews: loaded.showHotNews !== false,
     ai: { ...DEFAULT_SETTINGS.ai, ...(loaded.ai || {}) },
     oneDrive: { ...DEFAULT_SETTINGS.oneDrive, ...(loaded.oneDrive || {}) },
@@ -241,6 +274,35 @@ export async function saveSettings(settings: AppSettings, triggerOneDrive = true
       }
     }
   })
+}
+
+export async function updatePopupBlockerStats(delta: number = 1): Promise<PopupBlockerStats> {
+  const settings = await loadSettings()
+  const today = new Date().toISOString().slice(0, 10)
+  if (!settings.popupBlocker) {
+    settings.popupBlocker = { ...DEFAULT_POPUP_BLOCKER }
+  }
+  if (settings.popupBlocker.stats.lastDate !== today) {
+    settings.popupBlocker.stats.todayBlocked = 0
+    settings.popupBlocker.stats.lastDate = today
+  }
+  settings.popupBlocker.stats.todayBlocked += delta
+  settings.popupBlocker.stats.totalBlocked += delta
+  await saveSettings(settings, false)
+  return settings.popupBlocker.stats
+}
+
+export async function resetPopupBlockerStats(): Promise<void> {
+  const settings = await loadSettings()
+  if (!settings.popupBlocker) {
+    settings.popupBlocker = { ...DEFAULT_POPUP_BLOCKER }
+  }
+  settings.popupBlocker.stats = {
+    totalBlocked: 0,
+    todayBlocked: 0,
+    lastDate: new Date().toISOString().slice(0, 10)
+  }
+  await saveSettings(settings, false)
 }
 
 export function exportSettingsAsJSON(settings: AppSettings): void {

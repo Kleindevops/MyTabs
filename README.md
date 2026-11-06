@@ -6,7 +6,7 @@
 > **为极致隐私与高效工作流而生。**  
 > 独创「桌面隐形暗门·密码锁私人收藏夹」，外表是优雅极简的 iTab / Windows 风格高颜值新标签页，暗藏端到端加密私密空间；全网盘本地直存云同步、原生流媒体资源嗅探、侧边栏 AI 智能副驾驶一应俱全。
 
-[![Version](https://img.shields.io/badge/Version-v1.0.3-blue.svg)](package.json)
+[![Version](https://img.shields.io/badge/Version-v1.0.4-blue.svg)](package.json)
 [![Chrome Extension](https://img.shields.io/badge/Chrome-Extension-4285F4?style=flat&logo=googlechrome&logoColor=white)](https://developer.chrome.com/docs/extensions/)
 [![Edge Addon](https://img.shields.io/badge/Microsoft%20Edge-Supported-0078D7?style=flat&logo=microsoftedge&logoColor=white)](https://microsoftedge.microsoft.com/)
 [![Encryption](https://img.shields.io/badge/Crypto-AES--256--GCM-success?style=flat&logo=securityscorecard&logoColor=white)](#1-核心杀手锏绝密隐形暗门私人收藏夹)
@@ -146,6 +146,13 @@
 * **访问后自动抹除**：匹配指定规则的网址，扩展访问后自动从本地历史记录中物理删除该 URL。
 * **自动无痕分流**：普通窗口中打开特定网址时，自动关闭该页并在无痕窗口中拉起。
 
+### 4. 智能弹窗拦截与隐私模式防御
+* **后台标签弹窗封堵**：扼杀网页通过隐蔽 JS 或用户点击空白处触发的后置弹窗（Pop-under）与广告连环轰炸。
+* **页面内流氓遮罩清理**：自动识别居中弹窗、强制关注/登录浮层并智能移除，网页滚动条被锁死时自动恢复平滑滚动。
+* **全屏透明点击劫持粉碎**：精准侦测并清除覆盖在页面正文上方的透明 <a> 诱导陷阱（Clickjacking）。
+* **【隐私模式协同拦截】**：在无痕窗口下同样生效（开启无痕授权后），且遵循最高零知识防痕规范，绝不记录任何无痕模式下的敏感网址明文！
+* **一键网页净化**：点击右上角扩展图标可随时一键净化当前页面的流氓弹窗与遮罩层。
+
 ---
 
 ## 📥 安装与加载步骤
@@ -209,6 +216,15 @@ npm run build
 <summary><b>Q4: 网盘里的备份文件安全吗？私人网址会不会被网盘看到？</b></summary>
 
 > **A:** 绝对安全。私人收藏夹在写入 JSON 之前，已经由 Web Crypto API 使用 **AES-256-GCM** 进行了端到端加密，云盘保存的只是一串完全不可读的乱码密文。没有您的主密码，世界上任何人都无法逆向解密。
+</details>
+
+<details>
+<summary><b>Q5: 在隐私无痕模式下，弹窗拦截功能可以正常拦截弹窗吗？</b></summary>
+
+> **A:** **完全可以正常拦截！**
+> 1. **权限前提**：Chromium 内核对隐私模式默认禁用所有扩展。您只需在浏览器 `chrome://extensions` 中找到 MyTabs 扩展，开启**【在无痕模式下允许】**开关即可。
+> 2. **运行机制**：MyTabs 采用 MV3 `spanning` 跨窗口架构，Background Service Worker 与页面内 Content Script 会同步监听无痕窗口中的导航与 DOM 事件，无痕模式下的恶意后置标签页（Pop-under）、全屏遮罩、透明点击劫持均会被毫秒级直接查杀。
+> 3. **零知识防痕保证**：普通模式下拦截器支持记录统计，而在无痕模式下拦截时，扩展**严格不记录任何无痕浏览 URL 明文**，只做匿名计数累加，杜绝通过插件记录产生隐私指纹。
 </details>
 
 ---

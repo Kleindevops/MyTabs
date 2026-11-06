@@ -43,6 +43,16 @@
       </div>
 
       <div class="flex items-center space-x-1.5 text-xs">
+        <!-- Clean Popups Button -->
+        <button
+          @click="cleanCurrentPagePopups"
+          title="一键净化当前页面的流氓弹窗与遮罩层"
+          class="px-2 py-1 rounded-lg bg-emerald-950/60 hover:bg-emerald-900/80 border border-emerald-500/30 text-emerald-300 hover:text-white transition-colors flex items-center space-x-1 text-[11px]"
+        >
+          <ShieldCheck class="w-3.5 h-3.5 text-emerald-400" />
+          <span>净化弹窗</span>
+        </button>
+
         <!-- Sort Toggle Button -->
         <button
           @click="toggleSort"
@@ -352,7 +362,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import {
-  Radio, Trash2, Video, Music, Image, Download, Copy, Check, Sparkles,
+  Radio, Trash2, Video, Music, Image, Download, Copy, Check, Sparkles, ShieldCheck,
   ExternalLink, ArrowUpDown, Play, Square, Crown, Flame, Terminal
 } from 'lucide-vue-next'
 import type { SniffedResource } from '../shared/types'
@@ -483,6 +493,20 @@ function unwrapMediaUrl(rawUrl: string): string {
     }
   } catch {}
   return rawUrl
+}
+
+async function cleanCurrentPagePopups() {
+  try {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
+    if (tab?.id) {
+      await chrome.tabs.sendMessage(tab.id, { type: 'MANUAL_CLEAN_PAGE_OVERLAYS' })
+      showToast('已完成当前网页弹窗与遮罩层净化！')
+    } else {
+      showToast('未找到活动网页')
+    }
+  } catch (err) {
+    showToast('当前页面受保护或暂无弹窗遮罩')
+  }
 }
 
 function openInNewTab(url: string) {
