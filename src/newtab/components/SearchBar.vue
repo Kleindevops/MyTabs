@@ -2,10 +2,10 @@
   <div class="relative w-full max-w-2xl mx-auto px-4 z-20">
     <div
       :class="[
-        'flex items-center w-full px-4 py-3 rounded-2xl glass-panel-light transition-all duration-200 shadow-glass',
+        'flex items-center w-full px-4 py-3 rounded-2xl glass-panel-light transition-all duration-200 shadow-glass border',
         isFocused
-          ? 'ring-2 ring-blue-400/60 bg-white/20 dark:bg-slate-900/45 backdrop-blur-xl border-white/30 shadow-glass-hover'
-          : 'hover:bg-white/15'
+          ? 'border-white/40 ring-1 ring-white/20 bg-white/20 dark:bg-slate-900/45 backdrop-blur-xl shadow-glass-hover'
+          : 'border-white/20 hover:bg-white/15 hover:border-white/30'
       ]"
     >
       <!-- Engine selector button -->
@@ -14,7 +14,7 @@
           @click="showEngineMenu = !showEngineMenu"
           class="flex items-center space-x-1.5 px-2.5 py-1.5 rounded-xl bg-white/15 hover:bg-white/25 text-white text-xs font-medium transition-all"
         >
-          <Search class="w-3.5 h-3.5 text-blue-300" />
+          <Search class="w-3.5 h-3.5 text-white/80" />
           <span>{{ currentEngine.name }}</span>
           <ChevronDown class="w-3 h-3 text-white/60 transition-transform duration-200" :class="{ 'rotate-180': showEngineMenu }" />
         </button>
@@ -31,7 +31,7 @@
             :class="[
               'w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium transition-colors text-left',
               engine.id === currentEngine.id
-                ? 'bg-blue-600 text-white'
+                ? 'bg-white/20 text-white font-semibold'
                 : 'text-slate-300 hover:text-white hover:bg-white/10'
             ]"
           >
