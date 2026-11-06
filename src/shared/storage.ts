@@ -96,7 +96,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
     { id: 'bm-med-3', title: '腾讯视频', url: 'https://v.qq.com', bgColor: '#ff6428', categoryId: 'cat-media', icon: PRESET_SITE_ICONS['v.qq.com']?.icon },
 
     // 个人空间 (初始测试数据)
-    { id: 'bm-pvt-1', title: '私人专属网盘', url: 'https://pan.baidu.com', bgColor: '#09aaff', categoryId: 'cat-vault', isPrivate: true, openInIncognito: true, icon: PRESET_SITE_ICONS['pan.baidu.com']?.icon }
+    { id: 'bm-pvt-1', title: '个人网盘', url: 'https://pan.baidu.com', bgColor: '#09aaff', categoryId: 'cat-vault', isPrivate: true, openInIncognito: true, icon: PRESET_SITE_ICONS['pan.baidu.com']?.icon }
   ],
   wallpaper: {
     type: 'bing',
@@ -130,13 +130,13 @@ const STORAGE_KEY = 'mytabs_app_settings'
 function mergeSettings(loaded: any): AppSettings {
   if (!loaded) return { ...DEFAULT_SETTINGS }
 
-  // Automatic Migration: Upgrade any existing '私密空间' category to '个人空间'
+  // Automatic Migration: Upgrade any legacy vault category to '个人空间'
   let categories = Array.isArray(loaded.categories) && loaded.categories.length > 0
     ? loaded.categories
     : DEFAULT_SETTINGS.categories
 
   categories = categories.map((c: any) => {
-    if (c.id === 'cat-vault' || c.name === '私密空间') {
+    if (c.id === 'cat-vault' || c.name === '\u79c1\u5bc6\u7a7a\u95f4') {
       return { ...c, name: '个人空间' }
     }
     return c
@@ -144,8 +144,8 @@ function mergeSettings(loaded: any): AppSettings {
 
   let bookmarks = Array.isArray(loaded.bookmarks) ? loaded.bookmarks : DEFAULT_SETTINGS.bookmarks
   bookmarks = bookmarks.map((b: any) => {
-    if (b.title === '个人私密网盘') {
-      b = { ...b, title: '私人专属网盘' }
+    if (b.title === '\u4e2a\u4eba\u79c1\u5bc6\u7f51\u76d8' || b.title === '私人专属网盘') {
+      b = { ...b, title: '个人网盘' }
     }
     // Fix accidental "Https" or "Http" title
     if ((b.title === 'Https' || b.title === 'Http') && b.url) {

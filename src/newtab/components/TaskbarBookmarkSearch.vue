@@ -14,7 +14,7 @@
     >
       <Search class="w-3.5 h-3.5 text-white/80 group-hover:text-white transition-colors shrink-0" />
       <span class="hidden sm:inline text-white/80 group-hover:text-white transition-colors truncate max-w-[90px] md:max-w-[120px]">
-        {{ isInVault ? '搜索私密网址...' : '搜索网址...' }}
+        {{ isInVault ? '搜索个人空间...' : '搜索网址...' }}
       </span>
       <kbd class="hidden lg:inline text-[9px] font-mono px-1.5 py-0.5 rounded bg-white/10 text-white/50 border border-white/10">
         Ctrl+F
@@ -44,7 +44,7 @@
               ref="inputRef"
               v-model="searchQuery"
               type="text"
-              :placeholder="isInVault ? '输入私密网址名称或域名，按回车快速定位...' : '输入网址名称或域名，按回车快速定位...'"
+              :placeholder="isInVault ? '输入个人空间网址名称或域名，按回车快速定位...' : '输入网址名称或域名，按回车快速定位...'"
               class="w-full pl-9 pr-8 py-2 rounded-xl bg-white/10 border border-white/15 text-white placeholder-white/40 text-xs sm:text-sm focus:outline-none focus:ring-1 focus:ring-white/25 focus:border-white/40 transition-all shadow-inner"
               @keydown.down.prevent="handleKeydownDown"
               @keydown.up.prevent="handleKeydownUp"
@@ -108,7 +108,7 @@
           >
             <Compass class="w-8 h-8 text-white/50 mb-2 animate-pulse" />
             <p class="text-xs text-white/70 font-medium">
-              {{ isInVault ? '请输入私密网址名称开始搜索' : '请输入网址名称开始搜索' }}
+              {{ isInVault ? '请输入个人空间网址名称开始搜索' : '请输入网址名称开始搜索' }}
             </p>
             <p class="text-[11px] text-white/40 mt-1">
               支持快速定位图标位置，自动切换分类并翻页高亮显示

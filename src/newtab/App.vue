@@ -506,7 +506,7 @@ function handleLocateBookmark(bm: BookmarkItem) {
     pendingCategoryId = bm.categoryId
     pendingLocateBookmark = bm
     showVaultModal.value = true
-    showToast('该网址位于私密分类中，请先解锁个人空间')
+    showToast('该网址位于个人空间中，请先解锁')
     return
   }
 
@@ -583,7 +583,7 @@ async function handleVaultUnlock(password: string) {
       pendingLocateBookmark = null
       nextTick(() => {
         bookmarkGridRef.value?.locateBookmark(bmToLocate.id)
-        showToast(`已定位到私密图标 “${bmToLocate.title}”`)
+        showToast(`已定位到网址 “${bmToLocate.title}”`)
       })
     }
   } else {
