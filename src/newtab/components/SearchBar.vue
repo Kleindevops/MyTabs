@@ -2,17 +2,15 @@
   <div class="relative w-full max-w-2xl mx-auto px-4 z-20">
     <div
       :class="[
-        'flex items-center w-full px-4 py-3 rounded-2xl glass-panel-light transition-all duration-200 shadow-glass border',
-        isFocused
-          ? 'border-white/40 ring-1 ring-white/20 bg-white/20 dark:bg-slate-900/45 backdrop-blur-xl shadow-glass-hover'
-          : 'border-white/20 hover:bg-white/15 hover:border-white/30'
+        'flex items-center w-full px-4 py-3 rounded-2xl glass-acrylic',
+        isFocused && 'glass-acrylic-focus'
       ]"
     >
       <!-- Engine selector button -->
       <div class="relative shrink-0">
         <button
           @click="showEngineMenu = !showEngineMenu"
-          class="flex items-center space-x-1.5 px-2.5 py-1.5 rounded-xl bg-white/15 hover:bg-white/25 text-white text-xs font-medium transition-all"
+          class="flex items-center space-x-1.5 px-2.5 py-1.5 rounded-xl bg-white/15 hover:bg-white/25 text-white text-xs font-medium transition-all shadow-[inset_1px_1px_0_rgba(255,255,255,0.35)] border border-white/15"
         >
           <Search class="w-3.5 h-3.5 text-white/80" />
           <span>{{ currentEngine.name }}</span>
@@ -22,7 +20,7 @@
         <!-- Dropdown menu -->
         <div
           v-if="showEngineMenu"
-          class="absolute left-0 top-full mt-2 w-44 rounded-2xl glass-panel p-1.5 space-y-1 shadow-2xl z-30 animate-in fade-in slide-in-from-top-2"
+          class="absolute left-0 top-full mt-2 w-44 rounded-2xl glass-acrylic p-1.5 space-y-1 shadow-2xl z-30 animate-in fade-in slide-in-from-top-2"
         >
           <button
             v-for="engine in engines"
@@ -31,7 +29,7 @@
             :class="[
               'w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium transition-colors text-left',
               engine.id === currentEngine.id
-                ? 'bg-white/20 text-white font-semibold'
+                ? 'bg-white/20 text-white font-semibold shadow-[inset_1px_1px_0_rgba(255,255,255,0.3)]'
                 : 'text-slate-300 hover:text-white hover:bg-white/10'
             ]"
           >
@@ -66,7 +64,7 @@
       <!-- Submit search button -->
       <button
         @click="performSearch"
-        class="p-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white shadow-md shadow-blue-500/30 transition-all shrink-0"
+        class="p-2 rounded-xl bg-blue-600/90 hover:bg-blue-500 text-white shadow-md shadow-blue-500/30 transition-all shrink-0 border border-blue-400/30 shadow-[inset_1px_1px_0_rgba(255,255,255,0.4)] active:scale-95"
       >
         <ArrowRight class="w-4 h-4" />
       </button>
