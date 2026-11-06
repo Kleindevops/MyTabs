@@ -1,7 +1,7 @@
 <template>
   <footer
-    class="fixed bottom-0 left-0 right-0 h-16 z-30 select-none glass-panel border-t border-white/10 shadow-[0_-8px_30px_rgba(0,0,0,0.5)] px-3 md:px-6 flex items-center justify-between"
-    style="background: rgba(15, 23, 42, 0.75);"
+    class="fixed bottom-0 left-0 right-0 h-16 z-30 select-none glass-panel-light border-t border-white/20 shadow-[0_-8px_32px_rgba(0,0,0,0.25)] px-3 md:px-6 flex items-center justify-between"
+    style="background: rgba(255, 255, 255, 0.12); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);"
   >
     <!-- Left: Start Menu & Category Switcher (Windows Start style) -->
     <div class="flex items-center space-x-1.5 shrink-0">
@@ -10,16 +10,25 @@
         @click="showStartMenu = !showStartMenu"
         title="分类导航与开始菜单"
         :class="[
-          'p-2 rounded-xl transition-all duration-200 flex items-center justify-center space-x-1.5',
-          showStartMenu ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/30' : 'bg-white/10 hover:bg-white/20 text-white/90'
+          'p-2 rounded-xl transition-all duration-200 flex items-center justify-center space-x-1.5 border border-white/15',
+          showStartMenu
+            ? 'bg-blue-600/90 text-white shadow-lg shadow-blue-500/30 ring-1 ring-blue-300/40'
+            : 'glass-panel-light hover:bg-white/20 text-white/90 shadow-sm'
         ]"
       >
-        <LayoutGrid class="w-4 h-4 text-blue-400 group-hover:text-white" />
+        <LayoutGrid class="w-4 h-4 text-blue-300 group-hover:text-white" />
         <span class="text-xs font-semibold hidden sm:inline">分类</span>
       </button>
 
       <!-- Category Pills (Quick switch on taskbar & drag drop targets) -->
-      <div class="hidden md:flex items-center space-x-1 bg-black/20 p-1 rounded-xl border border-white/5">
+      <div
+        class="hidden md:flex items-center space-x-1.5 p-1 rounded-2xl transition-all duration-300"
+        :class="[
+          isDragging
+            ? 'bg-slate-900/90 border-2 border-emerald-400/60 shadow-xl shadow-emerald-500/20 ring-2 ring-emerald-400/20 backdrop-blur-xl'
+            : 'glass-panel-light border border-white/10 shadow-md backdrop-blur-md'
+        ]"
+      >
         <button
           v-for="cat in displayedCategories"
           :key="cat.id"
@@ -29,23 +38,35 @@
           @dragleave="onCategoryDragLeave($event, cat)"
           @drop="onCategoryDrop($event, cat)"
           :class="[
-            'px-2.5 py-1 rounded-lg text-xs font-medium transition-all truncate max-w-[90px]',
+            'relative px-3 py-1.5 rounded-xl text-xs font-medium transition-all duration-200 flex items-center space-x-1.5 shrink-0 select-none truncate max-w-[120px]',
             dragOverCatId === cat.id
-              ? 'bg-emerald-600 text-white ring-2 ring-emerald-300 scale-105 shadow-md'
+              ? 'bg-emerald-600 text-white ring-2 ring-emerald-300 scale-105 shadow-md shadow-emerald-600/30'
               : activeCategoryId === cat.id
-                ? 'bg-white/25 text-white shadow-sm'
-                : 'text-white/60 hover:text-white hover:bg-white/10'
+                ? 'bg-white/25 text-white shadow-md shadow-black/10 backdrop-blur-md font-semibold'
+                : 'text-white/75 hover:text-white hover:bg-white/15'
           ]"
-          :title="`分类：${cat.name} (可拖拽网址图标至此处移动分类)`"
+          :title="isDragging ? `释放以将图标移动至「${cat.name}」` : `切换至「${cat.name}」分类`"
         >
-          {{ cat.name }}
+          <component :is="getCategoryIcon(cat)" class="w-3.5 h-3.5 opacity-80 shrink-0" />
+          <span class="truncate">{{ cat.name }}</span>
+        </button>
+
+        <!-- Quick Add Category Button -->
+        <button
+          v-if="!isDragging"
+          @click="$emit('add-category'); showStartMenu = false"
+          title="新建分类"
+          class="p-1.5 rounded-xl text-white/50 hover:text-white hover:bg-white/15 transition-colors shrink-0"
+        >
+          <Plus class="w-3.5 h-3.5" />
         </button>
       </div>
 
       <!-- Start Menu Popup -->
       <div
         v-if="showStartMenu"
-        class="absolute left-4 bottom-20 w-56 rounded-2xl glass-panel p-2 shadow-2xl border border-white/15 animate-in fade-in slide-in-from-bottom-2 z-50 space-y-1"
+        class="absolute left-4 bottom-20 w-56 rounded-2xl p-2 shadow-2xl border border-white/20 animate-in fade-in slide-in-from-bottom-2 z-50 space-y-1 backdrop-blur-2xl"
+        style="background: rgba(15, 23, 42, 0.88);"
       >
         <div class="px-2.5 py-1.5 text-[10px] font-semibold text-white/40 uppercase tracking-wider">
           书签分类目录
@@ -88,13 +109,13 @@
       class="flex-1 flex items-center justify-center px-2 sm:px-6 overflow-hidden max-w-2xl mx-auto"
       @wheel.prevent="handleWheel"
     >
-      <div class="flex items-center space-x-1.5 sm:space-x-3 bg-black/25 px-2.5 py-1.5 rounded-2xl border border-white/5">
+      <div class="flex items-center space-x-1.5 sm:space-x-3 glass-panel-light px-2.5 py-1.5 rounded-2xl border border-white/15 shadow-md backdrop-blur-md">
         <!-- Prev Page Button -->
         <button
           @click="prevPage"
           :disabled="currentPage <= 1"
           title="上一页 (或滑动滚轮)"
-          class="p-1 rounded-lg text-white/50 hover:text-white hover:bg-white/10 disabled:opacity-20 disabled:hover:bg-transparent transition-all shrink-0"
+          class="p-1 rounded-lg text-white/60 hover:text-white hover:bg-white/15 disabled:opacity-20 disabled:hover:bg-transparent transition-all shrink-0"
         >
           <ChevronLeft class="w-4 h-4" />
         </button>
@@ -149,7 +170,7 @@
             v-if="isAddOnThisPage"
             @click="$emit('add-bookmark')"
             title="添加网站到当前分类"
-            class="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 text-white/70 hover:text-white flex items-center justify-center transition-all shrink-0 hover:scale-110 active:scale-95"
+            class="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-white/15 hover:bg-white/25 border border-white/20 text-white/80 hover:text-white flex items-center justify-center transition-all shrink-0 hover:scale-110 active:scale-95 shadow-sm"
           >
             <Plus class="w-4 h-4" />
           </button>
@@ -160,7 +181,7 @@
           @click="nextPage"
           :disabled="currentPage >= totalPages"
           title="下一页 (或滑动滚轮)"
-          class="p-1 rounded-lg text-white/50 hover:text-white hover:bg-white/10 disabled:opacity-20 disabled:hover:bg-transparent transition-all shrink-0"
+          class="p-1 rounded-lg text-white/60 hover:text-white hover:bg-white/15 disabled:opacity-20 disabled:hover:bg-transparent transition-all shrink-0"
         >
           <ChevronRight class="w-4 h-4" />
         </button>
@@ -168,7 +189,7 @@
         <!-- Page Indicator Pill (e.g. 1/3) -->
         <span
           v-if="totalPages > 1"
-          class="text-[10px] font-mono text-white/50 px-1.5 py-0.5 rounded-md bg-white/5 shrink-0 hidden sm:inline"
+          class="text-[10px] font-mono text-white/80 px-2 py-0.5 rounded-md bg-white/15 border border-white/10 shadow-sm shrink-0 hidden sm:inline"
         >
           {{ currentPage }} / {{ totalPages }}
         </span>
@@ -181,9 +202,9 @@
       <button
         @click="$emit('open-onedrive')"
         title="数据备份与同步状态 (点击管理)"
-        class="flex items-center space-x-1.5 px-2 sm:px-2.5 py-1.5 rounded-xl bg-white/5 hover:bg-white/15 border border-white/10 text-white/80 hover:text-white transition-all text-xs"
+        class="flex items-center space-x-1.5 px-2.5 py-1.5 rounded-xl glass-panel-light hover:bg-white/20 border border-white/15 text-white/90 transition-all text-xs shadow-sm"
       >
-        <Cloud class="w-3.5 h-3.5 text-sky-400" />
+        <Cloud class="w-3.5 h-3.5 text-sky-300" />
         <span class="hidden lg:inline text-[11px] font-medium">数据备份</span>
       </button>
 
@@ -191,7 +212,7 @@
       <button
         @click="$emit('open-sidepanel')"
         title="打开 AI 侧边栏助手"
-        class="p-2 rounded-xl bg-gradient-to-r from-blue-600/30 to-purple-600/30 hover:from-blue-600/50 hover:to-purple-600/50 border border-blue-400/30 text-white transition-all hover:scale-105 active:scale-95 shadow-sm"
+        class="p-2 rounded-xl bg-gradient-to-r from-blue-500/30 to-purple-500/30 hover:from-blue-500/50 hover:to-purple-500/50 border border-white/20 text-white transition-all hover:scale-105 active:scale-95 shadow-sm backdrop-blur-md"
       >
         <Sparkles class="w-3.5 h-3.5 text-amber-300 transition-transform group-hover:rotate-12" />
       </button>
@@ -200,20 +221,20 @@
       <button
         @click="$emit('open-settings')"
         title="打开系统设置"
-        class="p-2 rounded-xl bg-white/5 hover:bg-white/15 border border-white/10 text-white/80 hover:text-white transition-all hover:scale-105 active:scale-95"
+        class="p-2 rounded-xl glass-panel-light hover:bg-white/20 border border-white/15 text-white/90 transition-all hover:scale-105 active:scale-95 shadow-sm"
       >
         <Settings class="w-3.5 h-3.5" />
       </button>
 
       <!-- Digital Clock & Date (Windows tray bottom right) -->
       <div
-        class="hidden sm:flex flex-col items-end justify-center px-2 py-0.5 rounded-xl text-right cursor-default hover:bg-white/5 transition-colors"
+        class="hidden sm:flex flex-col items-end justify-center px-2 py-0.5 rounded-xl text-right cursor-default hover:bg-white/10 transition-colors"
         title="当前时间"
       >
         <span class="text-xs font-semibold tracking-wider font-mono text-white/90 leading-tight">
           {{ trayTime }}
         </span>
-        <span class="text-[9px] text-white/50 font-mono leading-tight">
+        <span class="text-[9px] text-white/60 font-mono leading-tight">
           {{ trayDate }}
         </span>
       </div>
@@ -225,7 +246,7 @@
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import {
   LayoutGrid, ChevronLeft, ChevronRight, Plus, Check,
-  Cloud, Sparkles, Settings
+  Cloud, Sparkles, Settings, Folder, Lock
 } from 'lucide-vue-next'
 import type { CategoryItem, BookmarkItem, AppSettings } from '../../shared/types'
 import { isSmallFavicon } from '../../shared/favicon'
@@ -235,6 +256,8 @@ const props = defineProps<{
   activeCategoryId: string
   bookmarks: BookmarkItem[]
   settings: AppSettings
+  isDragging?: boolean
+  isVaultUnlocked?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -263,15 +286,27 @@ function isSmallIcon(bm: BookmarkItem): boolean {
   return isSmallFavicon(bm.icon)
 }
 
+function getCategoryIcon(cat: CategoryItem) {
+  if (cat.isPrivate || cat.id === 'cat-vault') {
+    return Lock
+  }
+  return Folder
+}
+
 const showStartMenu = ref(false)
 const currentPage = ref(1)
 const pageSize = ref(8) // Number of bookmark icons per page on taskbar
 const dragOverCatId = ref<string | null>(null)
 let hoverCategoryTimer: any = null
 
-// Visible categories on taskbar (exclude private vault category)
+// Visible categories on taskbar (exclude private vault category unless unlocked)
 const displayedCategories = computed(() => {
-  return props.categories.filter((c) => !c.isPrivate && c.id !== 'cat-vault')
+  return (props.categories || []).filter((c) => {
+    if (c.isPrivate || c.id === 'cat-vault') {
+      return props.isVaultUnlocked === true
+    }
+    return true
+  })
 })
 
 const trayTime = ref('12:00')

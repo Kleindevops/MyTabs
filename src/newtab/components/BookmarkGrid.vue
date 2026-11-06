@@ -113,7 +113,7 @@
 
     <!-- Bottom Pagination Dots & Arrows Pill (Only visible when totalPages > 1) -->
     <div v-if="totalPages > 1" class="flex items-center justify-center space-x-2 mt-2 z-20">
-      <div class="flex items-center space-x-1.5 px-3 py-1 rounded-full bg-slate-900/65 border border-white/10 backdrop-blur-md shadow-md">
+      <div class="flex items-center space-x-1.5 px-3 py-1 rounded-full glass-panel-light border border-white/15 backdrop-blur-md shadow-md">
         <!-- Prev Button -->
         <button
           @click="prevPage"

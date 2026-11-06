@@ -25,22 +25,8 @@
         <SearchBar />
       </div>
 
-      <!-- Desktop Category Navigation & Drag Drop Bar (Zero-jump steady height) -->
-      <div class="w-full max-w-4xl mx-auto my-1 z-20">
-        <CategoryNav
-          :categories="settings.categories || []"
-          :activeCategoryId="activeCategoryId"
-          :isDragging="isDraggingBookmark"
-          :draggedBookmark="draggedBookmarkItem"
-          :isVaultUnlocked="isVaultUnlocked"
-          @select-category="handleCategorySelect"
-          @add-category="handleAddCategory"
-          @move-bookmark="handleMoveBookmark"
-        />
-      </div>
-
       <!-- Desktop Bookmarks Grid (Interactive desktop icons with labels, matching iTab) -->
-      <div class="w-full mt-1 max-w-5xl relative">
+      <div class="w-full mt-2 max-w-5xl relative">
         <BookmarkGrid
           :bookmarks="displayedBookmarks"
           :categories="settings.categories || []"
@@ -60,6 +46,8 @@
       :activeCategoryId="activeCategoryId"
       :bookmarks="settings.bookmarks || []"
       :settings="settings"
+      :isDragging="isDraggingBookmark"
+      :isVaultUnlocked="isVaultUnlocked"
       @select-category="handleCategorySelect"
       @add-category="handleAddCategory"
       @add-bookmark="showAddBookmark = true"
@@ -174,7 +162,6 @@ import { FolderInput, CheckCircle2 } from 'lucide-vue-next'
 import ClockWidget from './components/ClockWidget.vue'
 import HotNewsWidget from './components/HotNewsWidget.vue'
 import SearchBar from './components/SearchBar.vue'
-import CategoryNav from './components/CategoryNav.vue'
 import BookmarkGrid from './components/BookmarkGrid.vue'
 import WindowsTaskbar from './components/WindowsTaskbar.vue'
 import BookmarkContextMenu from './components/BookmarkContextMenu.vue'
