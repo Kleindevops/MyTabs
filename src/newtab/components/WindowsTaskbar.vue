@@ -20,6 +20,15 @@
         <span class="text-xs font-semibold hidden sm:inline">分类</span>
       </button>
 
+      <!-- Taskbar Bookmark Search (Windows 11 style) -->
+      <TaskbarBookmarkSearch
+        :bookmarks="bookmarks"
+        :categories="categories"
+        :isVaultUnlocked="isVaultUnlocked"
+        @locate="onLocateBookmark"
+        @open="openBookmark"
+      />
+
       <!-- Category Pills (Quick switch on taskbar & drag drop targets) -->
       <div
         class="hidden md:flex items-center space-x-1.5 p-1 rounded-2xl transition-all duration-300"
@@ -250,6 +259,7 @@ import {
 } from 'lucide-vue-next'
 import type { CategoryItem, BookmarkItem, AppSettings } from '../../shared/types'
 import { isSmallFavicon } from '../../shared/favicon'
+import TaskbarBookmarkSearch from './TaskbarBookmarkSearch.vue'
 
 const props = defineProps<{
   categories: CategoryItem[]
@@ -270,7 +280,18 @@ const emit = defineEmits<{
   (e: 'open-sidepanel'): void
   (e: 'open-onedrive'): void
   (e: 'move-bookmark', payload: { bookmarkId: string; targetCategoryId: string }): void
+  (e: 'locate-bookmark', bm: BookmarkItem): void
 }>()
+
+function onLocateBookmark(bm: BookmarkItem) {
+  if (bm.categoryId === props.activeCategoryId) {
+    const idx = currentCategoryBookmarks.value.findIndex(b => b.id === bm.id)
+    if (idx !== -1) {
+      currentPage.value = Math.floor(idx / pageSize.value) + 1
+    }
+  }
+  emit('locate-bookmark', bm)
+}
 
 const smallIconMap = ref<Record<string, boolean>>({})
 

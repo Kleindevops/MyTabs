@@ -32,33 +32,53 @@
         <div
           v-for="(bm, index) in pagedBookmarks"
           :key="bm.id"
+          :id="'grid-bookmark-' + bm.id"
           :draggable="true"
           @dragstart="handleDragStart($event, bm, index)"
           @dragend="handleDragEnd"
           @dragover.prevent="handleDragOver($event, bm)"
           @dragleave="handleDragLeave($event, bm)"
           @drop="handleDrop($event, bm)"
-          class="group relative flex flex-col items-center cursor-pointer cursor-grab active:cursor-grabbing w-20 transition-transform duration-200 hover:scale-105 active:scale-95"
+          class="group relative flex flex-col items-center cursor-pointer cursor-grab active:cursor-grabbing w-20 transition-all duration-300 hover:scale-105 active:scale-95"
           :class="[
             draggingBmId === bm.id ? 'opacity-30 scale-90' : '',
-            dragOverBmId === bm.id && draggingBmId !== bm.id ? 'scale-110 ring-2 ring-blue-400/80 rounded-2xl bg-blue-500/15 shadow-xl' : ''
+            dragOverBmId === bm.id && draggingBmId !== bm.id ? 'scale-110 ring-2 ring-blue-400/80 rounded-2xl bg-blue-500/15 shadow-xl' : '',
+            highlightedBmId === bm.id ? 'scale-110 z-30' : ''
           ]"
           @click="openBookmark(bm)"
           @contextmenu.prevent="$emit('contextmenu', $event, bm)"
         >
+          <!-- Floating "📍 在这里" Pointer Pill when highlighted -->
+          <div
+            v-if="highlightedBmId === bm.id"
+            class="absolute -top-7 px-2.5 py-0.5 rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-[10px] font-bold shadow-xl border border-white/30 animate-bounce flex items-center space-x-1 whitespace-nowrap z-40"
+          >
+            <MapPin class="w-3 h-3 text-amber-300" />
+            <span>在这里</span>
+          </div>
+
           <!-- Icon Container (Squircle) -->
           <div
             class="w-14 h-14 md:w-16 md:h-16 rounded-2xl md:rounded-3xl flex items-center justify-center transition-all duration-300 relative overflow-hidden pointer-events-none select-none"
             :class="[
-              !bm.bgColor || bm.bgColor === 'transparent'
-                ? (isSmallIcon(bm)
-                    ? 'bg-white/15 hover:bg-white/25 border border-white/20 shadow-md backdrop-blur-md'
-                    : (bm.icon ? 'bg-transparent border border-transparent hover:bg-white/10 hover:border-white/20' : 'bg-white/10 hover:bg-white/20 border border-white/20 shadow-lg')
+              highlightedBmId === bm.id
+                ? 'ring-4 ring-blue-400 ring-offset-2 ring-offset-slate-900 shadow-[0_0_35px_rgba(59,130,246,0.95)]'
+                : (!bm.bgColor || bm.bgColor === 'transparent'
+                    ? (isSmallIcon(bm)
+                        ? 'bg-white/15 hover:bg-white/25 border border-white/20 shadow-md backdrop-blur-md'
+                        : (bm.icon ? 'bg-transparent border border-transparent hover:bg-white/10 hover:border-white/20' : 'bg-white/10 hover:bg-white/20 border border-white/20 shadow-lg')
+                      )
+                    : 'border border-white/20 shadow-lg group-hover:shadow-2xl'
                   )
-                : 'border border-white/20 shadow-lg group-hover:shadow-2xl'
             ]"
             :style="bm.bgColor && bm.bgColor !== 'transparent' ? { backgroundColor: bm.bgColor } : {}"
           >
+            <!-- Ping Ripple Effect when highlighted -->
+            <div
+              v-if="highlightedBmId === bm.id"
+              class="absolute -inset-2 rounded-2xl md:rounded-3xl bg-blue-400/40 border-2 border-blue-400 animate-ping pointer-events-none"
+            ></div>
+
             <!-- Favicon or Initial Character -->
             <img
               v-if="bm.icon"
@@ -162,8 +182,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
-import { Plus, ChevronLeft, ChevronRight } from 'lucide-vue-next'
+import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
+import { Plus, ChevronLeft, ChevronRight, MapPin } from 'lucide-vue-next'
 import type { BookmarkItem, CategoryItem } from '../../shared/types'
 import { isSmallFavicon } from '../../shared/favicon'
 
@@ -187,6 +207,8 @@ const currentPage = ref(1)
 
 const draggingBmId = ref<string | null>(null)
 const dragOverBmId = ref<string | null>(null)
+const highlightedBmId = ref<string | null>(null)
+let highlightTimer: any = null
 const smallIconMap = ref<Record<string, boolean>>({})
 
 // Total pages needed: total slots = bookmarks + 1 ("添加" button)
@@ -312,6 +334,7 @@ onMounted(() => {
 onUnmounted(() => {
   window.removeEventListener('keydown', handleKeydown)
   if (dragPageHoverTimer) clearTimeout(dragPageHoverTimer)
+  if (highlightTimer) clearTimeout(highlightTimer)
 })
 
 function handleIconLoaded(id: string, ev: Event) {
@@ -398,4 +421,32 @@ function openBookmark(bm: BookmarkItem) {
   }
   window.open(bm.url, '_blank')
 }
+
+function locateBookmark(bmId: string) {
+  const list = props.bookmarks || []
+  const index = list.findIndex(b => b.id === bmId)
+  if (index !== -1) {
+    const targetPage = Math.floor(index / PAGE_SIZE) + 1
+    currentPage.value = targetPage
+    highlightedBmId.value = bmId
+
+    if (highlightTimer) clearTimeout(highlightTimer)
+    highlightTimer = setTimeout(() => {
+      highlightedBmId.value = null
+    }, 3500)
+
+    nextTick(() => {
+      const el = document.getElementById(`grid-bookmark-${bmId}`)
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+      }
+    })
+  }
+}
+
+defineExpose({
+  locateBookmark,
+  goToPage,
+  currentPage
+})
 </script>

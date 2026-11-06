@@ -28,6 +28,7 @@
       <!-- Desktop Bookmarks Grid (Interactive desktop icons with labels, matching iTab) -->
       <div class="w-full mt-2 max-w-5xl relative">
         <BookmarkGrid
+          ref="bookmarkGridRef"
           :bookmarks="displayedBookmarks"
           :categories="settings.categories || []"
           :activeCategoryId="activeCategoryId"
@@ -57,6 +58,7 @@
       @open-sidepanel="openSidePanel"
       @open-onedrive="openSettingsTab('onedrive')"
       @move-bookmark="handleMoveBookmark"
+      @locate-bookmark="handleLocateBookmark"
     />
 
     <!-- Floating Draggable & Collapsible Hot News Widget -->
@@ -159,7 +161,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, nextTick, onMounted, onUnmounted } from 'vue'
 import { FolderInput, CheckCircle2 } from 'lucide-vue-next'
 import ClockWidget from './components/ClockWidget.vue'
 import HotNewsWidget from './components/HotNewsWidget.vue'
@@ -240,7 +242,9 @@ const availableMoveCategories = computed(() => {
 
 const vaultModalRef = ref<any>(null)
 const changePasswordModalRef = ref<any>(null)
+const bookmarkGridRef = ref<InstanceType<typeof BookmarkGrid> | null>(null)
 let pendingCategoryId: string | null = null
+let pendingLocateBookmark: BookmarkItem | null = null
 
 const wallpaperStyle = computed(() => {
   const wp = settings.value?.wallpaper || DEFAULT_SETTINGS.wallpaper
@@ -456,6 +460,31 @@ function handleCategorySelect(cat: CategoryItem) {
   activeCategoryId.value = cat.id
 }
 
+function handleLocateBookmark(bm: BookmarkItem) {
+  const targetCat = settings.value.categories?.find(c => c.id === bm.categoryId)
+  const isPrivate = targetCat?.isPrivate || bm.categoryId === 'cat-vault'
+
+  if (isPrivate && !isVaultUnlocked.value) {
+    pendingCategoryId = bm.categoryId
+    pendingLocateBookmark = bm
+    showVaultModal.value = true
+    showToast('该网址位于私密分类中，请先解锁个人空间')
+    return
+  }
+
+  // Switch category if needed
+  if (activeCategoryId.value !== bm.categoryId) {
+    activeCategoryId.value = bm.categoryId
+  }
+
+  // Locate in BookmarkGrid on next tick after reactive update
+  nextTick(() => {
+    bookmarkGridRef.value?.locateBookmark(bm.id)
+    const catName = targetCat?.name || '当前分类'
+    showToast(`已在「${catName}」中定位到图标 “${bm.title}”`)
+  })
+}
+
 function handleClockDoubleClicked() {
   // If currently inside vault, double-clicking toggles back to normal first category and locks the vault
   if (activeCategoryId.value === 'cat-vault') {
@@ -510,6 +539,15 @@ async function handleVaultUnlock(password: string) {
     startVaultAutoLockTimer()
     activeCategoryId.value = pendingCategoryId || 'cat-vault'
     pendingCategoryId = null
+
+    if (pendingLocateBookmark) {
+      const bmToLocate = pendingLocateBookmark
+      pendingLocateBookmark = null
+      nextTick(() => {
+        bookmarkGridRef.value?.locateBookmark(bmToLocate.id)
+        showToast(`已定位到私密图标 “${bmToLocate.title}”`)
+      })
+    }
   } else {
     vaultModalRef.value?.showError('密码错误，请重新输入')
   }
@@ -518,6 +556,7 @@ async function handleVaultUnlock(password: string) {
 function handleVaultCancel() {
   showVaultModal.value = false
   pendingCategoryId = null
+  pendingLocateBookmark = null
 }
 
 function handleOpenVaultSetup() {

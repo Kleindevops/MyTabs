@@ -1,6 +1,8 @@
 node_modules
 dist
 MyTabs.zip
+dist.zip
+*.zip
 *.log
 .DS_Store
 Thumbs.db
