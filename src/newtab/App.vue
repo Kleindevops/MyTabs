@@ -66,7 +66,7 @@
 
     <!-- Floating Draggable & Collapsible Hot News Widget -->
     <HotNewsWidget
-      v-if="settings.showHotNews !== false"
+      v-if="settings.showHotNews !== false && !isCurrentInVault"
       @close="handleCloseHotNews"
     />
 
@@ -235,6 +235,12 @@ function showToast(msg: string) {
     toastMessage.value = null
   }, 2500)
 }
+
+const isCurrentInVault = computed(() => {
+  if (activeCategoryId.value === 'cat-vault') return true
+  const currentCat = (settings.value.categories || []).find((c) => c.id === activeCategoryId.value)
+  return !!currentCat?.isPrivate
+})
 
 const availableMoveCategories = computed(() => {
   const currentCatId = activeCategoryId.value

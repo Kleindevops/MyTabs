@@ -25,6 +25,7 @@
       <TaskbarBookmarkSearch
         :bookmarks="bookmarks"
         :categories="categories"
+        :activeCategoryId="activeCategoryId"
         :isVaultUnlocked="isVaultUnlocked"
         @locate="onLocateBookmark"
         @open="openBookmark"
