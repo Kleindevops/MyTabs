@@ -116,6 +116,8 @@
       ref="vaultModalRef"
       v-if="showVaultModal"
       :isFirstTime="!settings.vaultVerifier"
+      :salt="settings.salt"
+      :verifier="settings.vaultVerifier"
       @unlock="handleVaultUnlock"
       @cancel="handleVaultCancel"
     />
@@ -442,53 +444,45 @@ function handleCloseHotNews() {
 
 function handleCategorySelect(cat: CategoryItem) {
   if (cat.isPrivate && !isVaultUnlocked.value) {
-    if (!settings.value.vaultVerifier) {
-      isVaultUnlocked.value = true
-      activeCategoryId.value = cat.id
-      startVaultAutoLockTimer()
-      return
-    }
     pendingCategoryId = cat.id
     showVaultModal.value = true
     return
+  }
+  // If leaving vault to a non-private category, lock the vault
+  if (activeCategoryId.value === 'cat-vault' && !cat.isPrivate) {
+    isVaultUnlocked.value = false
+    stopVaultAutoLockTimer()
   }
   activeCategoryId.value = cat.id
 }
 
 function handleClockDoubleClicked() {
-  // If currently inside vault, double-clicking toggles back to normal first category
+  // If currently inside vault, double-clicking toggles back to normal first category and locks the vault
   if (activeCategoryId.value === 'cat-vault') {
+    isVaultUnlocked.value = false
+    stopVaultAutoLockTimer()
     if (settings.value.categories && settings.value.categories.length > 0) {
       activeCategoryId.value = settings.value.categories[0].id
     }
     return
   }
 
-  // If already unlocked, navigate directly
-  if (isVaultUnlocked.value) {
-    activeCategoryId.value = 'cat-vault'
-    startVaultAutoLockTimer()
-    return
-  }
-
-  // If initial password is empty (no verifier set), open directly
-  if (!settings.value.vaultVerifier) {
-    isVaultUnlocked.value = true
-    activeCategoryId.value = 'cat-vault'
-    startVaultAutoLockTimer()
-    return
-  }
-
-  // Password configured and locked: show unlock modal
+  // Double-clicking while outside vault: show transparent unlock prompt
   pendingCategoryId = 'cat-vault'
   showVaultModal.value = true
 }
 
 async function handleClearVaultPassword() {
-  if (confirm('确定要清除个人空间密码吗？清除后将恢复为空密码，双击时间即可直接进入。')) {
+  if (confirm('确定要清除个人空间密码吗？清除后下次双击时间可重新设置新密码。')) {
     settings.value.vaultVerifier = undefined
     settings.value.salt = undefined
+    isVaultUnlocked.value = false
+    stopVaultAutoLockTimer()
     await saveSettings(settings.value)
+    if (activeCategoryId.value === 'cat-vault' && settings.value.categories && settings.value.categories.length > 0) {
+      activeCategoryId.value = settings.value.categories[0].id
+    }
+    showToast('个人空间密码已重置')
   }
 }
 
@@ -503,10 +497,8 @@ async function handleVaultUnlock(password: string) {
     isVaultUnlocked.value = true
     showVaultModal.value = false
     startVaultAutoLockTimer()
-    if (pendingCategoryId) {
-      activeCategoryId.value = pendingCategoryId
-      pendingCategoryId = null
-    }
+    activeCategoryId.value = pendingCategoryId || 'cat-vault'
+    pendingCategoryId = null
     return
   }
 
@@ -516,10 +508,8 @@ async function handleVaultUnlock(password: string) {
     isVaultUnlocked.value = true
     showVaultModal.value = false
     startVaultAutoLockTimer()
-    if (pendingCategoryId) {
-      activeCategoryId.value = pendingCategoryId
-      pendingCategoryId = null
-    }
+    activeCategoryId.value = pendingCategoryId || 'cat-vault'
+    pendingCategoryId = null
   } else {
     vaultModalRef.value?.showError('密码错误，请重新输入')
   }

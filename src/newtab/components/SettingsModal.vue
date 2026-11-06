@@ -323,7 +323,7 @@
                   <div class="font-medium text-slate-200">个人空间密码保护状态</div>
                   <div class="text-emerald-400 mt-0.5 flex items-center gap-1">
                     <ShieldCheck class="w-3.5 h-3.5" />
-                    <span>{{ settings.vaultVerifier ? '已启用主密码保护' : '当前为空密码（双击桌面时间即可直接进入）' }}</span>
+                    <span>{{ settings.vaultVerifier ? '已启用主密码保护' : '未设置主密码（双击桌面时间即可设置）' }}</span>
                   </div>
                 </div>
                 <div class="flex items-center space-x-2">
