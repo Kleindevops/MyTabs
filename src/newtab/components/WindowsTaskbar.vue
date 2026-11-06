@@ -103,11 +103,11 @@
         class="pointer-events-auto flex items-center space-x-1.5 sm:space-x-3 glass-panel-light px-2.5 py-1.5 rounded-2xl border transition-all duration-200 shadow-md backdrop-blur-md"
         :class="[
           isDockDragOver
-            ? 'border-blue-400/80 bg-blue-600/30 ring-2 ring-blue-400/50 shadow-xl shadow-blue-500/20 scale-105'
-            : 'border-white/15'
+            ? 'border-blue-400/90 bg-blue-600/35 ring-2 ring-blue-400 shadow-[0_0_25px_rgba(59,130,246,0.5)] scale-105'
+            : (isDragging ? 'border-blue-400/50 bg-white/20 ring-1 ring-blue-400/30 animate-pulse' : 'border-white/15')
         ]"
+        @dragenter.prevent="onDockDragEnter"
         @dragover.prevent="onDockDragOver"
-        @dragenter.prevent="onDockDragOver"
         @dragleave="onDockDragLeave"
         @drop="onDockDrop"
         @wheel.prevent="handleWheel"
@@ -140,7 +140,7 @@
             @click="openBookmark(bm)"
             @contextmenu.prevent="$emit('contextmenu', $event, bm)"
             class="group relative flex flex-col items-center cursor-pointer shrink-0 transition-transform duration-200 hover:scale-110 active:scale-95"
-            :title="`${bm.title} (右键可取消固定)`"
+            :title="bm.title"
           >
             <!-- Squircle Icon -->
             <div
@@ -194,8 +194,9 @@
           class="flex items-center space-x-2 px-2 py-1 text-xs text-white/70 select-none"
         >
           <Pin class="w-3.5 h-3.5 text-blue-300 opacity-80" />
-          <span class="text-[11px]">右键桌面图标可固定到底栏</span>
+          <span class="text-[11px]">{{ isDockDragOver ? '松开立即固定到底部栏' : '拖拽桌面图标到此处固定' }}</span>
           <button
+            v-if="!isDockDragOver"
             @click="$emit('add-bookmark', { defaultPinned: true })"
             class="px-2 py-0.5 rounded-lg bg-white/15 hover:bg-white/25 text-white text-[11px] font-medium transition-colors"
           >
@@ -273,6 +274,7 @@ const props = defineProps<{
   bookmarks: BookmarkItem[]
   settings: AppSettings
   isDragging?: boolean
+  draggedBookmark?: BookmarkItem | null
   isVaultUnlocked?: boolean
 }>()
 
@@ -327,6 +329,23 @@ const dragOverCatId = ref<string | null>(null)
 let hoverCategoryTimer: any = null
 
 const isDockDragOver = ref(false)
+let dockDragCounter = 0
+
+watch(() => props.isDragging, (val) => {
+  if (!val) {
+    dockDragCounter = 0
+    isDockDragOver.value = false
+  }
+})
+
+function onDockDragEnter(e: DragEvent) {
+  e.preventDefault()
+  dockDragCounter++
+  if (e.dataTransfer) {
+    e.dataTransfer.dropEffect = 'copy'
+  }
+  isDockDragOver.value = true
+}
 
 function onDockDragOver(e: DragEvent) {
   e.preventDefault()
@@ -337,15 +356,16 @@ function onDockDragOver(e: DragEvent) {
 }
 
 function onDockDragLeave(e: DragEvent) {
-  const currentTarget = e.currentTarget as HTMLElement
-  const relatedTarget = e.relatedTarget as HTMLElement
-  if (!currentTarget || !relatedTarget || !currentTarget.contains(relatedTarget)) {
+  dockDragCounter--
+  if (dockDragCounter <= 0) {
+    dockDragCounter = 0
     isDockDragOver.value = false
   }
 }
 
 function onDockDrop(e: DragEvent) {
   e.preventDefault()
+  dockDragCounter = 0
   isDockDragOver.value = false
   let bmId: string | null = null
   try {
@@ -359,6 +379,9 @@ function onDockDrop(e: DragEvent) {
   }
   if (!bmId) {
     bmId = e.dataTransfer?.getData('text/plain') || null
+  }
+  if (!bmId && props.draggedBookmark) {
+    bmId = props.draggedBookmark.id
   }
   if (bmId) {
     emit('pin-bookmark', bmId)

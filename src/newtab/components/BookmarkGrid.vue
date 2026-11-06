@@ -353,7 +353,7 @@ function handleDragStart(e: DragEvent, bm: BookmarkItem, indexOnPage: number) {
   draggingBmId.value = bm.id
   const globalIndex = (currentPage.value - 1) * PAGE_SIZE + indexOnPage
   if (e.dataTransfer) {
-    e.dataTransfer.effectAllowed = 'move'
+    e.dataTransfer.effectAllowed = 'copyMove'
     e.dataTransfer.setData('application/json', JSON.stringify({
       bookmarkId: bm.id,
       sourceCategoryId: bm.categoryId,

@@ -48,6 +48,7 @@
       :bookmarks="settings.bookmarks || []"
       :settings="settings"
       :isDragging="isDraggingBookmark"
+      :draggedBookmark="draggedBookmarkItem"
       :isVaultUnlocked="isVaultUnlocked"
       @select-category="handleCategorySelect"
       @add-category="handleAddCategory"
@@ -82,7 +83,6 @@
       @edit-bookmark="onContextEditBookmark"
       @delete="onContextDelete"
       @move-to-category="handleContextMenuMoveBookmark"
-      @toggle-pin-taskbar="handleTogglePinTaskbar"
     />
 
     <!-- Toast Feedback Notification -->
@@ -325,27 +325,13 @@ function openAddBookmarkFromTaskbar(payload?: { defaultPinned?: boolean }) {
   showAddBookmark.value = true
 }
 
-function handleTogglePinTaskbar(bm: BookmarkItem) {
-  if (!settings.value.bookmarks) return
-  const idx = settings.value.bookmarks.findIndex(b => b.id === bm.id)
-  if (idx !== -1) {
-    const isNowPinned = !settings.value.bookmarks[idx].isPinnedToTaskbar
-    settings.value.bookmarks[idx] = {
-      ...settings.value.bookmarks[idx],
-      isPinnedToTaskbar: isNowPinned
-    }
-    saveSettings(settings.value)
-    showToast(isNowPinned ? `已固定「${bm.title}」到底部任务栏` : `已从底部任务栏取消固定「${bm.title}」`)
-  }
-}
-
 function handlePinBookmarkFromDrag(bookmarkId: string) {
   if (!settings.value.bookmarks) return
   const idx = settings.value.bookmarks.findIndex(b => b.id === bookmarkId)
   if (idx === -1) return
   const bm = settings.value.bookmarks[idx]
   if (bm.isPinnedToTaskbar) {
-    showToast(`「${bm.title}」已在底部任务栏中`)
+    showToast(`「${bm.title}」已固定在底部常用网站栏`)
     return
   }
   settings.value.bookmarks[idx] = {
@@ -353,7 +339,7 @@ function handlePinBookmarkFromDrag(bookmarkId: string) {
     isPinnedToTaskbar: true
   }
   saveSettings(settings.value)
-  showToast(`已固定「${bm.title}」到底部任务栏`)
+  showToast(`已成功固定「${bm.title}」到底部常用网站栏`)
 }
 
 function handleSaveEditIcon(payload: { id: string; icon?: string; bgColor?: string }) {
