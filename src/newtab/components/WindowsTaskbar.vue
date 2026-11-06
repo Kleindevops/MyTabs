@@ -100,7 +100,16 @@
       class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none z-10 flex items-center justify-center max-w-[calc(100vw-280px)] sm:max-w-xl md:max-w-2xl"
     >
       <div
-        class="pointer-events-auto flex items-center space-x-1.5 sm:space-x-3 glass-panel-light px-2.5 py-1.5 rounded-2xl border border-white/15 shadow-md backdrop-blur-md"
+        class="pointer-events-auto flex items-center space-x-1.5 sm:space-x-3 glass-panel-light px-2.5 py-1.5 rounded-2xl border transition-all duration-200 shadow-md backdrop-blur-md"
+        :class="[
+          isDockDragOver
+            ? 'border-blue-400/80 bg-blue-600/30 ring-2 ring-blue-400/50 shadow-xl shadow-blue-500/20 scale-105'
+            : 'border-white/15'
+        ]"
+        @dragover.prevent="onDockDragOver"
+        @dragenter.prevent="onDockDragOver"
+        @dragleave="onDockDragLeave"
+        @drop="onDockDrop"
         @wheel.prevent="handleWheel"
       >
         <!-- Invisible spacer on left to keep icons perfectly centered when totalPages > 1 -->
@@ -112,8 +121,9 @@
           {{ currentPage }} / {{ totalPages }}
         </span>
 
-        <!-- Prev Page Button -->
+        <!-- Prev Page Button (Only visible when totalPages > 1) -->
         <button
+          v-if="totalPages > 1"
           @click="prevPage"
           :disabled="currentPage <= 1"
           title="上一页 (或滑动滚轮)"
@@ -130,7 +140,7 @@
             @click="openBookmark(bm)"
             @contextmenu.prevent="$emit('contextmenu', $event, bm)"
             class="group relative flex flex-col items-center cursor-pointer shrink-0 transition-transform duration-200 hover:scale-110 active:scale-95"
-            :title="`${bm.title} (右键打开菜单)`"
+            :title="`${bm.title} (右键可取消固定)`"
           >
             <!-- Squircle Icon -->
             <div
@@ -170,16 +180,32 @@
           <!-- Add Bookmark Button (shown when on last page or fitting) -->
           <button
             v-if="isAddOnThisPage"
-            @click="$emit('add-bookmark')"
-            title="添加网站到当前分类"
+            @click="$emit('add-bookmark', { defaultPinned: true })"
+            title="添加常用网站并固定到底部栏"
             class="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-white/15 hover:bg-white/25 border border-white/20 text-white/80 hover:text-white flex items-center justify-center transition-all shrink-0 hover:scale-110 active:scale-95 shadow-sm"
           >
             <Plus class="w-4 h-4" />
           </button>
         </div>
 
-        <!-- Next Page Button -->
+        <!-- Empty Taskbar Prompt (When 0 pinned items) -->
+        <div
+          v-if="taskbarBookmarks.length === 0"
+          class="flex items-center space-x-2 px-2 py-1 text-xs text-white/70 select-none"
+        >
+          <Pin class="w-3.5 h-3.5 text-blue-300 opacity-80" />
+          <span class="text-[11px]">右键桌面图标可固定到底栏</span>
+          <button
+            @click="$emit('add-bookmark', { defaultPinned: true })"
+            class="px-2 py-0.5 rounded-lg bg-white/15 hover:bg-white/25 text-white text-[11px] font-medium transition-colors"
+          >
+            + 添加
+          </button>
+        </div>
+
+        <!-- Next Page Button (Only visible when totalPages > 1) -->
         <button
+          v-if="totalPages > 1"
           @click="nextPage"
           :disabled="currentPage >= totalPages"
           title="下一页 (或滑动滚轮)"
@@ -235,7 +261,7 @@
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import {
   LayoutGrid, ChevronLeft, ChevronRight, Plus, Minus, Check,
-  Cloud, Sparkles, Settings, Folder, Lock
+  Cloud, Sparkles, Settings, Folder, Lock, Pin
 } from 'lucide-vue-next'
 import type { CategoryItem, BookmarkItem, AppSettings } from '../../shared/types'
 import { isSmallFavicon } from '../../shared/favicon'
@@ -254,7 +280,7 @@ const emit = defineEmits<{
   (e: 'select-category', cat: CategoryItem): void
   (e: 'add-category'): void
   (e: 'delete-category', cat: CategoryItem): void
-  (e: 'add-bookmark'): void
+  (e: 'add-bookmark', payload?: { defaultPinned?: boolean }): void
   (e: 'delete-bookmark', id: string): void
   (e: 'contextmenu', ev: MouseEvent, bm: BookmarkItem): void
   (e: 'open-settings'): void
@@ -262,14 +288,13 @@ const emit = defineEmits<{
   (e: 'open-onedrive'): void
   (e: 'move-bookmark', payload: { bookmarkId: string; targetCategoryId: string }): void
   (e: 'locate-bookmark', bm: BookmarkItem): void
+  (e: 'pin-bookmark', bookmarkId: string): void
 }>()
 
 function onLocateBookmark(bm: BookmarkItem) {
-  if (bm.categoryId === props.activeCategoryId) {
-    const idx = currentCategoryBookmarks.value.findIndex(b => b.id === bm.id)
-    if (idx !== -1) {
-      currentPage.value = Math.floor(idx / pageSize.value) + 1
-    }
+  const idx = taskbarBookmarks.value.findIndex(b => b.id === bm.id)
+  if (idx !== -1) {
+    currentPage.value = Math.floor(idx / pageSize.value) + 1
   }
   emit('locate-bookmark', bm)
 }
@@ -301,6 +326,45 @@ const pageSize = ref(8) // Number of bookmark icons per page on taskbar
 const dragOverCatId = ref<string | null>(null)
 let hoverCategoryTimer: any = null
 
+const isDockDragOver = ref(false)
+
+function onDockDragOver(e: DragEvent) {
+  e.preventDefault()
+  if (e.dataTransfer) {
+    e.dataTransfer.dropEffect = 'copy'
+  }
+  isDockDragOver.value = true
+}
+
+function onDockDragLeave(e: DragEvent) {
+  const currentTarget = e.currentTarget as HTMLElement
+  const relatedTarget = e.relatedTarget as HTMLElement
+  if (!currentTarget || !relatedTarget || !currentTarget.contains(relatedTarget)) {
+    isDockDragOver.value = false
+  }
+}
+
+function onDockDrop(e: DragEvent) {
+  e.preventDefault()
+  isDockDragOver.value = false
+  let bmId: string | null = null
+  try {
+    const raw = e.dataTransfer?.getData('application/json')
+    if (raw) {
+      const data = JSON.parse(raw)
+      bmId = data.bookmarkId
+    }
+  } catch (err) {
+    console.error('Error handling dock drop:', err)
+  }
+  if (!bmId) {
+    bmId = e.dataTransfer?.getData('text/plain') || null
+  }
+  if (bmId) {
+    emit('pin-bookmark', bmId)
+  }
+}
+
 // Visible categories on taskbar (exclude private vault category unless unlocked)
 const displayedCategories = computed(() => {
   return (props.categories || []).filter((c) => {
@@ -311,34 +375,41 @@ const displayedCategories = computed(() => {
   })
 })
 
-// Category bookmarks
-const currentCategoryBookmarks = computed(() => {
-  return props.bookmarks.filter((b) => b.categoryId === props.activeCategoryId)
+// Pinned bookmarks on taskbar dock (Option 1: Pin to Taskbar)
+const taskbarBookmarks = computed(() => {
+  return (props.bookmarks || []).filter((b) => {
+    if (b.categoryId === 'cat-vault' || isPrivateBookmark(b)) {
+      return props.isVaultUnlocked === true && b.isPinnedToTaskbar === true
+    }
+    return b.isPinnedToTaskbar === true
+  })
 })
 
-// Total pages needed
+// Total pages needed for pinned taskbar bookmarks
 const totalPages = computed(() => {
-  const count = currentCategoryBookmarks.value.length + 1 // +1 for the Add button
+  const count = taskbarBookmarks.value.length + 1 // +1 for the Add button
   return Math.max(1, Math.ceil(count / pageSize.value))
 })
 
 // Sliced bookmarks for current page
 const pagedBookmarks = computed(() => {
   const start = (currentPage.value - 1) * pageSize.value
-  return currentCategoryBookmarks.value.slice(start, start + pageSize.value)
+  return taskbarBookmarks.value.slice(start, start + pageSize.value)
 })
 
 // Is the "Add" button placed on this current page
 const isAddOnThisPage = computed(() => {
-  const count = currentCategoryBookmarks.value.length
+  const count = taskbarBookmarks.value.length
   const start = (currentPage.value - 1) * pageSize.value
   const end = start + pageSize.value
   return count >= start && count < end
 })
 
-// Reset to page 1 whenever category changes
-watch(() => props.activeCategoryId, () => {
-  currentPage.value = 1
+// Clamp currentPage when totalPages shrinks
+watch(totalPages, (newTotal) => {
+  if (currentPage.value > newTotal) {
+    currentPage.value = Math.max(1, newTotal)
+  }
 })
 
 function confirmDeleteCategory(cat: CategoryItem) {

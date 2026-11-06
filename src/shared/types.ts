@@ -8,6 +8,7 @@ export interface BookmarkItem {
   isPrivate?: boolean
   encryptedData?: string // Ciphertext if sensitive
   openInIncognito?: boolean // Open in private incognito window
+  isPinnedToTaskbar?: boolean // 是否钉选常驻到底部任务栏 (Pin to Taskbar Dock)
 }
 
 export interface CategoryItem {

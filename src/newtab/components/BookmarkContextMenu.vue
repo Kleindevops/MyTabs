@@ -74,6 +74,19 @@
         </div>
       </div>
 
+      <!-- Item 1.5: 固定到任务栏 / 从任务栏取消固定 (Pin / Unpin from Taskbar) -->
+      <button
+        @click="onAction('toggle-pin-taskbar')"
+        class="w-full flex items-center space-x-2.5 px-3 py-2 rounded-xl text-xs font-medium hover:bg-white/10 hover:text-white transition-all text-left group"
+      >
+        <component
+          :is="bookmark?.isPinnedToTaskbar ? PinOff : Pin"
+          class="w-4 h-4 transition-colors"
+          :class="bookmark?.isPinnedToTaskbar ? 'text-amber-400 group-hover:text-amber-300' : 'text-slate-400 group-hover:text-blue-400'"
+        />
+        <span>{{ bookmark?.isPinnedToTaskbar ? '从底栏取消固定' : '固定到底部栏' }}</span>
+      </button>
+
       <!-- Item 2: 编辑图标 -->
       <button
         @click="onAction('edit-icon')"
@@ -109,7 +122,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
-import { Pencil, FileEdit, Trash2, FolderInput, Folder, ChevronRight } from 'lucide-vue-next'
+import { Pencil, FileEdit, Trash2, FolderInput, Folder, ChevronRight, Pin, PinOff } from 'lucide-vue-next'
 import type { BookmarkItem, CategoryItem } from '../../shared/types'
 
 const props = defineProps<{
@@ -126,6 +139,7 @@ const emit = defineEmits<{
   (e: 'edit-bookmark', bm: BookmarkItem): void
   (e: 'delete', bm: BookmarkItem): void
   (e: 'move-to-category', bm: BookmarkItem, targetCategoryId: string): void
+  (e: 'toggle-pin-taskbar', bm: BookmarkItem): void
 }>()
 
 const showSubmenu = ref(false)
@@ -272,7 +286,7 @@ function handleMoveToCategory(targetCatId: string) {
   emit('move-to-category', props.bookmark, targetCatId)
 }
 
-function onAction(action: 'edit-icon' | 'edit-bookmark' | 'delete') {
+function onAction(action: 'edit-icon' | 'edit-bookmark' | 'delete' | 'toggle-pin-taskbar') {
   if (!props.bookmark) return
   resetSubmenu()
   emit('close')
@@ -282,6 +296,8 @@ function onAction(action: 'edit-icon' | 'edit-bookmark' | 'delete') {
     emit('edit-bookmark', props.bookmark)
   } else if (action === 'delete') {
     emit('delete', props.bookmark)
+  } else if (action === 'toggle-pin-taskbar') {
+    emit('toggle-pin-taskbar', props.bookmark)
   }
 }
 </script>

@@ -136,6 +136,21 @@
           </div>
         </div>
 
+        <!-- Pin to taskbar toggle -->
+        <div class="flex items-center justify-between p-2.5 rounded-xl bg-slate-900/60 border border-slate-800">
+          <div>
+            <div class="font-medium text-slate-200 flex items-center gap-1.5">
+              <span>固定到底部任务栏 (Dock)</span>
+            </div>
+            <div class="text-[10px] text-slate-400">在屏幕底栏常驻显示，桌面存满 24 个也不会影响底栏清爽</div>
+          </div>
+          <input
+            type="checkbox"
+            v-model="isPinnedToTaskbar"
+            class="w-4 h-4 rounded text-blue-500 accent-blue-500 cursor-pointer"
+          />
+        </div>
+
         <!-- Open in Incognito toggle -->
         <div class="flex items-center justify-between p-2.5 rounded-xl bg-slate-900/60 border border-slate-800">
           <div>
@@ -186,10 +201,16 @@ import {
   isSmallFavicon
 } from '../../shared/favicon'
 
-const props = defineProps<{
-  categories: CategoryItem[]
-  defaultCategoryId: string
-}>()
+const props = withDefaults(
+  defineProps<{
+    categories: CategoryItem[]
+    defaultCategoryId: string
+    defaultPinned?: boolean
+  }>(),
+  {
+    defaultPinned: false
+  }
+)
 
 const emit = defineEmits<{
   (e: 'save', bm: Omit<BookmarkItem, 'id'>): void
@@ -202,6 +223,14 @@ const icon = ref('')
 const categoryId = ref(props.defaultCategoryId || props.categories[0]?.id || 'cat-common')
 const bgColor = ref('transparent')
 const openInIncognito = ref(false)
+const isPinnedToTaskbar = ref(props.defaultPinned)
+
+watch(
+  () => props.defaultPinned,
+  (v) => {
+    isPinnedToTaskbar.value = !!v
+  }
+)
 
 const availableCategories = computed(() => {
   if (props.defaultCategoryId === 'cat-vault') {
@@ -337,7 +366,8 @@ function handleSubmit() {
     categoryId: categoryId.value,
     bgColor: bgColor.value,
     isPrivate: selectedCategory?.isPrivate || false,
-    openInIncognito: isCurrentCategoryPrivate.value || openInIncognito.value
+    openInIncognito: isCurrentCategoryPrivate.value || openInIncognito.value,
+    isPinnedToTaskbar: isPinnedToTaskbar.value
   })
 }
 </script>

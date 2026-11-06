@@ -1,6 +1,6 @@
 {
   "name": "mytabs",
-  "version": "1.0.13",
+  "version": "1.0.14",
   "description": "iTab style NewTab extension with media sniffer, AI sidebar, locked folders, incognito cleaner and OneDrive sync.",
   "type": "module",
   "scripts": {

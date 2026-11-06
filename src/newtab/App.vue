@@ -32,7 +32,7 @@
           :bookmarks="displayedBookmarks"
           :categories="settings.categories || []"
           :activeCategoryId="activeCategoryId"
-          @add-bookmark="showAddBookmark = true"
+          @add-bookmark="openAddBookmarkFromDesktop"
           @contextmenu="handleBookmarkContextMenu"
           @drag-start="handleBookmarkDragStart"
           @drag-end="handleBookmarkDragEnd"
@@ -52,7 +52,7 @@
       @select-category="handleCategorySelect"
       @add-category="handleAddCategory"
       @delete-category="handleDeleteCategory"
-      @add-bookmark="showAddBookmark = true"
+      @add-bookmark="openAddBookmarkFromTaskbar"
       @delete-bookmark="handleDeleteBookmark"
       @contextmenu="handleBookmarkContextMenu"
       @open-settings="showSettings = true"
@@ -60,6 +60,7 @@
       @open-onedrive="openSettingsTab('onedrive')"
       @move-bookmark="handleMoveBookmark"
       @locate-bookmark="handleLocateBookmark"
+      @pin-bookmark="handlePinBookmarkFromDrag"
     />
 
     <!-- Floating Draggable & Collapsible Hot News Widget -->
@@ -81,6 +82,7 @@
       @edit-bookmark="onContextEditBookmark"
       @delete="onContextDelete"
       @move-to-category="handleContextMenuMoveBookmark"
+      @toggle-pin-taskbar="handleTogglePinTaskbar"
     />
 
     <!-- Toast Feedback Notification -->
@@ -138,6 +140,7 @@
       v-if="showAddBookmark"
       :categories="settings.categories || []"
       :defaultCategoryId="activeCategoryId"
+      :defaultPinned="addBookmarkDefaultPinned"
       @save="handleAddBookmarkSave"
       @cancel="showAddBookmark = false"
     />
@@ -201,6 +204,7 @@ const settingsInitialTab = ref('guide')
 const showVaultModal = ref(false)
 const showChangePasswordModal = ref(false)
 const showAddBookmark = ref(false)
+const addBookmarkDefaultPinned = ref(false)
 const showEditIconModal = ref(false)
 const showEditBookmarkModal = ref(false)
 
@@ -309,6 +313,47 @@ function onContextEditBookmark(bm: BookmarkItem) {
 
 function onContextDelete(bm: BookmarkItem) {
   handleDeleteBookmark(bm.id)
+}
+
+function openAddBookmarkFromDesktop() {
+  addBookmarkDefaultPinned.value = false
+  showAddBookmark.value = true
+}
+
+function openAddBookmarkFromTaskbar(payload?: { defaultPinned?: boolean }) {
+  addBookmarkDefaultPinned.value = payload?.defaultPinned ?? true
+  showAddBookmark.value = true
+}
+
+function handleTogglePinTaskbar(bm: BookmarkItem) {
+  if (!settings.value.bookmarks) return
+  const idx = settings.value.bookmarks.findIndex(b => b.id === bm.id)
+  if (idx !== -1) {
+    const isNowPinned = !settings.value.bookmarks[idx].isPinnedToTaskbar
+    settings.value.bookmarks[idx] = {
+      ...settings.value.bookmarks[idx],
+      isPinnedToTaskbar: isNowPinned
+    }
+    saveSettings(settings.value)
+    showToast(isNowPinned ? `已固定「${bm.title}」到底部任务栏` : `已从底部任务栏取消固定「${bm.title}」`)
+  }
+}
+
+function handlePinBookmarkFromDrag(bookmarkId: string) {
+  if (!settings.value.bookmarks) return
+  const idx = settings.value.bookmarks.findIndex(b => b.id === bookmarkId)
+  if (idx === -1) return
+  const bm = settings.value.bookmarks[idx]
+  if (bm.isPinnedToTaskbar) {
+    showToast(`「${bm.title}」已在底部任务栏中`)
+    return
+  }
+  settings.value.bookmarks[idx] = {
+    ...bm,
+    isPinnedToTaskbar: true
+  }
+  saveSettings(settings.value)
+  showToast(`已固定「${bm.title}」到底部任务栏`)
 }
 
 function handleSaveEditIcon(payload: { id: string; icon?: string; bgColor?: string }) {

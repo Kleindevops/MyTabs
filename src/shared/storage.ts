@@ -70,10 +70,10 @@ export const DEFAULT_SETTINGS: AppSettings = {
   ],
   bookmarks: [
     // 常用推荐
-    { id: 'bm-1', title: 'Bilibili', url: 'https://www.bilibili.com', bgColor: '#00AEEC', categoryId: 'cat-common', icon: PRESET_SITE_ICONS['bilibili.com']?.icon },
-    { id: 'bm-2', title: 'GitHub', url: 'https://github.com', bgColor: '#181717', categoryId: 'cat-common', icon: PRESET_SITE_ICONS['github.com']?.icon },
-    { id: 'bm-3', title: '知乎', url: 'https://www.zhihu.com', bgColor: '#0084ff', categoryId: 'cat-common', icon: PRESET_SITE_ICONS['zhihu.com']?.icon },
-    { id: 'bm-4', title: '少数派', url: 'https://sspai.com', bgColor: '#d71a1b', categoryId: 'cat-common', icon: PRESET_SITE_ICONS['sspai.com']?.icon },
+    { id: 'bm-1', title: 'Bilibili', url: 'https://www.bilibili.com', bgColor: '#00AEEC', categoryId: 'cat-common', isPinnedToTaskbar: true, icon: PRESET_SITE_ICONS['bilibili.com']?.icon },
+    { id: 'bm-2', title: 'GitHub', url: 'https://github.com', bgColor: '#181717', categoryId: 'cat-common', isPinnedToTaskbar: true, icon: PRESET_SITE_ICONS['github.com']?.icon },
+    { id: 'bm-3', title: '知乎', url: 'https://www.zhihu.com', bgColor: '#0084ff', categoryId: 'cat-common', isPinnedToTaskbar: true, icon: PRESET_SITE_ICONS['zhihu.com']?.icon },
+    { id: 'bm-4', title: '少数派', url: 'https://sspai.com', bgColor: '#d71a1b', categoryId: 'cat-common', isPinnedToTaskbar: true, icon: PRESET_SITE_ICONS['sspai.com']?.icon },
     { id: 'bm-5', title: 'YouTube', url: 'https://www.youtube.com', bgColor: '#ff0000', categoryId: 'cat-common', icon: PRESET_SITE_ICONS['youtube.com']?.icon },
     { id: 'bm-6', title: '微信读书', url: 'https://weread.qq.com', bgColor: '#1b88ee', categoryId: 'cat-common', icon: PRESET_SITE_ICONS['weread.qq.com']?.icon },
 
@@ -183,6 +183,19 @@ function mergeSettings(loaded: any): AppSettings {
     }
     return b
   })
+
+  // Migration for taskbar pinned bookmarks: if none are pinned, initialize top 4 public bookmarks
+  const hasPinned = bookmarks.some((b: any) => b.isPinnedToTaskbar === true)
+  if (!hasPinned && bookmarks.length > 0) {
+    let count = 0
+    bookmarks = bookmarks.map((b: any) => {
+      if (!b.isPrivate && b.categoryId !== 'cat-vault' && count < 4) {
+        count++
+        return { ...b, isPinnedToTaskbar: true }
+      }
+      return b
+    })
+  }
 
   let wallpaper = { ...DEFAULT_SETTINGS.wallpaper, ...(loaded.wallpaper || {}) }
   if (wallpaper.isPinned) {
