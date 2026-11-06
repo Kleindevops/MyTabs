@@ -194,7 +194,7 @@
           class="flex items-center space-x-2 px-2 py-1 text-xs text-white/70 select-none"
         >
           <Pin class="w-3.5 h-3.5 text-blue-300 opacity-80" />
-          <span class="text-[11px]">{{ isDockDragOver ? '松开立即固定到底部栏' : '拖拽桌面图标到此处固定' }}</span>
+          <span class="text-[11px]">{{ isDockDragOver ? '松开立即固定到底部栏' : (isCurrentVaultCategory ? '拖拽个人空间图标到此处固定' : '拖拽桌面图标到此处固定') }}</span>
           <button
             v-if="!isDockDragOver"
             @click="$emit('add-bookmark', { defaultPinned: true })"
@@ -388,6 +388,20 @@ function onDockDrop(e: DragEvent) {
   }
 }
 
+// Check if current category is Vault / Private category
+const isCurrentVaultCategory = computed(() => {
+  if (props.activeCategoryId === 'cat-vault') return true
+  const curCat = props.categories?.find(c => c.id === props.activeCategoryId)
+  return !!curCat?.isPrivate
+})
+
+function isVaultBookmark(bm: BookmarkItem): boolean {
+  if (bm.categoryId === 'cat-vault') return true
+  if (bm.isPrivate) return true
+  if (props.categories?.find(c => c.id === bm.categoryId)?.isPrivate) return true
+  return false
+}
+
 // Visible categories on taskbar (exclude private vault category unless unlocked)
 const displayedCategories = computed(() => {
   return (props.categories || []).filter((c) => {
@@ -398,14 +412,25 @@ const displayedCategories = computed(() => {
   })
 })
 
-// Pinned bookmarks on taskbar dock (Option 1: Pin to Taskbar)
+// Pinned bookmarks on taskbar dock:
+// In Vault/Private category, strictly ONLY show bookmarks stored in Vault/Private category!
+// In Regular category, strictly ONLY show regular bookmarks, zero vault leak!
 const taskbarBookmarks = computed(() => {
+  const isVault = isCurrentVaultCategory.value
   return (props.bookmarks || []).filter((b) => {
-    if (b.categoryId === 'cat-vault' || isPrivateBookmark(b)) {
-      return props.isVaultUnlocked === true && b.isPinnedToTaskbar === true
+    if (b.isPinnedToTaskbar !== true) return false
+    const inVault = isVaultBookmark(b)
+    if (isVault) {
+      return inVault && props.isVaultUnlocked === true
+    } else {
+      return !inVault
     }
-    return b.isPinnedToTaskbar === true
   })
+})
+
+// Reset to page 1 when switching category
+watch(() => props.activeCategoryId, () => {
+  currentPage.value = 1
 })
 
 // Total pages needed for pinned taskbar bookmarks
