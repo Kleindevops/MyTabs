@@ -4,7 +4,7 @@
       :class="[
         'flex items-center w-full px-4 py-3 rounded-2xl glass-panel-light transition-all duration-200 shadow-glass',
         isFocused
-          ? 'ring-2 ring-blue-400/80 bg-slate-900/95 dark:bg-slate-950/95 border-blue-400/30 shadow-2xl shadow-black/40'
+          ? 'ring-2 ring-blue-400/60 bg-white/20 dark:bg-slate-900/45 backdrop-blur-xl border-white/30 shadow-glass-hover'
           : 'hover:bg-white/15'
       ]"
     >
