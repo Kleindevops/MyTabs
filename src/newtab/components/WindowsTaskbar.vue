@@ -7,10 +7,11 @@
     <div class="flex items-center space-x-1.5 shrink-0">
       <!-- Windows / Start Logo Button -->
       <button
-        @click="showStartMenu = !showStartMenu"
+        @click.stop="showStartMenu = !showStartMenu"
+        @dragover.prevent="showStartMenu = true"
         title="分类导航与开始菜单"
         :class="[
-          'p-2 rounded-xl transition-all duration-200 flex items-center justify-center space-x-1.5 border border-white/15',
+          'start-menu-button p-2 rounded-xl transition-all duration-200 flex items-center justify-center space-x-1.5 border border-white/15',
           showStartMenu
             ? 'bg-white/25 text-white shadow-md shadow-black/10 backdrop-blur-md ring-1 ring-white/30'
             : 'glass-panel-light hover:bg-white/20 text-white/90 shadow-sm'
@@ -29,67 +30,29 @@
         @open="openBookmark"
       />
 
-      <!-- Category Pills (Quick switch on taskbar & drag drop targets) -->
-      <div
-        class="hidden md:flex items-center space-x-1.5 p-1 rounded-2xl transition-all duration-300"
-        :class="[
-          isDragging
-            ? 'bg-slate-900/90 border-2 border-emerald-400/60 shadow-xl shadow-emerald-500/20 ring-2 ring-emerald-400/20 backdrop-blur-xl'
-            : 'glass-panel-light border border-white/10 shadow-md backdrop-blur-md'
-        ]"
-      >
-        <button
-          v-for="cat in displayedCategories"
-          :key="cat.id"
-          @click="$emit('select-category', cat); showStartMenu = false"
-          @dragover.prevent="onCategoryDragOver($event, cat)"
-          @dragenter.prevent="onCategoryDragOver($event, cat)"
-          @dragleave="onCategoryDragLeave($event, cat)"
-          @drop="onCategoryDrop($event, cat)"
-          :class="[
-            'relative px-3 py-1.5 rounded-xl text-xs font-medium transition-all duration-200 flex items-center space-x-1.5 shrink-0 select-none truncate max-w-[120px]',
-            dragOverCatId === cat.id
-              ? 'bg-emerald-600 text-white ring-2 ring-emerald-300 scale-105 shadow-md shadow-emerald-600/30'
-              : activeCategoryId === cat.id
-                ? 'bg-white/25 text-white shadow-md shadow-black/10 backdrop-blur-md font-semibold'
-                : 'text-white/75 hover:text-white hover:bg-white/15'
-          ]"
-          :title="isDragging ? `释放以将图标移动至「${cat.name}」` : `切换至「${cat.name}」分类`"
-        >
-          <component :is="getCategoryIcon(cat)" class="w-3.5 h-3.5 opacity-80 shrink-0" />
-          <span class="truncate">{{ cat.name }}</span>
-        </button>
-
-        <!-- Quick Add Category Button -->
-        <button
-          v-if="!isDragging"
-          @click="$emit('add-category'); showStartMenu = false"
-          title="新建分类"
-          class="p-1.5 rounded-xl text-white/50 hover:text-white hover:bg-white/15 transition-colors shrink-0"
-        >
-          <Plus class="w-3.5 h-3.5" />
-        </button>
-      </div>
-
       <!-- Start Menu Popup -->
       <div
         v-if="showStartMenu"
-        class="absolute left-4 bottom-20 w-56 rounded-2xl p-2 shadow-[0_16px_36px_rgba(0,0,0,0.3)] border border-white/20 animate-in fade-in slide-in-from-bottom-2 z-50 space-y-1 glass-panel-light backdrop-blur-2xl"
+        class="start-menu-container absolute left-4 bottom-20 w-60 rounded-2xl p-2 shadow-[0_16px_36px_rgba(0,0,0,0.3)] border border-white/20 animate-in fade-in slide-in-from-bottom-2 z-50 space-y-1 glass-panel-light backdrop-blur-2xl"
         style="background: rgba(255, 255, 255, 0.16); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);"
       >
-        <div class="px-2.5 py-1.5 text-[10px] font-semibold text-white/60 uppercase tracking-wider">
-          书签分类目录
+        <div class="px-2.5 py-1.5 text-[10px] font-semibold text-white/60 uppercase tracking-wider flex items-center justify-between">
+          <span>书签分类目录</span>
+          <span class="text-[9px] text-white/40 font-normal">指向显示删除</span>
         </div>
-        <button
+
+        <div
           v-for="cat in displayedCategories"
           :key="cat.id"
+          role="button"
+          tabindex="0"
           @click="$emit('select-category', cat); showStartMenu = false"
           @dragover.prevent="onCategoryDragOver($event, cat)"
           @dragenter.prevent="onCategoryDragOver($event, cat)"
           @dragleave="onCategoryDragLeave($event, cat)"
           @drop="onCategoryDrop($event, cat)"
           :class="[
-            'w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium transition-all text-left',
+            'group w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium transition-all text-left cursor-pointer select-none',
             dragOverCatId === cat.id
               ? 'bg-emerald-600 text-white ring-2 ring-emerald-300'
               : activeCategoryId === cat.id
@@ -97,9 +60,28 @@
                 : 'text-white/80 hover:text-white hover:bg-white/15'
           ]"
         >
-          <span>{{ cat.name }}</span>
-          <Check v-if="activeCategoryId === cat.id" class="w-3.5 h-3.5" />
-        </button>
+          <div class="flex items-center space-x-2 truncate pr-1">
+            <component :is="getCategoryIcon(cat)" class="w-3.5 h-3.5 opacity-80 shrink-0" />
+            <span class="truncate">{{ cat.name }}</span>
+          </div>
+
+          <div class="flex items-center shrink-0 space-x-1">
+            <!-- Delete Category Button (shown on hover, minus icon) -->
+            <button
+              v-if="cat.id !== 'cat-vault'"
+              @click.stop="confirmDeleteCategory(cat)"
+              title="删除此分类"
+              class="opacity-0 group-hover:opacity-100 p-1 -mr-1 rounded-lg text-white/70 hover:text-red-300 hover:bg-red-500/30 transition-all flex items-center justify-center"
+            >
+              <Minus class="w-3.5 h-3.5" />
+            </button>
+            <!-- Checkmark indicator when active (hidden when hovering to leave clean space for delete minus) -->
+            <Check
+              v-if="activeCategoryId === cat.id"
+              class="w-3.5 h-3.5 text-white/90 group-hover:hidden"
+            />
+          </div>
+        </div>
 
         <div class="pt-1 border-t border-white/15">
           <button
@@ -241,7 +223,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import {
-  LayoutGrid, ChevronLeft, ChevronRight, Plus, Check,
+  LayoutGrid, ChevronLeft, ChevronRight, Plus, Minus, Check,
   Cloud, Sparkles, Settings, Folder, Lock
 } from 'lucide-vue-next'
 import type { CategoryItem, BookmarkItem, AppSettings } from '../../shared/types'
@@ -260,6 +242,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   (e: 'select-category', cat: CategoryItem): void
   (e: 'add-category'): void
+  (e: 'delete-category', cat: CategoryItem): void
   (e: 'add-bookmark'): void
   (e: 'delete-bookmark', id: string): void
   (e: 'contextmenu', ev: MouseEvent, bm: BookmarkItem): void
@@ -347,13 +330,36 @@ watch(() => props.activeCategoryId, () => {
   currentPage.value = 1
 })
 
+function confirmDeleteCategory(cat: CategoryItem) {
+  emit('delete-category', cat)
+}
+
+function handleGlobalClick(e: MouseEvent) {
+  if (showStartMenu.value) {
+    const target = e.target as HTMLElement
+    if (!target.closest('.start-menu-container') && !target.closest('.start-menu-button')) {
+      showStartMenu.value = false
+    }
+  }
+}
+
+function handleGlobalKeydown(e: KeyboardEvent) {
+  if (e.key === 'Escape' && showStartMenu.value) {
+    showStartMenu.value = false
+  }
+}
+
 onMounted(() => {
   updatePageSizeByWidth()
   window.addEventListener('resize', updatePageSizeByWidth)
+  window.addEventListener('click', handleGlobalClick)
+  window.addEventListener('keydown', handleGlobalKeydown)
 })
 
 onUnmounted(() => {
   window.removeEventListener('resize', updatePageSizeByWidth)
+  window.removeEventListener('click', handleGlobalClick)
+  window.removeEventListener('keydown', handleGlobalKeydown)
   if (hoverCategoryTimer) clearTimeout(hoverCategoryTimer)
 })
 

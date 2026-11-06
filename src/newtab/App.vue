@@ -51,6 +51,7 @@
       :isVaultUnlocked="isVaultUnlocked"
       @select-category="handleCategorySelect"
       @add-category="handleAddCategory"
+      @delete-category="handleDeleteCategory"
       @add-bookmark="showAddBookmark = true"
       @delete-bookmark="handleDeleteBookmark"
       @contextmenu="handleBookmarkContextMenu"
@@ -631,6 +632,46 @@ function handleAddCategory() {
   settings.value.categories.push(newCat)
   saveSettings(settings.value)
   handleCategorySelect(newCat)
+}
+
+function handleDeleteCategory(cat: CategoryItem) {
+  if (cat.id === 'cat-vault') {
+    alert('个人空间为内置绝密加密暗门，不可删除。')
+    return
+  }
+
+  const normalCategories = (settings.value.categories || []).filter(c => !c.isPrivate && c.id !== 'cat-vault')
+  if (normalCategories.length <= 1 && !cat.isPrivate) {
+    alert('至少需要保留一个分类，无法删除最后一个常规分类。')
+    return
+  }
+
+  const relatedBookmarks = (settings.value.bookmarks || []).filter(b => b.categoryId === cat.id)
+  const confirmMsg = relatedBookmarks.length > 0
+    ? `确定要删除分类「${cat.name}」吗？\n该分类下的 ${relatedBookmarks.length} 个书签网址也将一并被删除。`
+    : `确定要删除分类「${cat.name}」吗？`
+
+  if (!confirm(confirmMsg)) {
+    return
+  }
+
+  // 1. 从 categories 中移除
+  settings.value.categories = (settings.value.categories || []).filter(c => c.id !== cat.id)
+
+  // 2. 级联删除该分类下的所有书签
+  settings.value.bookmarks = (settings.value.bookmarks || []).filter(b => b.categoryId !== cat.id)
+
+  // 3. 如果删除的是当前激活分类，平滑切换到第一个可用分类
+  if (activeCategoryId.value === cat.id) {
+    const nextCat = settings.value.categories.find(c => !c.isPrivate) || settings.value.categories[0]
+    if (nextCat) {
+      activeCategoryId.value = nextCat.id
+    }
+  }
+
+  // 4. 持久化存储并反馈
+  saveSettings(settings.value)
+  showToast(`已删除分类「${cat.name}」`)
 }
 
 function handleAddBookmarkSave(bmData: Omit<BookmarkItem, 'id'>) {

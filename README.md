@@ -6,7 +6,7 @@
 > **为极致隐私与高效工作流而生。**  
 > 独创「桌面隐形暗门·密码锁私人收藏夹」，外表是优雅极简的 iTab / Windows 风格高颜值新标签页，暗藏端到端加密私密空间；全网盘本地直存云同步、原生流媒体资源嗅探、侧边栏 AI 智能副驾驶一应俱全。
 
-[![Version](https://img.shields.io/badge/Version-v1.0.11-blue.svg)](package.json)
+[![Version](https://img.shields.io/badge/Version-v1.0.12-blue.svg)](package.json)
 [![Chrome Extension](https://img.shields.io/badge/Chrome-Extension-4285F4?style=flat&logo=googlechrome&logoColor=white)](https://developer.chrome.com/docs/extensions/)
 [![Edge Addon](https://img.shields.io/badge/Microsoft%20Edge-Supported-0078D7?style=flat&logo=microsoftedge&logoColor=white)](https://microsoftedge.microsoft.com/)
 [![Encryption](https://img.shields.io/badge/Crypto-AES--256--GCM-success?style=flat&logo=securityscorecard&logoColor=white)](#1-核心杀手锏绝密隐形暗门私人收藏夹)
