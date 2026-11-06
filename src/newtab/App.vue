@@ -662,7 +662,9 @@ function handleAddCategory() {
   const name = prompt('请输入新分类名称：')
   if (!name?.trim()) return
 
-  const isPrivate = confirm('是否将此分类设为带密码保护的私密分类？')
+  const currentCat = settings.value.categories?.find(c => c.id === activeCategoryId.value)
+  const isPrivate = isVaultUnlocked.value && (activeCategoryId.value === 'cat-vault' || !!currentCat?.isPrivate)
+
   const newCat: CategoryItem = {
     id: `cat-${Date.now()}`,
     name: name.trim(),
