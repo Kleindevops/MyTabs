@@ -13,43 +13,63 @@
       <!-- Item 1: 移动到分类 (Move to Category Submenu) -->
       <div
         class="relative group/submenu"
-        @mouseenter="showSubmenu = true"
-        @mouseleave="showSubmenu = false"
+        @mouseenter="openSubmenu"
+        @mouseleave="scheduleCloseSubmenu"
       >
         <button
-          @click.stop="showSubmenu = !showSubmenu"
-          class="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium hover:bg-white/10 hover:text-white transition-all text-left group"
+          @click.stop="toggleSubmenu"
+          class="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium transition-all text-left group"
+          :class="[
+            showSubmenu ? 'bg-white/15 text-white' : 'hover:bg-white/10 hover:text-white text-slate-200'
+          ]"
         >
           <div class="flex items-center space-x-2.5">
-            <FolderInput class="w-4 h-4 text-slate-400 group-hover:text-emerald-400 transition-colors" />
+            <FolderInput
+              class="w-4 h-4 transition-colors"
+              :class="showSubmenu ? 'text-emerald-400' : 'text-slate-400 group-hover:text-emerald-400'"
+            />
             <span>移动到分类</span>
           </div>
-          <ChevronRight class="w-3.5 h-3.5 text-slate-500 group-hover:text-slate-300" />
+          <ChevronRight
+            class="w-3.5 h-3.5 transition-transform duration-200"
+            :class="[
+              showSubmenu ? 'text-emerald-300 translate-x-0.5' : 'text-slate-500 group-hover:text-slate-300'
+            ]"
+          />
         </button>
 
         <!-- Category Submenu -->
         <div
           v-if="showSubmenu"
           :class="[
-            'absolute top-0 w-36 rounded-2xl p-1.5 shadow-2xl border border-white/15 backdrop-blur-2xl text-slate-200 z-50 animate-in fade-in zoom-in-95 duration-100 space-y-0.5',
-            submenuOnLeft ? 'right-full mr-1.5' : 'left-full ml-1.5'
+            'absolute top-0 w-44 rounded-2xl p-1.5 shadow-2xl border border-white/15 backdrop-blur-2xl text-slate-200 z-50 animate-in fade-in zoom-in-95 duration-100 flex flex-col',
+            submenuOnLeft
+              ? 'right-full mr-2 before:absolute before:-right-4 before:top-0 before:bottom-0 before:w-5 before:content-[\'\']'
+              : 'left-full ml-2 before:absolute before:-left-4 before:top-0 before:bottom-0 before:w-5 before:content-[\'\']'
           ]"
           style="background: rgba(18, 24, 38, 0.98); box-shadow: 0 10px 35px -5px rgba(0, 0, 0, 0.85);"
+          @mouseenter="openSubmenu"
+          @mouseleave="scheduleCloseSubmenu"
         >
-          <div class="px-2 py-1 text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
-            选择目标分类
+          <div class="px-2 py-1 text-[10px] font-semibold text-slate-400 uppercase tracking-wider flex items-center justify-between shrink-0">
+            <span>选择目标分类</span>
+            <span v-if="isSubmenuPinned" class="text-[9px] text-emerald-400 font-normal">已锁定</span>
           </div>
-          <button
-            v-for="cat in targetCategories"
-            :key="cat.id"
-            @click="handleMoveToCategory(cat.id)"
-            class="w-full flex items-center space-x-2 px-2.5 py-1.5 rounded-xl text-xs hover:bg-emerald-500/20 hover:text-emerald-300 transition-all text-left truncate"
-          >
-            <Folder class="w-3.5 h-3.5 text-slate-400 group-hover:text-emerald-400 shrink-0" />
-            <span class="truncate">{{ cat.name }}</span>
-          </button>
-          <div v-if="targetCategories.length === 0" class="px-2.5 py-1 text-[11px] text-slate-400">
-            暂无其他分类
+          
+          <div class="max-h-56 overflow-y-auto space-y-0.5 pr-0.5">
+            <button
+              v-for="cat in targetCategories"
+              :key="cat.id"
+              @click.stop="handleMoveToCategory(cat.id)"
+              class="w-full flex items-center space-x-2 px-2.5 py-1.5 rounded-xl text-xs hover:bg-emerald-500/20 hover:text-emerald-300 transition-all text-left group/item truncate"
+              :title="cat.name"
+            >
+              <Folder class="w-3.5 h-3.5 text-slate-400 group-hover/item:text-emerald-400 shrink-0" />
+              <span class="truncate flex-1">{{ cat.name }}</span>
+            </button>
+            <div v-if="targetCategories.length === 0" class="px-2.5 py-2 text-[11px] text-slate-400 text-center">
+              暂无其他分类
+            </div>
           </div>
         </div>
       </div>
@@ -88,7 +108,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { Pencil, FileEdit, Trash2, FolderInput, Folder, ChevronRight } from 'lucide-vue-next'
 import type { BookmarkItem, CategoryItem } from '../../shared/types'
 
@@ -109,6 +129,50 @@ const emit = defineEmits<{
 }>()
 
 const showSubmenu = ref(false)
+const isSubmenuPinned = ref(false)
+let submenuTimer: any = null
+
+function openSubmenu() {
+  if (submenuTimer) {
+    clearTimeout(submenuTimer)
+    submenuTimer = null
+  }
+  showSubmenu.value = true
+}
+
+function scheduleCloseSubmenu() {
+  if (isSubmenuPinned.value) return
+  if (submenuTimer) {
+    clearTimeout(submenuTimer)
+  }
+  submenuTimer = setTimeout(() => {
+    showSubmenu.value = false
+    submenuTimer = null
+  }, 280)
+}
+
+function toggleSubmenu() {
+  if (showSubmenu.value && isSubmenuPinned.value) {
+    showSubmenu.value = false
+    isSubmenuPinned.value = false
+  } else {
+    showSubmenu.value = true
+    isSubmenuPinned.value = true
+    if (submenuTimer) {
+      clearTimeout(submenuTimer)
+      submenuTimer = null
+    }
+  }
+}
+
+function resetSubmenu() {
+  if (submenuTimer) {
+    clearTimeout(submenuTimer)
+    submenuTimer = null
+  }
+  showSubmenu.value = false
+  isSubmenuPinned.value = false
+}
 
 const targetCategories = computed(() => {
   if (!props.categories || !props.bookmark) return []
@@ -124,12 +188,16 @@ const targetCategories = computed(() => {
 
 const submenuOnLeft = computed(() => {
   if (typeof window === 'undefined') return false
-  return props.x + 180 + 150 > window.innerWidth - 12
+  const menuWidth = 176
+  const submenuWidth = 176
+  const gap = 8
+  const padding = 12
+  return props.x + menuWidth + submenuWidth + gap > window.innerWidth - padding
 })
 
 // Directly and reactively compute the style whenever props.x and props.y change
 const menuStyle = computed(() => {
-  const menuWidth = 180
+  const menuWidth = 176
   const menuHeight = 175
   let targetX = props.x
   let targetY = props.y
@@ -152,6 +220,12 @@ const menuStyle = computed(() => {
   }
 })
 
+watch(() => props.visible, (val) => {
+  if (!val) {
+    resetSubmenu()
+  }
+})
+
 let timer: any = null
 
 onMounted(() => {
@@ -163,7 +237,8 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
-  clearTimeout(timer)
+  if (timer) clearTimeout(timer)
+  resetSubmenu()
   window.removeEventListener('click', onGlobalClick)
   window.removeEventListener('contextmenu', onGlobalContextMenu)
   window.removeEventListener('keydown', onKeyDown)
@@ -171,30 +246,35 @@ onUnmounted(() => {
 
 function onGlobalClick() {
   if (props.visible) {
+    resetSubmenu()
     emit('close')
   }
 }
 
 function onGlobalContextMenu() {
   if (props.visible) {
+    resetSubmenu()
     emit('close')
   }
 }
 
 function onKeyDown(e: KeyboardEvent) {
   if (e.key === 'Escape' && props.visible) {
+    resetSubmenu()
     emit('close')
   }
 }
 
 function handleMoveToCategory(targetCatId: string) {
   if (!props.bookmark) return
+  resetSubmenu()
   emit('close')
   emit('move-to-category', props.bookmark, targetCatId)
 }
 
 function onAction(action: 'edit-icon' | 'edit-bookmark' | 'delete') {
   if (!props.bookmark) return
+  resetSubmenu()
   emit('close')
   if (action === 'edit-icon') {
     emit('edit-icon', props.bookmark)
