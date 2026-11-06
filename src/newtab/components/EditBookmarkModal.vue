@@ -130,9 +130,12 @@ const bgColor = ref(props.bookmark.bgColor || 'transparent')
 const openInIncognito = ref(props.bookmark.openInIncognito || false)
 
 const availableCategories = computed(() => {
-  if (props.bookmark.categoryId === 'cat-vault') {
-    return props.categories
+  const isBookmarkVault = props.bookmark.categoryId === 'cat-vault' || props.bookmark.isPrivate || !!props.categories?.find(c => c.id === props.bookmark.categoryId)?.isPrivate
+  if (isBookmarkVault) {
+    // In personal space: strictly ONLY show personal space categories
+    return props.categories.filter(c => c.isPrivate || c.id === 'cat-vault')
   }
+  // In regular space: strictly ONLY show regular categories
   return props.categories.filter(c => !c.isPrivate && c.id !== 'cat-vault')
 })
 

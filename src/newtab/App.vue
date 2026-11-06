@@ -62,6 +62,7 @@
       @move-bookmark="handleMoveBookmark"
       @locate-bookmark="handleLocateBookmark"
       @pin-bookmark="handlePinBookmarkFromDrag"
+      @exit-vault="handleLockVault"
     />
 
     <!-- Floating Draggable & Collapsible Hot News Widget -->
@@ -244,10 +245,11 @@ const isCurrentInVault = computed(() => {
 
 const availableMoveCategories = computed(() => {
   const currentCatId = activeCategoryId.value
+  const isVault = isCurrentInVault.value
   return (settings.value.categories || []).filter((c) => {
     if (c.id === currentCatId) return false
-    if (c.isPrivate && currentCatId !== 'cat-vault') return false
-    return true
+    const isTargetVault = c.isPrivate || c.id === 'cat-vault'
+    return isVault ? isTargetVault : !isTargetVault
   })
 })
 
@@ -485,13 +487,14 @@ function handleCloseHotNews() {
 }
 
 function handleCategorySelect(cat: CategoryItem) {
-  if (cat.isPrivate && !isVaultUnlocked.value) {
+  const isTargetVault = cat.isPrivate || cat.id === 'cat-vault'
+  if (isTargetVault && !isVaultUnlocked.value) {
     pendingCategoryId = cat.id
     showVaultModal.value = true
     return
   }
   // If leaving vault to a non-private category, lock the vault
-  if (activeCategoryId.value === 'cat-vault' && !cat.isPrivate) {
+  if (isCurrentInVault.value && !isTargetVault) {
     isVaultUnlocked.value = false
     stopVaultAutoLockTimer()
   }
@@ -525,10 +528,13 @@ function handleLocateBookmark(bm: BookmarkItem) {
 
 function handleClockDoubleClicked() {
   // If currently inside vault, double-clicking toggles back to normal first category and locks the vault
-  if (activeCategoryId.value === 'cat-vault') {
+  if (isCurrentInVault.value) {
     isVaultUnlocked.value = false
     stopVaultAutoLockTimer()
-    if (settings.value.categories && settings.value.categories.length > 0) {
+    const firstNormal = (settings.value.categories || []).find(c => !c.isPrivate && c.id !== 'cat-vault')
+    if (firstNormal) {
+      activeCategoryId.value = firstNormal.id
+    } else if (settings.value.categories && settings.value.categories.length > 0) {
       activeCategoryId.value = settings.value.categories[0].id
     }
     return
@@ -642,10 +648,14 @@ async function handleChangePassword(payload: { oldPwd: string; newPwd: string })
 function handleLockVault() {
   stopVaultAutoLockTimer()
   isVaultUnlocked.value = false
-  // If user is currently looking at private category, navigate back to first category
-  const currentCat = settings.value.categories.find(c => c.id === activeCategoryId.value)
-  if (currentCat?.isPrivate && settings.value.categories.length > 0) {
-    activeCategoryId.value = settings.value.categories[0].id
+  // If user is currently looking at personal space category, navigate back to first regular category
+  if (isCurrentInVault.value) {
+    const firstNormal = (settings.value.categories || []).find(c => !c.isPrivate && c.id !== 'cat-vault')
+    if (firstNormal) {
+      activeCategoryId.value = firstNormal.id
+    } else if (settings.value.categories && settings.value.categories.length > 0) {
+      activeCategoryId.value = settings.value.categories[0].id
+    }
   }
   showSettings.value = false
 }
@@ -702,9 +712,16 @@ function handleDeleteCategory(cat: CategoryItem) {
 
   // 3. 如果删除的是当前激活分类，平滑切换到第一个可用分类
   if (activeCategoryId.value === cat.id) {
-    const nextCat = settings.value.categories.find(c => !c.isPrivate) || settings.value.categories[0]
-    if (nextCat) {
-      activeCategoryId.value = nextCat.id
+    if (cat.isPrivate || cat.id === 'cat-vault') {
+      const nextVaultCat = settings.value.categories.find(c => c.id === 'cat-vault' || c.isPrivate)
+      if (nextVaultCat) {
+        activeCategoryId.value = nextVaultCat.id
+      }
+    } else {
+      const nextCat = settings.value.categories.find(c => !c.isPrivate && c.id !== 'cat-vault') || settings.value.categories[0]
+      if (nextCat) {
+        activeCategoryId.value = nextCat.id
+      }
     }
   }
 

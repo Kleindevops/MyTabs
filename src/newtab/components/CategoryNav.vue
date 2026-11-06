@@ -78,13 +78,16 @@ const emit = defineEmits<{
 const dragOverCatId = ref<string | null>(null)
 let hoverTimer: any = null
 
-// Filter categories: strict zero-leakage for private categories when locked
+// Filter categories: strict zero-leakage and personal space isolation
 const displayedCategories = computed(() => {
+  const isVault = props.activeCategoryId === 'cat-vault' || !!props.categories?.find(c => c.id === props.activeCategoryId)?.isPrivate
   return (props.categories || []).filter((c) => {
-    if (c.isPrivate || c.id === 'cat-vault') {
-      return props.isVaultUnlocked === true
+    const isVaultCat = c.isPrivate || c.id === 'cat-vault'
+    if (isVault) {
+      return isVaultCat && props.isVaultUnlocked === true
+    } else {
+      return !isVaultCat
     }
-    return true
   })
 })
 

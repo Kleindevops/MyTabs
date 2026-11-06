@@ -38,7 +38,7 @@
         style="background: rgba(255, 255, 255, 0.16); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);"
       >
         <div class="px-2.5 py-1.5 text-[10px] font-semibold text-white/60 uppercase tracking-wider flex items-center justify-between">
-          <span>书签分类目录</span>
+          <span>{{ isCurrentVaultCategory ? '个人空间分类' : '书签分类目录' }}</span>
           <span class="text-[9px] text-white/40 font-normal">指向显示删除</span>
         </div>
 
@@ -84,13 +84,23 @@
           </div>
         </div>
 
-        <div class="pt-1 border-t border-white/15">
+        <div class="pt-1 border-t border-white/15 space-y-1">
           <button
             @click="$emit('add-category'); showStartMenu = false"
             class="w-full flex items-center space-x-2 px-3 py-1.5 rounded-xl text-xs text-white/85 hover:text-white hover:bg-white/15 transition-colors"
           >
             <Plus class="w-3.5 h-3.5" />
             <span>新建分类</span>
+          </button>
+
+          <!-- 仅在个人空间下显示快速退出与上锁按钮，方便一键回到常规桌面 -->
+          <button
+            v-if="isCurrentVaultCategory"
+            @click="handleExitVault"
+            class="w-full flex items-center space-x-2 px-3 py-1.5 rounded-xl text-xs text-amber-300 hover:text-amber-200 hover:bg-amber-500/20 transition-colors"
+          >
+            <Lock class="w-3.5 h-3.5" />
+            <span>退出并锁定个人空间</span>
           </button>
         </div>
       </div>
@@ -292,7 +302,13 @@ const emit = defineEmits<{
   (e: 'move-bookmark', payload: { bookmarkId: string; targetCategoryId: string }): void
   (e: 'locate-bookmark', bm: BookmarkItem): void
   (e: 'pin-bookmark', bookmarkId: string): void
+  (e: 'exit-vault'): void
 }>()
+
+function handleExitVault() {
+  showStartMenu.value = false
+  emit('exit-vault')
+}
 
 function onLocateBookmark(bm: BookmarkItem) {
   const idx = taskbarBookmarks.value.findIndex(b => b.id === bm.id)
@@ -403,13 +419,18 @@ function isVaultBookmark(bm: BookmarkItem): boolean {
   return false
 }
 
-// Visible categories on taskbar (exclude private vault category unless unlocked)
+// Visible categories on taskbar (strict isolation):
+// In personal space (Vault): ONLY show personal space categories, never show default/normal categories!
+// In regular space: strictly ONLY show regular categories, never show personal space categories!
 const displayedCategories = computed(() => {
+  const isVault = isCurrentVaultCategory.value
   return (props.categories || []).filter((c) => {
-    if (c.isPrivate || c.id === 'cat-vault') {
-      return props.isVaultUnlocked === true
+    const isVaultCat = c.isPrivate || c.id === 'cat-vault'
+    if (isVault) {
+      return isVaultCat && props.isVaultUnlocked === true
+    } else {
+      return !isVaultCat
     }
-    return true
   })
 })
 

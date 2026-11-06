@@ -210,9 +210,12 @@ const bgColor = ref('transparent')
 const openInIncognito = ref(false)
 
 const availableCategories = computed(() => {
-  if (props.defaultCategoryId === 'cat-vault') {
-    return props.categories
+  const isDefaultVault = props.defaultCategoryId === 'cat-vault' || !!props.categories?.find(c => c.id === props.defaultCategoryId)?.isPrivate
+  if (isDefaultVault) {
+    // In personal space: strictly ONLY show personal space categories
+    return props.categories.filter(c => c.isPrivate || c.id === 'cat-vault')
   }
+  // In regular space: strictly ONLY show regular categories
   return props.categories.filter(c => !c.isPrivate && c.id !== 'cat-vault')
 })
 

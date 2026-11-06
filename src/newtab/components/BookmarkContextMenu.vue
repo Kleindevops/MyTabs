@@ -177,12 +177,15 @@ function resetSubmenu() {
 const targetCategories = computed(() => {
   if (!props.categories || !props.bookmark) return []
   const currentCatId = props.bookmark.categoryId
+  const isBookmarkVault = props.bookmark.isPrivate || currentCatId === 'cat-vault' || !!props.categories.find(c => c.id === currentCatId)?.isPrivate
+
   return props.categories.filter((c) => {
     // Exclude current category
     if (c.id === currentCatId) return false
-    // If not in vault, do not reveal secret cat-vault in regular move list
-    if (c.isPrivate && currentCatId !== 'cat-vault') return false
-    return true
+    const isTargetVault = c.isPrivate || c.id === 'cat-vault'
+    // In personal space: strictly only allow moving to other personal space categories!
+    // In regular space: strictly only allow moving to regular categories!
+    return isBookmarkVault ? isTargetVault : !isTargetVault
   })
 })
 
