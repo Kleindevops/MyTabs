@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div
     class="relative h-screen w-screen overflow-hidden flex flex-col font-sans select-none text-slate-100"
     :class="{ 'modal-active': hasActiveModal }"
@@ -25,44 +25,19 @@
         <SearchBar />
       </div>
 
-      <!-- Floating Category Drag & Drop Target Bar (visible when dragging an icon) -->
-      <transition
-        enter-active-class="transition duration-200 ease-out"
-        enter-from-class="transform -translate-y-2 opacity-0"
-        enter-to-class="transform translate-y-0 opacity-100"
-        leave-active-class="transition duration-150 ease-in"
-        leave-from-class="transform translate-y-0 opacity-100"
-        leave-to-class="transform -translate-y-2 opacity-0"
-      >
-        <div
-          v-if="isDraggingBookmark"
-          class="w-full max-w-2xl mx-auto my-1.5 p-2 rounded-2xl glass-panel border border-emerald-400/40 bg-slate-900/90 shadow-2xl flex items-center justify-center space-x-2 text-xs z-30"
-        >
-          <span class="text-emerald-300 font-medium flex items-center space-x-1.5 shrink-0 pl-1">
-            <FolderInput class="w-3.5 h-3.5" />
-            <span>拖拽移动至分类：</span>
-          </span>
-          <div class="flex items-center space-x-1.5 overflow-x-auto py-0.5">
-            <button
-              v-for="cat in availableMoveCategories"
-              :key="cat.id"
-              @dragover.prevent="dragOverFloatingCatId = cat.id"
-              @dragleave="dragOverFloatingCatId = null"
-              @drop="handleFloatingDrop($event, cat)"
-              :class="[
-                'px-3 py-1.5 rounded-xl font-medium transition-all shrink-0',
-                dragOverFloatingCatId === cat.id
-                  ? 'bg-emerald-600 text-white ring-2 ring-emerald-300 scale-105 shadow-lg'
-                  : activeCategoryId === cat.id
-                    ? 'bg-white/20 text-white/90'
-                    : 'bg-white/10 hover:bg-white/15 text-white/80'
-              ]"
-            >
-              {{ cat.name }}
-            </button>
-          </div>
-        </div>
-      </transition>
+      <!-- Desktop Category Navigation & Drag Drop Bar (Zero-jump steady height) -->
+      <div class="w-full max-w-4xl mx-auto my-1 z-20">
+        <CategoryNav
+          :categories="settings.categories || []"
+          :activeCategoryId="activeCategoryId"
+          :isDragging="isDraggingBookmark"
+          :draggedBookmark="draggedBookmarkItem"
+          :isVaultUnlocked="isVaultUnlocked"
+          @select-category="handleCategorySelect"
+          @add-category="handleAddCategory"
+          @move-bookmark="handleMoveBookmark"
+        />
+      </div>
 
       <!-- Desktop Bookmarks Grid (Interactive desktop icons with labels, matching iTab) -->
       <div class="w-full mt-1 max-w-5xl relative">
@@ -199,6 +174,7 @@ import { FolderInput, CheckCircle2 } from 'lucide-vue-next'
 import ClockWidget from './components/ClockWidget.vue'
 import HotNewsWidget from './components/HotNewsWidget.vue'
 import SearchBar from './components/SearchBar.vue'
+import CategoryNav from './components/CategoryNav.vue'
 import BookmarkGrid from './components/BookmarkGrid.vue'
 import WindowsTaskbar from './components/WindowsTaskbar.vue'
 import BookmarkContextMenu from './components/BookmarkContextMenu.vue'

@@ -389,16 +389,21 @@ function onCategoryDrop(e: DragEvent, cat: CategoryItem) {
     clearTimeout(hoverCategoryTimer)
     hoverCategoryTimer = null
   }
+  let bmId: string | null = null;
   try {
-    const raw = e.dataTransfer?.getData('application/json')
+    const raw = e.dataTransfer?.getData("application/json");
     if (raw) {
-      const data = JSON.parse(raw)
-      if (data.bookmarkId) {
-        emit('move-bookmark', { bookmarkId: data.bookmarkId, targetCategoryId: cat.id })
-      }
+      const data = JSON.parse(raw);
+      bmId = data.bookmarkId;
     }
   } catch (err) {
-    console.error('Error handling category drop:', err)
+    console.error("Error handling category drop:", err);
+  }
+  if (!bmId) {
+    bmId = e.dataTransfer?.getData("text/plain") || null;
+  }
+  if (bmId) {
+    emit("move-bookmark", { bookmarkId: bmId, targetCategoryId: cat.id });
   }
 }
 

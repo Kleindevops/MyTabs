@@ -48,7 +48,7 @@
         >
           <!-- Icon Container (Squircle) -->
           <div
-            class="w-14 h-14 md:w-16 md:h-16 rounded-2xl md:rounded-3xl flex items-center justify-center transition-all duration-300 relative overflow-hidden"
+            class="w-14 h-14 md:w-16 md:h-16 rounded-2xl md:rounded-3xl flex items-center justify-center transition-all duration-300 relative overflow-hidden pointer-events-none select-none"
             :class="[
               !bm.bgColor || bm.bgColor === 'transparent'
                 ? (isSmallIcon(bm)
@@ -64,8 +64,9 @@
               v-if="bm.icon"
               :src="bm.icon"
               :alt="bm.title"
+              draggable="false"
               :class="[
-                'object-contain transition-transform group-hover:scale-110',
+                'object-contain transition-transform group-hover:scale-110 pointer-events-none select-none',
                 isSmallIcon(bm)
                   ? 'w-7 h-7 sm:w-8 sm:h-8 max-w-[32px] max-h-[32px] drop-shadow-sm'
                   : 'w-10 h-10 md:w-12 md:h-12 rounded-xl'
@@ -73,7 +74,7 @@
               @load="handleIconLoaded(bm.id, $event)"
               @error="bm.icon = undefined"
             />
-            <span v-else class="text-xl md:text-2xl font-bold text-white tracking-wider drop-shadow-md">
+            <span v-else class="text-xl md:text-2xl font-bold text-white tracking-wider drop-shadow-md pointer-events-none select-none">
               {{ bm.title ? bm.title.slice(0, 1).toUpperCase() : 'W' }}
             </span>
 
@@ -81,14 +82,14 @@
             <span
               v-if="isPrivateBookmark(bm)"
               title="以无痕模式打开 (底层物理零记录，关闭即焚)"
-              class="absolute bottom-1 right-1 px-1 py-0.2 bg-purple-900/90 border border-purple-400/40 rounded text-[8px] text-purple-200 font-mono shadow-sm"
+              class="absolute bottom-1 right-1 px-1 py-0.2 bg-purple-900/90 border border-purple-400/40 rounded text-[8px] text-purple-200 font-mono shadow-sm pointer-events-none select-none"
             >
               无痕
             </span>
           </div>
 
           <!-- Title Underneath (e.g. github) -->
-          <span class="mt-2 text-xs font-medium text-white/90 group-hover:text-white drop-shadow-[0_1px_4px_rgba(0,0,0,0.8)] text-center truncate w-full px-1">
+          <span class="mt-2 text-xs font-medium text-white/90 group-hover:text-white drop-shadow-[0_1px_4px_rgba(0,0,0,0.8)] text-center truncate w-full px-1 pointer-events-none select-none">
             {{ bm.title }}
           </span>
         </div>
