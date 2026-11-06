@@ -1,5 +1,5 @@
 <template>
-  <div class="flex flex-col w-[440px] h-[560px] bg-slate-950 text-slate-100 font-sans select-none overflow-hidden relative">
+  <div class="flex flex-col w-[440px] h-[560px] min-w-[440px] min-h-[560px] max-w-[440px] max-h-[560px] bg-slate-950 text-slate-100 font-sans select-none overflow-hidden relative">
     <!-- Floating Toast Notification -->
     <transition
       enter-active-class="transition duration-200 ease-out"

@@ -1,12 +1,37 @@
 <!DOCTYPE html>
-<html lang="zh-CN" class="dark">
+<html lang="zh-CN" class="dark" style="width: 440px; height: 560px;">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>MyTabs 资源嗅探器</title>
+    <style>
+      html, body {
+        width: 440px !important;
+        min-width: 440px !important;
+        max-width: 440px !important;
+        height: 560px !important;
+        min-height: 560px !important;
+        max-height: 560px !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        overflow: hidden !important;
+        box-sizing: border-box !important;
+        background-color: #020617;
+      }
+      #app {
+        width: 440px !important;
+        height: 560px !important;
+        min-width: 440px !important;
+        min-height: 560px !important;
+        max-width: 440px !important;
+        max-height: 560px !important;
+        overflow: hidden !important;
+        box-sizing: border-box !important;
+      }
+    </style>
   </head>
-  <body class="bg-slate-950 text-slate-100 w-[440px] min-h-[480px] max-h-[600px] overflow-hidden selection:bg-blue-500/30 font-sans">
-    <div id="app"></div>
+  <body class="bg-slate-950 text-slate-100 overflow-hidden selection:bg-blue-500/30 font-sans" style="width: 440px; height: 560px; margin: 0; padding: 0;">
+    <div id="app" style="width: 440px; height: 560px;"></div>
     <script type="module" src="/src/popup/main.ts"></script>
   </body>
 </html>
