@@ -1,6 +1,6 @@
 import type { AppSettings, SearchEngine } from './types'
 import { writeBackupToOneDrive } from './onedrive'
-import { PRESET_SITE_ICONS, extractHostname, findPresetForDomain, getFaviconCandidates } from './favicon'
+import { PRESET_SITE_ICONS, extractHostname, findPresetForDomain, getFaviconCandidates, suggestTitleFromUrl } from './favicon'
 
 export const DEFAULT_SEARCH_ENGINES: SearchEngine[] = [
   {
@@ -214,7 +214,7 @@ export async function saveSettings(settings: AppSettings, triggerOneDrive = true
   }
   settings.oneDrive.lastModifiedTime = Date.now()
   const plainData = JSON.parse(JSON.stringify(settings))
-  return new Promise((resolve) => {
+  return new Promise<void>((resolve) => {
     if (typeof chrome !== 'undefined' && chrome.storage?.local) {
       chrome.storage.local.set({ [STORAGE_KEY]: plainData }, () => {
         resolve()
