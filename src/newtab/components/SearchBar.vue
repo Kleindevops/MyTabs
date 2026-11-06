@@ -2,8 +2,10 @@
   <div class="relative w-full max-w-2xl mx-auto px-4 z-20">
     <div
       :class="[
-        'flex items-center w-full px-4 py-3 rounded-2xl glass-panel-light transition-all duration-300 shadow-glass',
-        isFocused ? 'ring-2 ring-blue-400/50 bg-white/20 dark:bg-slate-900/70 scale-[1.01]' : 'hover:bg-white/15'
+        'flex items-center w-full px-4 py-3 rounded-2xl glass-panel-light transition-all duration-200 shadow-glass',
+        isFocused
+          ? 'ring-2 ring-blue-400/80 bg-slate-900/95 dark:bg-slate-950/95 border-blue-400/30 shadow-2xl shadow-black/40'
+          : 'hover:bg-white/15'
       ]"
     >
       <!-- Engine selector button -->
@@ -49,7 +51,7 @@
         @blur="handleBlur"
         @keydown.enter="performSearch"
         @keydown.tab.prevent="cycleEngine"
-        class="flex-1 bg-transparent border-0 px-3 text-sm md:text-base text-white placeholder-white/50 focus:outline-none"
+        class="flex-1 bg-transparent border-0 px-3 text-sm md:text-base text-white font-medium subpixel-antialiased placeholder-white/60 focus:outline-none drop-shadow-[0_1px_2px_rgba(0,0,0,0.5)]"
       />
 
       <!-- Clear button -->
