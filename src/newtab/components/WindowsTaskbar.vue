@@ -12,11 +12,11 @@
         :class="[
           'p-2 rounded-xl transition-all duration-200 flex items-center justify-center space-x-1.5 border border-white/15',
           showStartMenu
-            ? 'bg-blue-600/90 text-white shadow-lg shadow-blue-500/30 ring-1 ring-blue-300/40'
+            ? 'bg-white/25 text-white shadow-md shadow-black/10 backdrop-blur-md ring-1 ring-white/30'
             : 'glass-panel-light hover:bg-white/20 text-white/90 shadow-sm'
         ]"
       >
-        <LayoutGrid class="w-4 h-4 text-blue-300 group-hover:text-white" />
+        <LayoutGrid class="w-4 h-4 text-white/90 group-hover:text-white" />
         <span class="text-xs font-semibold hidden sm:inline">分类</span>
       </button>
 
@@ -74,10 +74,10 @@
       <!-- Start Menu Popup -->
       <div
         v-if="showStartMenu"
-        class="absolute left-4 bottom-20 w-56 rounded-2xl p-2 shadow-2xl border border-white/20 animate-in fade-in slide-in-from-bottom-2 z-50 space-y-1 backdrop-blur-2xl"
-        style="background: rgba(15, 23, 42, 0.88);"
+        class="absolute left-4 bottom-20 w-56 rounded-2xl p-2 shadow-[0_16px_36px_rgba(0,0,0,0.3)] border border-white/20 animate-in fade-in slide-in-from-bottom-2 z-50 space-y-1 glass-panel-light backdrop-blur-2xl"
+        style="background: rgba(255, 255, 255, 0.16); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);"
       >
-        <div class="px-2.5 py-1.5 text-[10px] font-semibold text-white/40 uppercase tracking-wider">
+        <div class="px-2.5 py-1.5 text-[10px] font-semibold text-white/60 uppercase tracking-wider">
           书签分类目录
         </div>
         <button
@@ -93,18 +93,18 @@
             dragOverCatId === cat.id
               ? 'bg-emerald-600 text-white ring-2 ring-emerald-300'
               : activeCategoryId === cat.id
-                ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30'
-                : 'text-slate-300 hover:text-white hover:bg-white/10'
+                ? 'bg-white/25 text-white shadow-sm font-semibold backdrop-blur-md ring-1 ring-white/20'
+                : 'text-white/80 hover:text-white hover:bg-white/15'
           ]"
         >
           <span>{{ cat.name }}</span>
           <Check v-if="activeCategoryId === cat.id" class="w-3.5 h-3.5" />
         </button>
 
-        <div class="pt-1 border-t border-white/10">
+        <div class="pt-1 border-t border-white/15">
           <button
             @click="$emit('add-category'); showStartMenu = false"
-            class="w-full flex items-center space-x-2 px-3 py-1.5 rounded-xl text-xs text-blue-400 hover:text-blue-300 hover:bg-white/5 transition-colors"
+            class="w-full flex items-center space-x-2 px-3 py-1.5 rounded-xl text-xs text-white/85 hover:text-white hover:bg-white/15 transition-colors"
           >
             <Plus class="w-3.5 h-3.5" />
             <span>新建分类</span>
@@ -234,19 +234,6 @@
       >
         <Settings class="w-3.5 h-3.5" />
       </button>
-
-      <!-- Digital Clock & Date (Windows tray bottom right) -->
-      <div
-        class="hidden sm:flex flex-col items-end justify-center px-2 py-0.5 rounded-xl text-right cursor-default hover:bg-white/10 transition-colors"
-        title="当前时间"
-      >
-        <span class="text-xs font-semibold tracking-wider font-mono text-white/90 leading-tight">
-          {{ trayTime }}
-        </span>
-        <span class="text-[9px] text-white/60 font-mono leading-tight">
-          {{ trayDate }}
-        </span>
-      </div>
     </div>
   </footer>
 </template>
@@ -330,10 +317,6 @@ const displayedCategories = computed(() => {
   })
 })
 
-const trayTime = ref('12:00')
-const trayDate = ref('2026/11/01')
-let clockTimer: number | null = null
-
 // Category bookmarks
 const currentCategoryBookmarks = computed(() => {
   return props.bookmarks.filter((b) => b.categoryId === props.activeCategoryId)
@@ -365,14 +348,11 @@ watch(() => props.activeCategoryId, () => {
 })
 
 onMounted(() => {
-  updateTrayClock()
-  clockTimer = window.setInterval(updateTrayClock, 1000)
   updatePageSizeByWidth()
   window.addEventListener('resize', updatePageSizeByWidth)
 })
 
 onUnmounted(() => {
-  if (clockTimer) clearInterval(clockTimer)
   window.removeEventListener('resize', updatePageSizeByWidth)
   if (hoverCategoryTimer) clearTimeout(hoverCategoryTimer)
 })
@@ -385,14 +365,6 @@ function updatePageSizeByWidth() {
   } else {
     pageSize.value = 9
   }
-}
-
-function updateTrayClock() {
-  const now = new Date()
-  const h = now.getHours().toString().padStart(2, '0')
-  const m = now.getMinutes().toString().padStart(2, '0')
-  trayTime.value = `${h}:${m}`
-  trayDate.value = `${now.getFullYear()}/${now.getMonth() + 1}/${now.getDate()}`
 }
 
 function prevPage() {
