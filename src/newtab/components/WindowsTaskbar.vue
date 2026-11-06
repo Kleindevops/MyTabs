@@ -4,7 +4,7 @@
     style="background: rgba(255, 255, 255, 0.12); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);"
   >
     <!-- Left: Start Menu & Category Switcher (Windows Start style) -->
-    <div class="flex items-center space-x-1.5 shrink-0">
+    <div class="flex items-center space-x-1.5 shrink-0 z-20">
       <!-- Windows / Start Logo Button -->
       <button
         @click.stop="showStartMenu = !showStartMenu"
@@ -95,12 +95,23 @@
       </div>
     </div>
 
-    <!-- Center: Paged Bookmarks Taskbar Icons (with Prev/Next arrows & Wheel flip) -->
+    <!-- Center: Paged Bookmarks Taskbar Icons (with Prev/Next arrows & Wheel flip) - Strictly Horizontally & Vertically Centered -->
     <div
-      class="flex-1 flex items-center justify-center px-2 sm:px-6 overflow-hidden max-w-2xl mx-auto"
-      @wheel.prevent="handleWheel"
+      class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none z-10 flex items-center justify-center max-w-[calc(100vw-280px)] sm:max-w-xl md:max-w-2xl"
     >
-      <div class="flex items-center space-x-1.5 sm:space-x-3 glass-panel-light px-2.5 py-1.5 rounded-2xl border border-white/15 shadow-md backdrop-blur-md">
+      <div
+        class="pointer-events-auto flex items-center space-x-1.5 sm:space-x-3 glass-panel-light px-2.5 py-1.5 rounded-2xl border border-white/15 shadow-md backdrop-blur-md"
+        @wheel.prevent="handleWheel"
+      >
+        <!-- Invisible spacer on left to keep icons perfectly centered when totalPages > 1 -->
+        <span
+          v-if="totalPages > 1"
+          class="text-[10px] font-mono invisible px-2 py-0.5 rounded-md border border-transparent shrink-0 hidden sm:inline select-none pointer-events-none"
+          aria-hidden="true"
+        >
+          {{ currentPage }} / {{ totalPages }}
+        </span>
+
         <!-- Prev Page Button -->
         <button
           @click="prevPage"
@@ -188,7 +199,7 @@
     </div>
 
     <!-- Right: Windows System Tray (OneDrive, AI, Clock, Settings) -->
-    <div class="flex items-center space-x-1.5 sm:space-x-2 shrink-0">
+    <div class="flex items-center space-x-1.5 sm:space-x-2 shrink-0 z-20">
       <!-- Data Sync / Backup Pill -->
       <button
         @click="$emit('open-onedrive')"
