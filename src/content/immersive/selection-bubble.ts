@@ -245,9 +245,21 @@ function showBubbleTrigger(x: number, y: number, text: string) {
     e.preventDefault()
   })
 
+  // 支持点击直接展开
   trigger.addEventListener('click', (e) => {
     e.stopPropagation()
     openTranslationCard(safeX, safeY, text)
+  })
+
+  // 支持鼠标悬停 200ms 自动展开，无需费劲点击
+  let hoverTimer: number | null = null
+  trigger.addEventListener('mouseenter', () => {
+    hoverTimer = window.setTimeout(() => {
+      openTranslationCard(safeX, safeY, text)
+    }, 180)
+  })
+  trigger.addEventListener('mouseleave', () => {
+    if (hoverTimer) clearTimeout(hoverTimer)
   })
 
   root.appendChild(trigger)
@@ -381,11 +393,32 @@ export function initSelectionTranslator(enabled: boolean = true, targetLang: str
       const rect = range.getBoundingClientRect()
       if (rect.width === 0 && rect.height === 0) return
 
-      const clickX = e.pageX
-      const clickY = e.pageY
+      // 优先以选区右下角为锚点，贴合选中文本末端
+      const anchorX = Math.round(rect.right + window.scrollX)
+      const anchorY = Math.round(rect.bottom + window.scrollY)
 
-      showBubbleTrigger(clickX, clickY, text)
+      showBubbleTrigger(anchorX, anchorY, text)
     }, 10)
+  })
+
+  // 监听用户按下 Ctrl+C 复制事件：直接自动弹出翻译卡片
+  document.addEventListener('copy', () => {
+    if (!isSelectionBubbleEnabled) return
+    setTimeout(() => {
+      const selection = window.getSelection()
+      const text = selection?.toString().trim()
+      if (text && text.length >= 2 && text.length <= 5000 && !/^[\s\d.,!?;:()]+$/.test(text)) {
+        try {
+          const range = selection?.getRangeAt(0)
+          const rect = range?.getBoundingClientRect()
+          if (rect) {
+            const posX = Math.round(rect.left + window.scrollX)
+            const posY = Math.round(rect.bottom + window.scrollY)
+            openTranslationCard(posX, posY, text)
+          }
+        } catch {}
+      }
+    }, 50)
   })
 
   // 点击空白区域时收起卡片

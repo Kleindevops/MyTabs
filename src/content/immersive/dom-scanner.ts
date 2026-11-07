@@ -8,7 +8,7 @@ const EXCLUDE_TAGS = new Set([
   'NAV', 'NOSCRIPT'
 ])
 
-const BLOCK_TAGS = ['P', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'LI', 'BLOCKQUOTE', 'DD', 'FIGCAPTION']
+const BLOCK_TAGS = ['P', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'LI', 'BLOCKQUOTE', 'DD', 'FIGCAPTION', 'TD']
 
 /**
  * 检查元素本身或其祖先是否属于受保护排除标签
@@ -97,8 +97,8 @@ export function scanPageTranslatableBlocks(targetLang: string = 'zh-Hans'): Tran
     })
   })
 
-  // 2. 补充扫描 article / main 内包含较多纯文本的 div
-  const containers = document.querySelectorAll<HTMLElement>('article div, main div, .content div, .post div')
+  // 2. 补充扫描 article / main / 邮件阅读面板 内包含较多纯文本的 div
+  const containers = document.querySelectorAll<HTMLElement>('article div, main div, .content div, .post div, [role="main"] div, .ReadingPaneContainer div, .ItemBody div, [data-message-id] div')
   containers.forEach((el) => {
     if (seenElements.has(el) || isElementExcluded(el)) return
     if (el.hasAttribute('data-mytabs-scanned')) return
