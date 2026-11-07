@@ -147,6 +147,8 @@ export interface ImmersiveTranslateConfig {
   selectionAdaptiveSize?: boolean // 弹窗自适应开关（根据长短句智能调整宽高并折叠长原文）
   selectionResizable?: boolean // 支持手动拉伸（允许拖拽右下角自由改变窗口大小）
   tripleSpaceTranslate: boolean // 输入框 3 次空格翻译
+  grammarHighlight?: boolean // 划选英文段落自动以颜色标记英语语法 (默认开启)
+  grammarDisplayMode?: 'syntax' | 'pos' | 'plain' // 默认语法标记模式：'syntax'(句子主干成分) 或 'pos'(词性分类) 或 'plain'(纯文本)
 }
 
 export interface AppSettings {

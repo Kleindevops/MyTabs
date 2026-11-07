@@ -13,6 +13,8 @@ export interface ImmersiveConfig {
   selectionAdaptiveSize?: boolean
   selectionResizable?: boolean
   tripleSpaceTranslate: boolean
+  grammarHighlight?: boolean
+  grammarDisplayMode?: 'syntax' | 'pos' | 'plain'
 }
 
 export type BilingualDisplayState = 'idle' | 'translating' | 'showing' | 'hidden'

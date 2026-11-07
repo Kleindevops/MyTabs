@@ -187,7 +187,9 @@ export function initImmersiveTranslation(config?: Partial<ImmersiveConfig>) {
   const triggerMode = activeConfig.selectionTriggerMode || 'bubble'
   const adaptiveSize = activeConfig.selectionAdaptiveSize !== false
   const resizable = activeConfig.selectionResizable !== false
-  initSelectionTranslator(isSelectionEnabled, activeConfig.targetLang, triggerMode, adaptiveSize, resizable)
+  const grammarHighlight = activeConfig.grammarHighlight !== false
+  const grammarDefaultMode = activeConfig.grammarDisplayMode || 'syntax'
+  initSelectionTranslator(isSelectionEnabled, activeConfig.targetLang, triggerMode, adaptiveSize, resizable, grammarHighlight, grammarDefaultMode)
 
   // 2. 初始化输入框 3 次空格翻译
   const isTripleSpaceEnabled = Boolean(activeConfig.enabled && activeConfig.tripleSpaceTranslate)
@@ -222,7 +224,9 @@ export function updateImmersiveConfig(newConfig: Partial<ImmersiveConfig>) {
   const triggerMode = activeConfig.selectionTriggerMode || 'bubble'
   const adaptiveSize = activeConfig.selectionAdaptiveSize !== false
   const resizable = activeConfig.selectionResizable !== false
-  updateSelectionConfig(isSelectionEnabled, activeConfig.targetLang, triggerMode, adaptiveSize, resizable)
+  const grammarHighlight = activeConfig.grammarHighlight !== false
+  const grammarDefaultMode = activeConfig.grammarDisplayMode || 'syntax'
+  updateSelectionConfig(isSelectionEnabled, activeConfig.targetLang, triggerMode, adaptiveSize, resizable, grammarHighlight, grammarDefaultMode)
 
   const isTripleSpaceEnabled = Boolean(isGloballyEnabled && activeConfig.tripleSpaceTranslate)
   updateTripleSpaceConfig(isTripleSpaceEnabled)

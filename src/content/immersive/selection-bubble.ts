@@ -1,8 +1,17 @@
 import type { SelectionTriggerMode } from './types'
+import {
+  analyzeEnglishGrammar,
+  renderGrammarToHtml,
+  type GrammarDisplayMode,
+  type AnalyzedSentence
+} from './grammar-engine'
 
 let hostElement: HTMLElement | null = null
 let shadowRoot: ShadowRoot | null = null
+let tooltipElement: HTMLElement | null = null
 let isSelectionBubbleEnabled = true
+let isGrammarEnabled = true
+let currentGrammarMode: GrammarDisplayMode = 'syntax'
 let currentSelectedText = ''
 let currentTargetLang = 'zh-Hans'
 let currentTriggerMode: SelectionTriggerMode = 'bubble'
@@ -263,6 +272,179 @@ function ensureHost(): ShadowRoot {
       to { transform: rotate(360deg); }
     }
 
+    /* 语法高亮分词胶囊通用样式 */
+    .mt-grammar-token {
+      display: inline-block;
+      padding: 0 4px;
+      margin: 1px 1.5px;
+      border-radius: 4px;
+      transition: all 0.15s ease;
+      cursor: help;
+      line-height: 1.45;
+    }
+    .mt-grammar-token:hover {
+      filter: brightness(0.92);
+      transform: translateY(-1px);
+      box-shadow: 0 2px 5px rgba(0,0,0,0.12);
+    }
+    .mt-token-plain {
+      display: inline;
+    }
+
+    /* 句子成分模式配色 (浅色模式) */
+    .mt-role-subject {
+      background: rgba(59, 130, 246, 0.12);
+      color: #1d4ed8;
+      border: 1px solid rgba(59, 130, 246, 0.32);
+      font-weight: 500;
+    }
+    .mt-role-predicate {
+      background: rgba(239, 68, 68, 0.12);
+      color: #b91c1c;
+      border: 1px solid rgba(239, 68, 68, 0.38);
+      font-weight: 600;
+    }
+    .mt-role-object {
+      background: rgba(16, 185, 129, 0.12);
+      color: #047857;
+      border: 1px solid rgba(16, 185, 129, 0.32);
+      font-weight: 500;
+    }
+    .mt-role-predicative {
+      background: rgba(6, 182, 212, 0.12);
+      color: #0e7490;
+      border: 1px solid rgba(6, 182, 212, 0.32);
+      font-weight: 500;
+    }
+    .mt-role-modifier {
+      background: rgba(245, 158, 11, 0.12);
+      color: #b45309;
+      border: 1px dashed rgba(245, 158, 11, 0.42);
+    }
+    .mt-role-conjunction {
+      background: rgba(139, 92, 246, 0.12);
+      color: #6d28d9;
+      border: 1px solid rgba(139, 92, 246, 0.32);
+      font-weight: 600;
+    }
+
+    /* 词性模式配色 (浅色模式) */
+    .mt-pos-noun {
+      background: rgba(59, 130, 246, 0.1);
+      color: #2563eb;
+      border-bottom: 2px solid #3b82f6;
+    }
+    .mt-pos-verb {
+      background: rgba(239, 68, 68, 0.1);
+      color: #dc2626;
+      border-bottom: 2px solid #ef4444;
+      font-weight: 600;
+    }
+    .mt-pos-adj {
+      background: rgba(16, 185, 129, 0.1);
+      color: #059669;
+      border-bottom: 2px solid #10b981;
+    }
+    .mt-pos-adv {
+      background: rgba(245, 158, 11, 0.1);
+      color: #d97706;
+      border-bottom: 2px solid #f59e0b;
+    }
+    .mt-pos-pron {
+      background: rgba(99, 102, 241, 0.1);
+      color: #4f46e5;
+      border-bottom: 2px solid #6366f1;
+    }
+    .mt-pos-prep {
+      background: rgba(168, 85, 247, 0.1);
+      color: #9333ea;
+      border-bottom: 2px solid #a855f7;
+    }
+    .mt-pos-conj {
+      background: rgba(236, 72, 153, 0.1);
+      color: #db2777;
+      border-bottom: 2px solid #ec4899;
+    }
+    .mt-pos-det {
+      background: rgba(107, 114, 128, 0.08);
+      color: #4b5563;
+    }
+
+    /* 语法浮动提示气泡 Tooltip */
+    .mt-grammar-tooltip {
+      position: absolute;
+      background: rgba(17, 24, 39, 0.95);
+      backdrop-filter: blur(8px);
+      color: #ffffff;
+      padding: 5px 9px;
+      border-radius: 6px;
+      font-size: 11px;
+      line-height: 1.35;
+      pointer-events: none;
+      z-index: 2147483647;
+      box-shadow: 0 4px 14px rgba(0,0,0,0.25);
+      transition: opacity 0.12s ease;
+      white-space: nowrap;
+      display: none;
+    }
+    .mt-grammar-tooltip .mt-tip-sub {
+      color: #9ca3af;
+      font-size: 10px;
+    }
+
+    /* 模式切换按钮栏 */
+    .mt-grammar-controls {
+      display: inline-flex;
+      align-items: center;
+      gap: 2px;
+      background: #f1f5f9;
+      padding: 2px 3px;
+      border-radius: 6px;
+    }
+    .mt-mode-btn {
+      background: transparent;
+      border: none;
+      font-size: 10.5px;
+      color: #64748b;
+      padding: 2px 6px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: 500;
+      transition: all 0.15s ease;
+    }
+    .mt-mode-btn:hover {
+      color: #1e2937;
+    }
+    .mt-mode-btn.active {
+      background: #ffffff;
+      color: #4f46e5;
+      font-weight: 600;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+
+    /* 语法图例栏 */
+    .mt-grammar-legend {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 5px 10px;
+      padding-top: 5px;
+      margin-top: 4px;
+      border-top: 1px dashed #e5e7eb;
+      font-size: 10.5px;
+      color: #6b7280;
+    }
+    .mt-legend-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+    }
+    .mt-legend-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+    }
+
     /* 暗色模式适配 */
     @media (prefers-color-scheme: dark) {
       .mt-card {
@@ -300,6 +482,81 @@ function ensureHost(): ShadowRoot {
         background: #334155;
         color: #f1f5f9;
       }
+      .mt-role-subject {
+        background: rgba(59, 130, 246, 0.22);
+        color: #93c5fd;
+        border-color: rgba(59, 130, 246, 0.4);
+      }
+      .mt-role-predicate {
+        background: rgba(239, 68, 68, 0.22);
+        color: #fca5a5;
+        border-color: rgba(239, 68, 68, 0.45);
+      }
+      .mt-role-object {
+        background: rgba(16, 185, 129, 0.22);
+        color: #6ee7b7;
+        border-color: rgba(16, 185, 129, 0.4);
+      }
+      .mt-role-predicative {
+        background: rgba(6, 182, 212, 0.22);
+        color: #67e8f9;
+        border-color: rgba(6, 182, 212, 0.4);
+      }
+      .mt-role-modifier {
+        background: rgba(245, 158, 11, 0.2);
+        color: #fcd34d;
+        border-color: rgba(245, 158, 11, 0.45);
+      }
+      .mt-role-conjunction {
+        background: rgba(139, 92, 246, 0.22);
+        color: #c4b5fd;
+        border-color: rgba(139, 92, 246, 0.45);
+      }
+      .mt-pos-noun {
+        background: rgba(59, 130, 246, 0.2);
+        color: #93c5fd;
+      }
+      .mt-pos-verb {
+        background: rgba(239, 68, 68, 0.2);
+        color: #fca5a5;
+      }
+      .mt-pos-adj {
+        background: rgba(16, 185, 129, 0.2);
+        color: #6ee7b7;
+      }
+      .mt-pos-adv {
+        background: rgba(245, 158, 11, 0.2);
+        color: #fcd34d;
+      }
+      .mt-pos-pron {
+        background: rgba(99, 102, 241, 0.2);
+        color: #a5b4fc;
+      }
+      .mt-pos-prep {
+        background: rgba(168, 85, 247, 0.2);
+        color: #d8b4fe;
+      }
+      .mt-pos-conj {
+        background: rgba(236, 72, 153, 0.2);
+        color: #f472b6;
+      }
+      .mt-grammar-controls {
+        background: #0f172a;
+      }
+      .mt-mode-btn {
+        color: #94a3b8;
+      }
+      .mt-mode-btn:hover {
+        color: #f8fafc;
+      }
+      .mt-mode-btn.active {
+        background: #1e2937;
+        color: #818cf8;
+      }
+      .mt-grammar-legend {
+        border-top-color: #334155;
+        color: #94a3b8;
+      }
     }
   `
   shadowRoot.appendChild(style)
@@ -314,12 +571,47 @@ function speakText(text: string) {
   window.speechSynthesis.speak(utterance)
 }
 
+function ensureTooltip(): HTMLElement {
+  const root = ensureHost()
+  if (tooltipElement && tooltipElement.isConnected) return tooltipElement
+  tooltipElement = document.createElement('div')
+  tooltipElement.className = 'mt-grammar-tooltip'
+  root.appendChild(tooltipElement)
+  return tooltipElement
+}
+
+function renderLegendHtml(mode: GrammarDisplayMode): string {
+  if (mode === 'syntax') {
+    return `
+      <span class="mt-legend-item"><span class="mt-legend-dot" style="background: #3b82f6;"></span>主语 (S)</span>
+      <span class="mt-legend-item"><span class="mt-legend-dot" style="background: #ef4444;"></span>谓语 (V)</span>
+      <span class="mt-legend-item"><span class="mt-legend-dot" style="background: #10b981;"></span>宾/表语 (O/P)</span>
+      <span class="mt-legend-item"><span class="mt-legend-dot" style="background: #f59e0b;"></span>修饰/从句 (M)</span>
+      <span class="mt-legend-item"><span class="mt-legend-dot" style="background: #8b5cf6;"></span>连词/引导词 (C)</span>
+    `
+  }
+  if (mode === 'pos') {
+    return `
+      <span class="mt-legend-item"><span class="mt-legend-dot" style="background: #3b82f6;"></span>名词</span>
+      <span class="mt-legend-item"><span class="mt-legend-dot" style="background: #ef4444;"></span>动词</span>
+      <span class="mt-legend-item"><span class="mt-legend-dot" style="background: #10b981;"></span>形容词</span>
+      <span class="mt-legend-item"><span class="mt-legend-dot" style="background: #f59e0b;"></span>副词</span>
+      <span class="mt-legend-item"><span class="mt-legend-dot" style="background: #8b5cf6;"></span>介词</span>
+      <span class="mt-legend-item"><span class="mt-legend-dot" style="background: #ec4899;"></span>连词</span>
+    `
+  }
+  return ''
+}
+
 export function hideSelectionUI() {
   if (!shadowRoot) return
   const triggers = shadowRoot.querySelectorAll('.mt-float-trigger, #mt-trigger')
   triggers.forEach((t) => t.remove())
   const cards = shadowRoot.querySelectorAll('.mt-card, #mt-card')
   cards.forEach((c) => c.remove())
+  if (tooltipElement) {
+    tooltipElement.style.display = 'none'
+  }
 }
 
 const SAFE_BOTTOM_GAP = 28 // 底部预留避让系统任务栏与浏览器边界
@@ -448,27 +740,55 @@ function openTranslationCard(rect: DOMRect, text: string) {
   card.style.top = `${posY}px`
   card.addEventListener('mousedown', (e) => e.stopPropagation())
 
-  // 4. 渲染卡片结构：支持长原文折叠与充裕译文展示
+  // 4. 渲染卡片结构：支持长原文折叠与语法彩色分析
   const wordCount = text.length
   const showCollapsibleOrig = isAdaptiveSize && isLongText
+
+  const isEnglish = /[a-zA-Z]{2,}/.test(text)
+  const analyzedSentences: AnalyzedSentence[] = (isEnglish && isGrammarEnabled)
+    ? analyzeEnglishGrammar(text)
+    : []
+
+  const initialContentHtml = (isEnglish && isGrammarEnabled)
+    ? renderGrammarToHtml(analyzedSentences, currentGrammarMode)
+    : escapeHtml(text)
+
+  const legendInitialHtml = (isEnglish && isGrammarEnabled && currentGrammarMode !== 'plain')
+    ? `<div class="mt-grammar-legend" id="mt-grammar-legend">${renderLegendHtml(currentGrammarMode)}</div>`
+    : `<div class="mt-grammar-legend" id="mt-grammar-legend" style="display: none;"></div>`
+
+  const controlsHtml = (isEnglish && isGrammarEnabled)
+    ? `
+      <div class="mt-grammar-controls" id="mt-grammar-switch">
+        <button class="mt-mode-btn ${currentGrammarMode === 'syntax' ? 'active' : ''}" data-mode="syntax" type="button" title="句子主干成分分析 (主谓宾定状从句)">成分</button>
+        <button class="mt-mode-btn ${currentGrammarMode === 'pos' ? 'active' : ''}" data-mode="pos" type="button" title="词性分类标注 (名/动/形/副等)">词性</button>
+        <button class="mt-mode-btn ${currentGrammarMode === 'plain' ? 'active' : ''}" data-mode="plain" type="button" title="原始纯文本">纯文本</button>
+      </div>
+    `
+    : ''
 
   const origSectionHtml = showCollapsibleOrig
     ? `
     <div class="mt-original-box">
       <div class="mt-section-title">
         <span>选区原文 · 共 ${wordCount} 字</span>
-        <button class="mt-toggle-orig-btn" id="mt-btn-toggle-orig" type="button">展开原文 ▾</button>
+        <div style="display: flex; align-items: center; gap: 6px;">
+          ${controlsHtml}
+          <button class="mt-toggle-orig-btn" id="mt-btn-toggle-orig" type="button">展开原文 ▾</button>
+        </div>
       </div>
-      <div class="mt-original-text" id="mt-orig-text" style="display: none;">${escapeHtml(text)}</div>
+      <div class="mt-original-text" id="mt-orig-text" style="display: none;">${initialContentHtml}</div>
+      ${legendInitialHtml}
     </div>
     `
     : `
     <div class="mt-original-box">
       <div class="mt-section-title">
-        <span>选区原文</span>
-        <span>共 ${wordCount} 字符</span>
+        <span>选区原文 · 共 ${wordCount} 字</span>
+        ${controlsHtml}
       </div>
-      <div class="mt-original-text">${escapeHtml(text)}</div>
+      <div class="mt-original-text" id="mt-orig-text">${initialContentHtml}</div>
+      ${legendInitialHtml}
     </div>
     `
 
@@ -476,7 +796,7 @@ function openTranslationCard(rect: DOMRect, text: string) {
     <div class="mt-header">
       <div class="mt-brand">
         <span>🌹</span>
-        <span>MyTabs 翻译</span>
+        <span>MyTabs 翻译与语法</span>
       </div>
       <div class="mt-actions">
         <button class="mt-icon-btn" id="mt-btn-speak" title="朗读">🔊 朗读</button>
@@ -506,13 +826,89 @@ function openTranslationCard(rect: DOMRect, text: string) {
   if (showCollapsibleOrig) {
     const toggleBtn = card.querySelector('#mt-btn-toggle-orig') as HTMLButtonElement
     const origBox = card.querySelector('#mt-orig-text') as HTMLElement
+    const legendBox = card.querySelector('#mt-grammar-legend') as HTMLElement
     if (toggleBtn && origBox) {
       toggleBtn.addEventListener('click', (e) => {
         e.stopPropagation()
         const isHidden = origBox.style.display === 'none'
         origBox.style.display = isHidden ? 'block' : 'none'
+        if (legendBox && currentGrammarMode !== 'plain') {
+          legendBox.style.display = isHidden ? 'flex' : 'none'
+        }
         toggleBtn.textContent = isHidden ? '收起原文 ▴' : '展开原文 ▾'
         requestAnimationFrame(clampToViewport)
+      })
+    }
+  }
+
+  // 绑定语法模式切换与 Tooltip 事件
+  if (isEnglish && isGrammarEnabled) {
+    const switchBox = card.querySelector('#mt-grammar-switch')
+    const origBox = card.querySelector('#mt-orig-text') as HTMLElement
+    const legendBox = card.querySelector('#mt-grammar-legend') as HTMLElement
+
+    if (switchBox && origBox) {
+      switchBox.querySelectorAll('.mt-mode-btn').forEach((btn) => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation()
+          const mode = (btn as HTMLElement).getAttribute('data-mode') as GrammarDisplayMode
+          if (!mode) return
+          currentGrammarMode = mode
+
+          switchBox.querySelectorAll('.mt-mode-btn').forEach((b) => b.classList.remove('active'))
+          btn.classList.add('active')
+
+          origBox.innerHTML = renderGrammarToHtml(analyzedSentences, currentGrammarMode)
+
+          if (legendBox) {
+            if (currentGrammarMode === 'plain') {
+              legendBox.style.display = 'none'
+            } else {
+              legendBox.style.display = 'flex'
+              legendBox.innerHTML = renderLegendHtml(currentGrammarMode)
+            }
+          }
+
+          requestAnimationFrame(clampToViewport)
+        })
+      })
+    }
+
+    if (origBox) {
+      origBox.addEventListener('mouseover', (e) => {
+        const target = (e.target as HTMLElement)?.closest?.('.mt-grammar-token') as HTMLElement | null
+        if (!target) return
+        const tipHtml = target.getAttribute('data-grammar-tip')
+        if (!tipHtml) return
+
+        const tip = ensureTooltip()
+        tip.innerHTML = tipHtml
+        tip.style.display = 'block'
+
+        const targetRect = target.getBoundingClientRect()
+        const tipW = tip.offsetWidth
+        const tipH = tip.offsetHeight
+
+        let tipX = targetRect.left + window.scrollX + (targetRect.width / 2) - (tipW / 2)
+        let tipY = targetRect.top + window.scrollY - tipH - 6
+
+        if (tipX < window.scrollX + 8) tipX = window.scrollX + 8
+        if (tipX + tipW > window.innerWidth + window.scrollX - 8) {
+          tipX = window.innerWidth + window.scrollX - tipW - 8
+        }
+        if (targetRect.top - tipH - 6 < 8) {
+          tipY = targetRect.bottom + window.scrollY + 6
+        }
+
+        tip.style.left = `${tipX}px`
+        tip.style.top = `${tipY}px`
+      })
+
+      origBox.addEventListener('mouseout', (e) => {
+        const target = (e.target as HTMLElement)?.closest?.('.mt-grammar-token')
+        if (target && tooltipElement) {
+          tooltipElement.style.display = 'none'
+        }
       })
     }
   }
@@ -609,13 +1005,17 @@ export function initSelectionTranslator(
   targetLang: string = 'zh-Hans',
   triggerMode: SelectionTriggerMode = 'bubble',
   adaptiveSize: boolean = true,
-  resizable: boolean = true
+  resizable: boolean = true,
+  grammarHighlight: boolean = true,
+  grammarDefaultMode: GrammarDisplayMode = 'syntax'
 ) {
   isSelectionBubbleEnabled = enabled
   currentTargetLang = targetLang
   currentTriggerMode = triggerMode
   isAdaptiveSize = adaptiveSize
   isResizable = resizable
+  isGrammarEnabled = grammarHighlight
+  currentGrammarMode = grammarDefaultMode
 
   if (isInitialized) return
   isInitialized = true
@@ -706,13 +1106,17 @@ export function updateSelectionConfig(
   targetLang: string,
   triggerMode: SelectionTriggerMode = 'bubble',
   adaptiveSize: boolean = true,
-  resizable: boolean = true
+  resizable: boolean = true,
+  grammarHighlight: boolean = true,
+  grammarDefaultMode: GrammarDisplayMode = 'syntax'
 ) {
   isSelectionBubbleEnabled = enabled
   currentTargetLang = targetLang
   currentTriggerMode = triggerMode
   isAdaptiveSize = adaptiveSize
   isResizable = resizable
+  isGrammarEnabled = grammarHighlight
+  currentGrammarMode = grammarDefaultMode
   if (!enabled) {
     hideSelectionUI()
   }

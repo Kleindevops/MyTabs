@@ -382,7 +382,78 @@
                   </div>
                 </div>
 
-                <!-- 5. 输入框 3 次空格翻译 -->
+                <!-- 5. 英文语法彩色标记 (本地轻量 NLP 引擎) -->
+                <div class="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 space-y-3">
+                  <div class="flex items-center justify-between">
+                    <div>
+                      <div class="text-xs font-semibold text-white flex items-center gap-2">
+                        <span>划选英文语法彩色标记</span>
+                        <span class="text-[10px] px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">本地轻量 NLP · 零延迟</span>
+                      </div>
+                      <div class="text-[11px] text-slate-400 mt-0.5">
+                        划选英文段落时，自动以不同颜色标记出句子成分（主谓宾定状从句）或词性，鼠标悬停即显语法点拨
+                      </div>
+                    </div>
+                    <input
+                      type="checkbox"
+                      v-model="currentImmersiveConfig.grammarHighlight"
+                      @change="saveChanges"
+                      class="w-4 h-4 rounded text-blue-600 accent-blue-600 cursor-pointer"
+                    />
+                  </div>
+
+                  <!-- 默认语法模式选择 -->
+                  <div v-if="currentImmersiveConfig.grammarHighlight !== false" class="pt-2.5 border-t border-slate-800/80 space-y-2">
+                    <div class="text-[11px] font-medium text-slate-300">默认语法展示视角：</div>
+                    <div class="grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        @click="setGrammarDefaultMode('syntax')"
+                        :class="[
+                          'p-2.5 rounded-xl text-left border transition-all space-y-1',
+                          (currentImmersiveConfig.grammarDisplayMode || 'syntax') === 'syntax'
+                            ? 'bg-blue-600/20 border-blue-500 text-blue-300'
+                            : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-white hover:border-slate-700'
+                        ]"
+                      >
+                        <div class="text-xs font-semibold text-white flex items-center gap-1.5">
+                          <span
+                            class="w-2 h-2 rounded-full"
+                            :class="(currentImmersiveConfig.grammarDisplayMode || 'syntax') === 'syntax' ? 'bg-blue-400' : 'bg-slate-600'"
+                          ></span>
+                          句子成分模式 (推荐)
+                        </div>
+                        <div class="text-[10px] text-slate-400 leading-tight">
+                          主语(蓝)、谓语(红)、宾/表语(绿)、修饰从句(橙)，长难句主干一目了然。
+                        </div>
+                      </button>
+
+                      <button
+                        type="button"
+                        @click="setGrammarDefaultMode('pos')"
+                        :class="[
+                          'p-2.5 rounded-xl text-left border transition-all space-y-1',
+                          currentImmersiveConfig.grammarDisplayMode === 'pos'
+                            ? 'bg-blue-600/20 border-blue-500 text-blue-300'
+                            : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-white hover:border-slate-700'
+                        ]"
+                      >
+                        <div class="text-xs font-semibold text-white flex items-center gap-1.5">
+                          <span
+                            class="w-2 h-2 rounded-full"
+                            :class="currentImmersiveConfig.grammarDisplayMode === 'pos' ? 'bg-blue-400' : 'bg-slate-600'"
+                          ></span>
+                          词性分类模式
+                        </div>
+                        <div class="text-[10px] text-slate-400 leading-tight">
+                          细致标注名词、动词、形容词、副词、介词、连词等基础语法词性。
+                        </div>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- 6. 输入框 3 次空格翻译 -->
                 <div class="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 flex items-center justify-between">
                   <div>
                     <div class="text-xs font-semibold text-white">输入框连按 3 次空格极速互翻</div>
@@ -2223,6 +2294,11 @@ function setBilingualStyle(styleId: 'dashed' | 'block' | 'highlight') {
 
 function setSelectionTriggerMode(mode: SelectionTriggerMode) {
   currentImmersiveConfig.value.selectionTriggerMode = mode
+  saveChanges()
+}
+
+function setGrammarDefaultMode(mode: 'syntax' | 'pos' | 'plain') {
+  currentImmersiveConfig.value.grammarDisplayMode = mode
   saveChanges()
 }
 
