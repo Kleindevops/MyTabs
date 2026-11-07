@@ -246,11 +246,11 @@
                 </div>
               </div>
 
-              <!-- 4. 划词悬浮释义与发音气泡 -->
+              <!-- 4. 选中文本直接弹出翻译卡片 -->
               <div class="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 flex items-center justify-between">
                 <div>
-                  <div class="text-xs font-semibold text-white">划词悬浮释义与朗读气泡</div>
-                  <div class="text-[11px] text-slate-400 mt-0.5">选中文本时浮现快捷微标，支持单词音标、长句多行排版、真人语音朗读与一键复制</div>
+                  <div class="text-xs font-semibold text-white">选中文本直接弹出翻译卡片</div>
+                  <div class="text-[11px] text-slate-400 mt-0.5">鼠标选中文本（或双击单词）直接自动弹出翻译卡片，无需额外点击，支持音标、译文与朗读</div>
                 </div>
                 <input
                   type="checkbox"

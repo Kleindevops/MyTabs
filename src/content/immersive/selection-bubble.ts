@@ -282,8 +282,15 @@ function openTranslationCard(x: number, y: number, text: string) {
   }
   if (posX < window.scrollX + 10) posX = window.scrollX + 10
 
+  // 计算卡片垂直位置（若底部超出屏幕，翻转到选区上方）
+  let posY = y + 8
+  const estimatedHeight = 220
+  if (posY - window.scrollY + estimatedHeight > window.innerHeight && y - window.scrollY - estimatedHeight > 20) {
+    posY = y - estimatedHeight - 16
+  }
+
   card.style.left = `${posX}px`
-  card.style.top = `${y + 6}px`
+  card.style.top = `${posY}px`
 
   card.addEventListener('mousedown', (e) => e.stopPropagation())
 
@@ -393,15 +400,16 @@ export function initSelectionTranslator(enabled: boolean = true, targetLang: str
       const rect = range.getBoundingClientRect()
       if (rect.width === 0 && rect.height === 0) return
 
-      // 优先以选区右下角为锚点，贴合选中文本末端
-      const anchorX = Math.round(rect.right + window.scrollX)
+      // 优先以选区左下方为锚点
+      const anchorX = Math.round(rect.left + window.scrollX)
       const anchorY = Math.round(rect.bottom + window.scrollY)
 
-      showBubbleTrigger(anchorX, anchorY, text)
-    }, 10)
+      // 选中内容立即自动弹出翻译卡片
+      openTranslationCard(anchorX, anchorY, text)
+    }, 15)
   })
 
-  // 监听用户按下 Ctrl+C 复制事件：直接自动弹出翻译卡片
+  // 监听用户按下 Ctrl+C 复制事件：同样支持自动呼出翻译卡片
   document.addEventListener('copy', () => {
     if (!isSelectionBubbleEnabled) return
     setTimeout(() => {
