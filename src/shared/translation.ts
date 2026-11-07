@@ -1,5 +1,5 @@
 /**
- * MyTabs 沉浸式翻译核心服务
+ * MyTabs 翻译核心服务
  * 基于微软 Edge 官方免费直连通道，免 API Key、免翻墙、国内毫秒级响应
  */
 
@@ -174,7 +174,54 @@ export async function batchTranslateViaEdge(
 }
 
 /**
- * 翻译单个文本或单词
+ * 将长文本按段落与标点智能切分，同时保留空行结构
+ */
+function splitTextIntoParagraphChunks(text: string, maxChunkLen = 800): { chunks: string[]; isBlank: boolean[] } {
+  const rawLines = text.split('\n')
+  const chunks: string[] = []
+  const isBlank: boolean[] = []
+
+  rawLines.forEach((line) => {
+    const trimmed = line.trim()
+    if (!trimmed) {
+      chunks.push('')
+      isBlank.push(true)
+      return
+    }
+
+    if (trimmed.length <= maxChunkLen) {
+      chunks.push(trimmed)
+      isBlank.push(false)
+      return
+    }
+
+    // 单行过长时，按句末标点细分 (保留标点)
+    const sentences = trimmed.match(/[^.!?。！？;；]+[.!?。！？;；]?/g) || [trimmed]
+    let currentChunk = ''
+
+    sentences.forEach((s) => {
+      if ((currentChunk + s).length <= maxChunkLen) {
+        currentChunk += s
+      } else {
+        if (currentChunk.trim()) {
+          chunks.push(currentChunk.trim())
+          isBlank.push(false)
+        }
+        currentChunk = s
+      }
+    })
+
+    if (currentChunk.trim()) {
+      chunks.push(currentChunk.trim())
+      isBlank.push(false)
+    }
+  })
+
+  return { chunks, isBlank }
+}
+
+/**
+ * 翻译单个文本或大段长文 (自动按段落切片并发翻译并还原结构)
  */
 export async function translateSingleText(
   text: string,
@@ -186,6 +233,40 @@ export async function translateSingleText(
   const cached = getFromCache(clean, targetLang)
   if (cached !== undefined) return cached
 
-  const res = await batchTranslateViaEdge([clean], targetLang, fromLang)
-  return res[0]?.translated || clean
+  // 短文本或单句（<= 800 字符且无换行），直接单批次请求
+  if (clean.length <= 800 && !clean.includes('\n')) {
+    const res = await batchTranslateViaEdge([clean], targetLang, fromLang)
+    const translated = res[0]?.translated || clean
+    putCache(clean, targetLang, translated)
+    return translated
+  }
+
+  // 大段长文或多段文本：智能拆分为小段并发批量翻译，完美保留段落格式
+  const { chunks, isBlank } = splitTextIntoParagraphChunks(text, 800)
+  const validIndices: number[] = []
+  const validTexts: string[] = []
+
+  chunks.forEach((chunk, idx) => {
+    if (!isBlank[idx] && chunk.trim()) {
+      validIndices.push(idx)
+      validTexts.push(chunk)
+    }
+  })
+
+  if (validTexts.length === 0) {
+    return text
+  }
+
+  const batchResults = await batchTranslateViaEdge(validTexts, targetLang, fromLang)
+
+  const finalChunks = [...chunks]
+  batchResults.forEach((resItem, i) => {
+    const targetIdx = validIndices[i]
+    finalChunks[targetIdx] = resItem.translated || finalChunks[targetIdx]
+  })
+
+  const fullTranslated = finalChunks.join('\n')
+  putCache(clean, targetLang, fullTranslated)
+  return fullTranslated
 }
+

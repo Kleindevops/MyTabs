@@ -1,7 +1,7 @@
 import type { ImmersiveConfig, BilingualDisplayState, TranslatableNodeWrapper } from './types'
 import { scanPageTranslatableBlocks } from './dom-scanner'
 import { injectTranslationStyles, mountTranslationNode, setTranslationsVisibility } from './dom-renderer'
-import { initSelectionTranslator, updateSelectionConfig } from './selection-bubble'
+import { initSelectionTranslator, updateSelectionConfig, hideSelectionUI } from './selection-bubble'
 import { initTripleSpaceTranslator, updateTripleSpaceConfig } from './input-translator'
 
 let displayState: BilingualDisplayState = 'idle'
@@ -141,6 +141,11 @@ function setupViewportObserver() {
  * 切换整页双语对照翻译
  */
 export function togglePageBilingualTranslation() {
+  if (!activeConfig.enabled) {
+    showGlobalNotice('翻译功能已在设置中关闭')
+    return
+  }
+
   if (displayState === 'showing') {
     setTranslationsVisibility(false)
     displayState = 'hidden'
@@ -170,7 +175,7 @@ export function togglePageBilingualTranslation() {
 }
 
 /**
- * 初始化沉浸式翻译全套服务
+ * 初始化翻译全套服务
  */
 export function initImmersiveTranslation(config?: Partial<ImmersiveConfig>) {
   if (config) {
@@ -200,10 +205,22 @@ export function updateImmersiveConfig(newConfig: Partial<ImmersiveConfig>) {
   activeConfig = { ...activeConfig, ...newConfig }
   injectTranslationStyles(activeConfig.bilingualStyle)
 
-  const isSelectionEnabled = Boolean(activeConfig.enabled && activeConfig.selectionTranslate)
+  const isGloballyEnabled = Boolean(activeConfig.enabled)
+
+  // 如果总开关被关闭，立即清理并隐藏当前页面上所有的双语译文与划词浮窗
+  if (!isGloballyEnabled) {
+    if (displayState === 'showing') {
+      setTranslationsVisibility(false)
+      displayState = 'hidden'
+    }
+    hideSelectionUI()
+  }
+
+  const isSelectionEnabled = Boolean(isGloballyEnabled && activeConfig.selectionTranslate)
   const triggerMode = activeConfig.selectionTriggerMode || 'bubble'
   updateSelectionConfig(isSelectionEnabled, activeConfig.targetLang, triggerMode)
 
-  const isTripleSpaceEnabled = Boolean(activeConfig.enabled && activeConfig.tripleSpaceTranslate)
+  const isTripleSpaceEnabled = Boolean(isGloballyEnabled && activeConfig.tripleSpaceTranslate)
   updateTripleSpaceConfig(isTripleSpaceEnabled)
 }
+

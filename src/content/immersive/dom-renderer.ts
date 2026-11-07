@@ -3,7 +3,7 @@ import type { TranslatableNodeWrapper, ImmersiveConfig } from './types'
 const STYLE_ELEMENT_ID = 'mytabs-trans-global-styles'
 
 /**
- * 注入沉浸式翻译排版样式
+ * 注入翻译排版样式
  */
 export function injectTranslationStyles(styleType: 'dashed' | 'block' | 'highlight' = 'dashed') {
   if (document.getElementById(STYLE_ELEMENT_ID)) {

@@ -143,12 +143,12 @@
             </div>
           </div>
 
-          <!-- 沉浸式翻译配置面板 -->
+          <!-- 翻译配置面板 -->
           <div v-else-if="activeTab === 'translate'" class="space-y-4">
             <div>
               <h3 class="text-sm font-semibold text-white flex items-center gap-1.5">
                 <Languages class="w-4 h-4 text-indigo-400" />
-                沉浸式翻译 (双语对照与划词释义)
+                翻译设置 (双语对照与划词释义)
               </h3>
               <p class="text-xs text-slate-400 mt-1">
                 采用微软 Edge 官方免翻墙、免 API Key 国内极速直连通道，毫秒级响应，无需在本地部署大模型，完全零磁盘与显存占用。
@@ -181,8 +181,8 @@
               <!-- 1. 功能总开关 -->
               <div class="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 flex items-center justify-between">
                 <div>
-                  <div class="text-xs font-semibold text-white">启用沉浸式翻译功能</div>
-                  <div class="text-[11px] text-slate-400 mt-0.5">在所有网页支持快捷键唤起双语对照、划词气泡与输入框翻译</div>
+                  <div class="text-xs font-semibold text-white">启用翻译功能</div>
+                  <div class="text-[11px] text-slate-400 mt-0.5">关闭后将彻底禁用所有网页与桌面的划词翻译、双语对照和输入框翻译</div>
                 </div>
                 <input
                   type="checkbox"
@@ -192,161 +192,176 @@
                 />
               </div>
 
-              <!-- 2. 目标语言选择 -->
-              <div class="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 space-y-2">
-                <div class="text-xs font-semibold text-white">默认目标翻译语言</div>
-                <div class="text-[11px] text-slate-400">网页外文将默认自动翻译为该目标语言：</div>
-                <div class="grid grid-cols-3 gap-2 pt-1">
-                  <button
-                    v-for="lang in [
-                      { id: 'zh-Hans', name: '简体中文 (推荐)' },
-                      { id: 'zh-Hant', name: '繁体中文' },
-                      { id: 'en', name: 'English (英语)' },
-                      { id: 'ja', name: '日本語 (日语)' },
-                      { id: 'ko', name: '한국어 (韩语)' },
-                      { id: 'fr', name: 'Français (法语)' }
-                    ]"
-                    :key="lang.id"
-                    @click="setTargetLang(lang.id)"
-                    :class="[
-                      'p-2.5 rounded-xl text-xs font-medium border text-left transition-all',
-                      currentImmersiveConfig.targetLang === lang.id
-                        ? 'bg-blue-600/20 border-blue-500 text-blue-300'
-                        : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-white hover:border-slate-700'
-                    ]"
-                  >
-                    {{ lang.name }}
-                  </button>
-                </div>
+              <!-- 全局关闭警告提示 -->
+              <div
+                v-if="!currentImmersiveConfig.enabled"
+                class="p-3 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs flex items-center gap-2"
+              >
+                <span>⚠️</span>
+                <span>翻译功能当前已全局停用，划词气泡、双语快捷键及输入框翻译均不会触发。</span>
               </div>
 
-              <!-- 3. 双语对照译文排版样式 -->
-              <div class="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 space-y-2">
-                <div class="text-xs font-semibold text-white">双语对照译文排版样式</div>
-                <div class="text-[11px] text-slate-400">选择页面段落插入译文时的视觉呈现风格：</div>
-                <div class="grid grid-cols-3 gap-2 pt-1">
-                  <button
-                    v-for="st in [
-                      { id: 'dashed', name: '虚线优雅 (默认)', desc: '段落下方附带浅灰虚线，轻盈不喧宾夺主' },
-                      { id: 'block', name: '微底色块', desc: '微透明蓝底卡片与左侧强调条，层次分明' },
-                      { id: 'highlight', name: '淡黄高亮', desc: '温润荧光高亮底纹，适合研读精读' }
-                    ]"
-                    :key="st.id"
-                    @click="setBilingualStyle(st.id)"
-                    :class="[
-                      'p-2.5 rounded-xl text-xs border text-left transition-all flex flex-col justify-between',
-                      currentImmersiveConfig.bilingualStyle === st.id
-                        ? 'bg-blue-600/20 border-blue-500 text-blue-300'
-                        : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-white hover:border-slate-700'
-                    ]"
-                  >
-                    <div class="font-medium text-white mb-1">{{ st.name }}</div>
-                    <div class="text-[10px] text-slate-400 leading-tight">{{ st.desc }}</div>
-                  </button>
+              <!-- 子选项区域 (当总开关关闭时整块置灰并禁用交互) -->
+              <div
+                class="space-y-3 transition-opacity"
+                :class="{ 'opacity-35 pointer-events-none select-none': !currentImmersiveConfig.enabled }"
+              >
+                <!-- 2. 目标语言选择 -->
+                <div class="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 space-y-2">
+                  <div class="text-xs font-semibold text-white">默认目标翻译语言</div>
+                  <div class="text-[11px] text-slate-400">网页外文将默认自动翻译为该目标语言：</div>
+                  <div class="grid grid-cols-3 gap-2 pt-1">
+                    <button
+                      v-for="lang in [
+                        { id: 'zh-Hans', name: '简体中文 (推荐)' },
+                        { id: 'zh-Hant', name: '繁体中文' },
+                        { id: 'en', name: 'English (英语)' },
+                        { id: 'ja', name: '日本語 (日语)' },
+                        { id: 'ko', name: '한국어 (韩语)' },
+                        { id: 'fr', name: 'Français (法语)' }
+                      ]"
+                      :key="lang.id"
+                      @click="setTargetLang(lang.id)"
+                      :class="[
+                        'p-2.5 rounded-xl text-xs font-medium border text-left transition-all',
+                        currentImmersiveConfig.targetLang === lang.id
+                          ? 'bg-blue-600/20 border-blue-500 text-blue-300'
+                          : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-white hover:border-slate-700'
+                      ]"
+                    >
+                      {{ lang.name }}
+                    </button>
+                  </div>
                 </div>
-              </div>
 
-              <!-- 4. 划词翻译与触发方式 -->
-              <div class="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 space-y-3">
-                <div class="flex items-center justify-between">
+                <!-- 3. 双语对照译文排版样式 -->
+                <div class="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 space-y-2">
+                  <div class="text-xs font-semibold text-white">双语对照译文排版样式</div>
+                  <div class="text-[11px] text-slate-400">选择页面段落插入译文时的视觉呈现风格：</div>
+                  <div class="grid grid-cols-3 gap-2 pt-1">
+                    <button
+                      v-for="st in [
+                        { id: 'dashed', name: '虚线优雅 (默认)', desc: '段落下方附带浅灰虚线，轻盈不喧宾夺主' },
+                        { id: 'block', name: '微底色块', desc: '微透明蓝底卡片与左侧强调条，层次分明' },
+                        { id: 'highlight', name: '淡黄高亮', desc: '温润荧光高亮底纹，适合研读精读' }
+                      ]"
+                      :key="st.id"
+                      @click="setBilingualStyle(st.id)"
+                      :class="[
+                        'p-2.5 rounded-xl text-xs border text-left transition-all flex flex-col justify-between',
+                        currentImmersiveConfig.bilingualStyle === st.id
+                          ? 'bg-blue-600/20 border-blue-500 text-blue-300'
+                          : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-white hover:border-slate-700'
+                      ]"
+                    >
+                      <div class="font-medium text-white mb-1">{{ st.name }}</div>
+                      <div class="text-[10px] text-slate-400 leading-tight">{{ st.desc }}</div>
+                    </button>
+                  </div>
+                </div>
+
+                <!-- 4. 划词翻译与触发方式 -->
+                <div class="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 space-y-3">
+                  <div class="flex items-center justify-between">
+                    <div>
+                      <div class="text-xs font-semibold text-white flex items-center gap-2">
+                        <span>划词翻译功能</span>
+                        <span
+                          v-if="currentImmersiveConfig.enabled && currentImmersiveConfig.selectionTranslate"
+                          class="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
+                        >
+                          已开启
+                        </span>
+                        <span
+                          v-else
+                          class="text-[10px] px-2 py-0.5 rounded-full bg-slate-700/50 text-slate-400 border border-slate-700"
+                        >
+                          已禁用
+                        </span>
+                      </div>
+                      <div class="text-[11px] text-slate-400 mt-0.5">
+                        在网页或桌面中选中文本、双击词句时提供即时翻译卡片、音标与语音朗读
+                      </div>
+                    </div>
+                    <input
+                      type="checkbox"
+                      v-model="currentImmersiveConfig.selectionTranslate"
+                      @change="saveChanges"
+                      class="w-4 h-4 rounded text-blue-600 accent-blue-600 cursor-pointer"
+                    />
+                  </div>
+
+                  <!-- 触发方式选择：是直接翻译 还是弹窗翻译 (仅在划词翻译开启时展示) -->
+                  <div v-if="currentImmersiveConfig.selectionTranslate" class="pt-2.5 border-t border-slate-800/80 space-y-2">
+                    <div class="text-[11px] font-medium text-slate-300">划词触发方式：</div>
+                    <div class="grid grid-cols-2 gap-2.5">
+                      <!-- 方式 A: 弹窗翻译 (气泡图标触发) -->
+                      <button
+                        type="button"
+                        @click="setSelectionTriggerMode('bubble')"
+                        :class="[
+                          'p-3 rounded-xl text-left border transition-all flex flex-col justify-between space-y-1.5',
+                          (currentImmersiveConfig.selectionTriggerMode || 'bubble') === 'bubble'
+                            ? 'bg-blue-600/20 border-blue-500 text-blue-300 shadow-sm shadow-blue-500/10'
+                            : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-white hover:border-slate-700'
+                        ]"
+                      >
+                        <div class="flex items-center justify-between">
+                          <span class="text-xs font-semibold text-white flex items-center gap-1.5">
+                            <span
+                              class="w-2 h-2 rounded-full"
+                              :class="(currentImmersiveConfig.selectionTriggerMode || 'bubble') === 'bubble' ? 'bg-blue-400' : 'bg-slate-600'"
+                            ></span>
+                            弹窗翻译 (悬浮图标)
+                          </span>
+                          <span class="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-300 border border-blue-500/30">推荐</span>
+                        </div>
+                        <div class="text-[10px] text-slate-400 leading-relaxed">
+                          选中文本后显示悬浮“译”图标，鼠标点击或悬停时再展开翻译卡片，不干扰正常阅读与选词复制。
+                        </div>
+                      </button>
+
+                      <!-- 方式 B: 直接翻译 (直接自动弹出卡片) -->
+                      <button
+                        type="button"
+                        @click="setSelectionTriggerMode('direct')"
+                        :class="[
+                          'p-3 rounded-xl text-left border transition-all flex flex-col justify-between space-y-1.5',
+                          currentImmersiveConfig.selectionTriggerMode === 'direct'
+                            ? 'bg-blue-600/20 border-blue-500 text-blue-300 shadow-sm shadow-blue-500/10'
+                            : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-white hover:border-slate-700'
+                        ]"
+                      >
+                        <div class="flex items-center justify-between">
+                          <span class="text-xs font-semibold text-white flex items-center gap-1.5">
+                            <span
+                              class="w-2 h-2 rounded-full"
+                              :class="currentImmersiveConfig.selectionTriggerMode === 'direct' ? 'bg-blue-400' : 'bg-slate-600'"
+                            ></span>
+                            直接翻译 (直接弹出卡片)
+                          </span>
+                        </div>
+                        <div class="text-[10px] text-slate-400 leading-relaxed">
+                          鼠标选中文本（或双击单词）直接自动弹出翻译卡片，一步到位无需二次点击。
+                        </div>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- 5. 输入框 3 次空格翻译 -->
+                <div class="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 flex items-center justify-between">
                   <div>
-                    <div class="text-xs font-semibold text-white flex items-center gap-2">
-                      <span>划词翻译功能</span>
-                      <span
-                        v-if="currentImmersiveConfig.selectionTranslate"
-                        class="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
-                      >
-                        已开启
-                      </span>
-                      <span
-                        v-else
-                        class="text-[10px] px-2 py-0.5 rounded-full bg-slate-700/50 text-slate-400 border border-slate-700"
-                      >
-                        已禁用
-                      </span>
-                    </div>
-                    <div class="text-[11px] text-slate-400 mt-0.5">
-                      在网页或桌面中选中文本、双击词句时提供即时翻译卡片、音标与语音朗读
-                    </div>
+                    <div class="text-xs font-semibold text-white">输入框连按 3 次空格极速互翻</div>
+                    <div class="text-[11px] text-slate-400 mt-0.5">在任何输入框打中文连敲 3 次空格即刻原地翻译为地道英文（反之亦然），无需切换外部工具</div>
                   </div>
                   <input
                     type="checkbox"
-                    v-model="currentImmersiveConfig.selectionTranslate"
+                    v-model="currentImmersiveConfig.tripleSpaceTranslate"
                     @change="saveChanges"
                     class="w-4 h-4 rounded text-blue-600 accent-blue-600 cursor-pointer"
                   />
                 </div>
-
-                <!-- 触发方式选择：是直接翻译 还是弹窗翻译 (仅在划词翻译开启时展示) -->
-                <div v-if="currentImmersiveConfig.selectionTranslate" class="pt-2.5 border-t border-slate-800/80 space-y-2">
-                  <div class="text-[11px] font-medium text-slate-300">划词触发方式：</div>
-                  <div class="grid grid-cols-2 gap-2.5">
-                    <!-- 方式 A: 弹窗翻译 (气泡图标触发) -->
-                    <button
-                      type="button"
-                      @click="setSelectionTriggerMode('bubble')"
-                      :class="[
-                        'p-3 rounded-xl text-left border transition-all flex flex-col justify-between space-y-1.5',
-                        (currentImmersiveConfig.selectionTriggerMode || 'bubble') === 'bubble'
-                          ? 'bg-blue-600/20 border-blue-500 text-blue-300 shadow-sm shadow-blue-500/10'
-                          : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-white hover:border-slate-700'
-                      ]"
-                    >
-                      <div class="flex items-center justify-between">
-                        <span class="text-xs font-semibold text-white flex items-center gap-1.5">
-                          <span
-                            class="w-2 h-2 rounded-full"
-                            :class="(currentImmersiveConfig.selectionTriggerMode || 'bubble') === 'bubble' ? 'bg-blue-400' : 'bg-slate-600'"
-                          ></span>
-                          弹窗翻译 (悬浮图标)
-                        </span>
-                        <span class="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-300 border border-blue-500/30">推荐</span>
-                      </div>
-                      <div class="text-[10px] text-slate-400 leading-relaxed">
-                        选中文本后显示悬浮“译”图标，鼠标点击或悬停时再展开翻译卡片，不干扰正常阅读与选词复制。
-                      </div>
-                    </button>
-
-                    <!-- 方式 B: 直接翻译 (直接自动弹出卡片) -->
-                    <button
-                      type="button"
-                      @click="setSelectionTriggerMode('direct')"
-                      :class="[
-                        'p-3 rounded-xl text-left border transition-all flex flex-col justify-between space-y-1.5',
-                        currentImmersiveConfig.selectionTriggerMode === 'direct'
-                          ? 'bg-blue-600/20 border-blue-500 text-blue-300 shadow-sm shadow-blue-500/10'
-                          : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-white hover:border-slate-700'
-                      ]"
-                    >
-                      <div class="flex items-center justify-between">
-                        <span class="text-xs font-semibold text-white flex items-center gap-1.5">
-                          <span
-                            class="w-2 h-2 rounded-full"
-                            :class="currentImmersiveConfig.selectionTriggerMode === 'direct' ? 'bg-blue-400' : 'bg-slate-600'"
-                          ></span>
-                          直接翻译 (直接弹出卡片)
-                        </span>
-                      </div>
-                      <div class="text-[10px] text-slate-400 leading-relaxed">
-                        鼠标选中文本（或双击单词）直接自动弹出翻译卡片，一步到位无需二次点击。
-                      </div>
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              <!-- 5. 输入框 3 次空格翻译 -->
-              <div class="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 flex items-center justify-between">
-                <div>
-                  <div class="text-xs font-semibold text-white">输入框连按 3 次空格极速互翻</div>
-                  <div class="text-[11px] text-slate-400 mt-0.5">在任何输入框打中文连敲 3 次空格即刻原地翻译为地道英文（反之亦然），无需切换外部工具</div>
-                </div>
-                <input
-                  type="checkbox"
-                  v-model="currentImmersiveConfig.tripleSpaceTranslate"
-                  @change="saveChanges"
-                  class="w-4 h-4 rounded text-blue-600 accent-blue-600 cursor-pointer"
-                />
               </div>
             </div>
           </div>
@@ -1452,7 +1467,7 @@ watch(() => props.currentCategoryId, () => {
 const tabs = computed(() => {
   const allTabs = [
     { id: 'guide', name: '功能介绍', icon: BookOpen },
-    { id: 'translate', name: '沉浸式翻译', icon: Languages },
+    { id: 'translate', name: '翻译', icon: Languages },
     { id: 'search', name: '搜索引擎', icon: Search },
     { id: 'onedrive', name: '数据备份同步', icon: Cloud },
     { id: 'vault', name: '个人空间锁', icon: Lock },
@@ -1470,7 +1485,7 @@ const selectedGuideCategory = ref('all')
 
 const guideCategories = [
   { id: 'all', name: '全部功能' },
-  { id: 'translate', name: '沉浸式翻译' },
+  { id: 'translate', name: '翻译' },
   { id: 'search', name: '搜索引擎' },
   { id: 'desktop', name: '常用桌面' },
   { id: 'onedrive', name: '数据备份同步' },
@@ -1483,7 +1498,7 @@ const guideItems = [
   {
     id: 'g-translate',
     category: 'translate',
-    categoryName: '沉浸式翻译与双语阅读',
+    categoryName: '网页翻译与双语阅读',
     title: '全网页双语对照、划词释义与输入框3次空格翻译',
     badge: '免翻墙 · 0本地显存',
     badgeColor: 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30',
@@ -1492,7 +1507,7 @@ const guideItems = [
     targetTab: 'translate',
     whatIsIt: [
       '基于微软 Edge 官方免翻墙、免 API Key 国内极速直连通道，毫秒级响应，无需在本地部署大模型，完全零显存与磁盘负担。',
-      '全页沉浸式双语对照：段落下贴合插入柔和译文，保留原文排版，自动保护代码块不乱码。',
+      '全页双语对照：段落下贴合插入柔和译文，保留原文排版，自动保护代码块不乱码。',
       '划词悬浮释义气泡：选中文本浮起微标，支持音标、长句多行排版、真人语音朗读与一键复制。',
       '输入框 3 次空格翻译：连续敲 3 次空格直接把中文原地变为地道英文（或英文变中文）。'
     ],

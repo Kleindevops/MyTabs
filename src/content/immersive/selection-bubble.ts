@@ -37,6 +37,22 @@ function ensureHost(): ShadowRoot {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif;
     }
 
+    /* 极细滚动条美化 */
+    ::-webkit-scrollbar {
+      width: 5px;
+      height: 5px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(156, 163, 175, 0.4);
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(107, 114, 128, 0.7);
+    }
+
     .mt-float-trigger {
       position: absolute;
       width: 28px;
@@ -63,16 +79,15 @@ function ensureHost(): ShadowRoot {
 
     .mt-card {
       position: absolute;
-      width: 320px;
+      width: 380px;
       max-width: calc(100vw - 32px);
-      max-height: 400px;
-      overflow-y: auto;
-      background: rgba(255, 255, 255, 0.95);
-      backdrop-filter: blur(16px);
-      -webkit-backdrop-filter: blur(16px);
-      border: 1px solid rgba(229, 231, 235, 0.8);
-      border-radius: 12px;
-      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.12), 0 8px 10px -6px rgba(0, 0, 0, 0.08);
+      box-sizing: border-box;
+      background: rgba(255, 255, 255, 0.96);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(229, 231, 235, 0.85);
+      border-radius: 14px;
+      box-shadow: 0 12px 32px -4px rgba(0, 0, 0, 0.16), 0 4px 12px -2px rgba(0, 0, 0, 0.08);
       padding: 12px 14px;
       color: #1f2937;
       font-size: 13px;
@@ -80,14 +95,15 @@ function ensureHost(): ShadowRoot {
       display: flex;
       flex-direction: column;
       gap: 8px;
-      animation: mt-card-in 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-      z-index: 20;
+      animation: mt-card-in 0.18s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      z-index: 2147483647;
+      overflow: hidden;
     }
 
     @keyframes mt-card-in {
       from {
         opacity: 0;
-        transform: translateY(6px) scale(0.96);
+        transform: translateY(4px) scale(0.97);
       }
       to {
         opacity: 1;
@@ -103,12 +119,13 @@ function ensureHost(): ShadowRoot {
       padding-bottom: 6px;
       font-size: 12px;
       color: #6b7280;
+      shrink: 0;
     }
 
     .mt-brand {
       display: flex;
       align-items: center;
-      gap: 4px;
+      gap: 5px;
       font-weight: 600;
       color: #4f46e5;
     }
@@ -123,10 +140,11 @@ function ensureHost(): ShadowRoot {
       background: none;
       border: none;
       cursor: pointer;
-      color: #9ca3af;
+      color: #6b7280;
       padding: 3px 6px;
       border-radius: 4px;
       font-size: 11px;
+      font-weight: 500;
       transition: all 0.15s ease;
       display: flex;
       align-items: center;
@@ -135,20 +153,48 @@ function ensureHost(): ShadowRoot {
 
     .mt-icon-btn:hover {
       background: #f3f4f6;
-      color: #374151;
+      color: #1f2937;
+    }
+
+    .mt-original-box {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      shrink: 0;
+    }
+
+    .mt-section-title {
+      font-size: 10.5px;
+      font-weight: 600;
+      color: #9ca3af;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
     }
 
     .mt-original-text {
       color: #4b5563;
       font-size: 12px;
-      line-height: 1.4;
+      line-height: 1.45;
       background: #f9fafb;
-      padding: 6px 8px;
+      padding: 6px 10px;
       border-radius: 6px;
       border-left: 3px solid #cbd5e1;
-      max-height: 90px;
+      max-height: 80px;
       overflow-y: auto;
       word-break: break-word;
+      white-space: pre-wrap;
+    }
+
+    .mt-result-container {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      flex: 1;
+      min-height: 40px;
+      overflow: hidden;
     }
 
     .mt-trans-result {
@@ -158,15 +204,18 @@ function ensureHost(): ShadowRoot {
       line-height: 1.6;
       word-break: break-word;
       white-space: pre-wrap;
+      max-height: 320px;
+      overflow-y: auto;
+      padding-right: 4px;
     }
 
     .mt-loading {
       display: flex;
       align-items: center;
-      gap: 6px;
+      gap: 8px;
       color: #6b7280;
       font-size: 12px;
-      padding: 10px 0;
+      padding: 10px 2px;
     }
 
     .mt-spinner {
@@ -185,14 +234,17 @@ function ensureHost(): ShadowRoot {
     /* 暗色模式适配 */
     @media (prefers-color-scheme: dark) {
       .mt-card {
-        background: rgba(30, 41, 59, 0.95);
-        border-color: rgba(51, 65, 85, 0.8);
+        background: rgba(30, 41, 59, 0.96);
+        border-color: rgba(51, 65, 85, 0.85);
         color: #f1f5f9;
-        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4);
+        box-shadow: 0 12px 32px -4px rgba(0, 0, 0, 0.5);
       }
       .mt-header {
         border-bottom-color: #334155;
         color: #94a3b8;
+      }
+      .mt-section-title {
+        color: #64748b;
       }
       .mt-original-text {
         background: #0f172a;
@@ -201,6 +253,9 @@ function ensureHost(): ShadowRoot {
       }
       .mt-trans-result {
         color: #f8fafc;
+      }
+      .mt-icon-btn {
+        color: #94a3b8;
       }
       .mt-icon-btn:hover {
         background: #334155;
@@ -228,7 +283,10 @@ export function hideSelectionUI() {
   cards.forEach((c) => c.remove())
 }
 
-function showBubbleTrigger(x: number, y: number, text: string) {
+const SAFE_BOTTOM_GAP = 28 // 底部预留避让系统任务栏与浏览器边界
+const SAFE_TOP_GAP = 16 // 顶部预留安全边距
+
+function showBubbleTrigger(rect: DOMRect, text: string) {
   const root = ensureHost()
   hideSelectionUI()
 
@@ -237,12 +295,12 @@ function showBubbleTrigger(x: number, y: number, text: string) {
   const trigger = document.createElement('div')
   trigger.id = 'mt-trigger'
   trigger.className = 'mt-float-trigger'
-  trigger.title = 'MyTabs 沉浸式翻译'
+  trigger.title = 'MyTabs 翻译'
   trigger.innerHTML = `译`
 
   // 避免超出屏幕边界
-  const safeX = Math.min(x, window.innerWidth + window.scrollX - 40)
-  const safeY = Math.min(y + 8, window.innerHeight + window.scrollY - 40)
+  const safeX = Math.min(rect.left + window.scrollX, window.innerWidth + window.scrollX - 40)
+  const safeY = Math.min(rect.bottom + window.scrollY + 8, window.innerHeight + window.scrollY - 40)
 
   trigger.style.left = `${safeX}px`
   trigger.style.top = `${safeY}px`
@@ -256,14 +314,14 @@ function showBubbleTrigger(x: number, y: number, text: string) {
   trigger.addEventListener('click', (e) => {
     e.stopPropagation()
     e.preventDefault()
-    openTranslationCard(safeX, safeY, text)
+    openTranslationCard(rect, text)
   })
 
-  // 支持鼠标悬停 200ms 自动展开，无需费劲点击
+  // 支持鼠标悬停 200ms 自动展开
   let hoverTimer: number | null = null
   trigger.addEventListener('mouseenter', () => {
     hoverTimer = window.setTimeout(() => {
-      openTranslationCard(safeX, safeY, text)
+      openTranslationCard(rect, text)
     }, 200)
   })
   trigger.addEventListener('mouseleave', () => {
@@ -273,7 +331,7 @@ function showBubbleTrigger(x: number, y: number, text: string) {
   root.appendChild(trigger)
 }
 
-function openTranslationCard(x: number, y: number, text: string) {
+function openTranslationCard(rect: DOMRect, text: string) {
   const root = ensureHost()
   hideSelectionUI()
 
@@ -281,49 +339,76 @@ function openTranslationCard(x: number, y: number, text: string) {
   card.id = 'mt-card'
   card.className = 'mt-card'
 
-  // 计算卡片位置（防止屏幕溢出）
-  const cardWidth = 320
-  let posX = x
-  if (posX + cardWidth > window.innerWidth + window.scrollX - 20) {
-    posX = window.innerWidth + window.scrollX - cardWidth - 20
-  }
-  if (posX < window.scrollX + 10) posX = window.scrollX + 10
+  const cardWidth = 380
+  const viewportW = window.innerWidth
+  const viewportH = window.innerHeight
 
-  // 计算卡片垂直位置（若底部超出屏幕，翻转到选区上方）
-  let posY = y + 8
-  const estimatedHeight = 220
-  if (posY - window.scrollY + estimatedHeight > window.innerHeight && y - window.scrollY - estimatedHeight > 20) {
-    posY = y - estimatedHeight - 16
+  // 计算卡片水平坐标（防止左右超出屏幕）
+  let posX = rect.left + window.scrollX
+  if (posX + cardWidth > viewportW + window.scrollX - 16) {
+    posX = viewportW + window.scrollX - cardWidth - 16
   }
+  if (posX < window.scrollX + 16) posX = window.scrollX + 16
 
+  // 计算视口上方与下方可用高度空间
+  const spaceBelow = viewportH - rect.bottom - SAFE_BOTTOM_GAP
+  const spaceAbove = rect.top - SAFE_TOP_GAP
+  // 若下方可用空间不足 260px 且上方空间更大，则朝上方翻转展开
+  const isUpward = spaceBelow < 260 && spaceAbove > spaceBelow
+
+  const availableHeight = isUpward ? spaceAbove : spaceBelow
+  const maxCardHeight = Math.min(520, Math.max(180, Math.floor(availableHeight - 12)))
+
+  card.style.maxHeight = `${maxCardHeight}px`
   card.style.left = `${posX}px`
-  card.style.top = `${posY}px`
 
+  // 垂直位置初步计算
+  let posY = isUpward
+    ? rect.top + window.scrollY - 8
+    : rect.bottom + window.scrollY + 8
+
+  card.style.top = `${posY}px`
   card.addEventListener('mousedown', (e) => e.stopPropagation())
 
-  // 渲染卡片结构
+  // 渲染卡片结构：明确展示字数、支持全文多段翻译与滚动
+  const wordCount = text.length
   card.innerHTML = `
     <div class="mt-header">
       <div class="mt-brand">
         <span>🌹</span>
-        <span>MyTabs 沉浸式翻译</span>
+        <span>MyTabs 翻译</span>
       </div>
       <div class="mt-actions">
         <button class="mt-icon-btn" id="mt-btn-speak" title="朗读">🔊 朗读</button>
         <button class="mt-icon-btn" id="mt-btn-copy" title="复制">📋 复制</button>
       </div>
     </div>
-    <div class="mt-original-text">${escapeHtml(text.slice(0, 300))}${text.length > 300 ? '...' : ''}</div>
-    <div class="mt-loading" id="mt-loading-box">
-      <div class="mt-spinner"></div>
-      <span>正在调用微软直连引擎极速翻译...</span>
+    <div class="mt-original-box">
+      <div class="mt-section-title">
+        <span>选区原文</span>
+        <span>共 ${wordCount} 字符</span>
+      </div>
+      <div class="mt-original-text">${escapeHtml(text)}</div>
     </div>
-    <div class="mt-trans-result" id="mt-result-box" style="display: none;"></div>
+    <div class="mt-result-container">
+      <div class="mt-loading" id="mt-loading-box">
+        <div class="mt-spinner"></div>
+        <span>正在调用微软直连引擎极速翻译...</span>
+      </div>
+      <div class="mt-trans-result" id="mt-result-box" style="display: none;"></div>
+    </div>
   `
 
   root.appendChild(card)
 
-  // 绑定功能按钮
+  // 如果朝上展开，将卡片底部对准选区上方
+  if (isUpward) {
+    const cardH = card.offsetHeight
+    posY = Math.max(window.scrollY + SAFE_TOP_GAP, rect.top + window.scrollY - cardH - 8)
+    card.style.top = `${posY}px`
+  }
+
+  // 绑定朗读与复制按钮
   const btnSpeak = card.querySelector('#mt-btn-speak') as HTMLButtonElement
   btnSpeak?.addEventListener('click', () => speakText(text))
 
@@ -339,6 +424,34 @@ function openTranslationCard(x: number, y: number, text: string) {
     })
   })
 
+  // 动态视口校准：确保卡片底部绝对不沉入 Windows 任务栏或浏览器视口下方
+  const clampToViewport = () => {
+    const cardRect = card.getBoundingClientRect()
+    const maxBottom = window.innerHeight - SAFE_BOTTOM_GAP
+
+    if (cardRect.bottom > maxBottom) {
+      const overflow = cardRect.bottom - maxBottom
+      const curTop = parseFloat(card.style.top) || 0
+      const safeTop = Math.max(window.scrollY + SAFE_TOP_GAP, curTop - overflow)
+      card.style.top = `${safeTop}px`
+
+      // 调整译文容器的内部滚动限高，杜绝撑破卡片
+      const resultBox = card.querySelector('#mt-result-box') as HTMLElement
+      if (resultBox) {
+        const remainingForContent = window.innerHeight - SAFE_BOTTOM_GAP - (cardRect.top - (curTop - safeTop)) - 140
+        if (remainingForContent > 80) {
+          resultBox.style.maxHeight = `${remainingForContent}px`
+        }
+      }
+    }
+
+    if (isUpward) {
+      const cardH = card.offsetHeight
+      const upwardTop = Math.max(window.scrollY + SAFE_TOP_GAP, rect.top + window.scrollY - cardH - 8)
+      card.style.top = `${upwardTop}px`
+    }
+  }
+
   // 请求后台翻译
   chrome.runtime.sendMessage(
     {
@@ -347,21 +460,19 @@ function openTranslationCard(x: number, y: number, text: string) {
       targetLang: currentTargetLang
     },
     (res) => {
-      if (chrome.runtime.lastError) {
-        const loadingBox = card.querySelector('#mt-loading-box') as HTMLElement
-        const resultBox = card.querySelector('#mt-result-box') as HTMLElement
-        if (loadingBox) loadingBox.style.display = 'none'
-        if (resultBox) {
-          resultBox.style.display = 'block'
-          resultBox.textContent = '扩展已更新，请刷新网页后使用划词翻译'
-          resultBox.style.color = '#ef4444'
-        }
-        return
-      }
-
       const loadingBox = card.querySelector('#mt-loading-box') as HTMLElement
       const resultBox = card.querySelector('#mt-result-box') as HTMLElement
       if (loadingBox) loadingBox.style.display = 'none'
+
+      if (chrome.runtime.lastError) {
+        if (resultBox) {
+          resultBox.style.display = 'block'
+          resultBox.textContent = '扩展已更新，请刷新网页后使用翻译'
+          resultBox.style.color = '#ef4444'
+        }
+        clampToViewport()
+        return
+      }
 
       if (resultBox) {
         resultBox.style.display = 'block'
@@ -372,6 +483,9 @@ function openTranslationCard(x: number, y: number, text: string) {
           resultBox.style.color = '#ef4444'
         }
       }
+
+      // 异步渲染完成后，立即执行动态视口边界二次修正
+      requestAnimationFrame(clampToViewport)
     }
   )
 }
@@ -385,6 +499,7 @@ function escapeHtml(str: string): string {
     "'": '&#39;'
   }[m] || m))
 }
+
 
 /**
  * 监听全局选区事件
@@ -423,8 +538,8 @@ export function initSelectionTranslator(
       }
 
       const text = selection.toString().trim()
-      // 过滤空串、超长（>5000字符）或纯标点/纯空白/纯数字
-      if (!text || text.length === 0 || text.length > 5000 || /^[\s\d.,!?;:()]+$/.test(text)) {
+      // 过滤空串、超长（>25000字符）或纯标点/纯空白/纯数字
+      if (!text || text.length === 0 || text.length > 25000 || /^[\s\d.,!?;:()]+$/.test(text)) {
         hideSelectionUI()
         return
       }
@@ -434,14 +549,10 @@ export function initSelectionTranslator(
       const rect = range.getBoundingClientRect()
       if (rect.width === 0 && rect.height === 0) return
 
-      // 优先以选区左下方为锚点
-      const anchorX = Math.round(rect.left + window.scrollX)
-      const anchorY = Math.round(rect.bottom + window.scrollY)
-
       if (currentTriggerMode === 'direct') {
-        openTranslationCard(anchorX, anchorY, text)
+        openTranslationCard(rect, text)
       } else {
-        showBubbleTrigger(anchorX, anchorY, text)
+        showBubbleTrigger(rect, text)
       }
     }, 20)
   })
@@ -452,18 +563,16 @@ export function initSelectionTranslator(
     setTimeout(() => {
       const selection = window.getSelection()
       const text = selection?.toString().trim()
-      if (text && text.length >= 1 && text.length <= 5000 && !/^[\s\d.,!?;:()]+$/.test(text)) {
+      if (text && text.length >= 1 && text.length <= 25000 && !/^[\s\d.,!?;:()]+$/.test(text)) {
         try {
           if (!selection || selection.rangeCount === 0) return
           const range = selection.getRangeAt(0)
           const rect = range.getBoundingClientRect()
-          if (rect) {
-            const posX = Math.round(rect.left + window.scrollX)
-            const posY = Math.round(rect.bottom + window.scrollY)
+          if (rect && (rect.width > 0 || rect.height > 0)) {
             if (currentTriggerMode === 'direct') {
-              openTranslationCard(posX, posY, text)
+              openTranslationCard(rect, text)
             } else {
-              showBubbleTrigger(posX, posY, text)
+              showBubbleTrigger(rect, text)
             }
           }
         } catch {}
@@ -500,3 +609,4 @@ export function updateSelectionConfig(
     hideSelectionUI()
   }
 }
+

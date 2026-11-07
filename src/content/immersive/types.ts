@@ -1,5 +1,5 @@
 /**
- * 沉浸式翻译 Content Script 类型定义
+ * 翻译 Content Script 类型定义
  */
 
 export type SelectionTriggerMode = 'bubble' | 'direct'

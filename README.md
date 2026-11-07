@@ -6,10 +6,10 @@
 > **为极致隐私与高效工作流而生。**  
 > 独创「桌面隐形暗门·密码锁个人空间」，外表是优雅极简的 iTab / Windows 风格高颜值新标签页，暗藏端到端加密个人空间；全网盘本地直存云同步、原生流媒体资源嗅探、侧边栏 AI 智能副驾驶一应俱全。
 
-[![Version](https://img.shields.io/badge/Version-v1.0.30-blue.svg)](package.json)
+[![Version](https://img.shields.io/badge/Version-v1.0.31-blue.svg)](package.json)
 [![Chrome Extension](https://img.shields.io/badge/Chrome-Extension-4285F4?style=flat&logo=googlechrome&logoColor=white)](https://developer.chrome.com/docs/extensions/)
 [![Edge Addon](https://img.shields.io/badge/Microsoft%20Edge-Supported-0078D7?style=flat&logo=microsoftedge&logoColor=white)](https://microsoftedge.microsoft.com/)
-[![Immersive Translate](https://img.shields.io/badge/Translate-Edge%20Official%20Direct-success?style=flat&logo=googletranslate&logoColor=white)](#沉浸式双语对照与划词翻译)
+[![Web Translate](https://img.shields.io/badge/Translate-Edge%20Official%20Direct-success?style=flat&logo=googletranslate&logoColor=white)](#全功能网页翻译与划词释义)
 [![Encryption](https://img.shields.io/badge/Crypto-AES--256--GCM-success?style=flat&logo=securityscorecard&logoColor=white)](#1-核心杀手锏绝密隐形暗门私人收藏夹)
 [![Cloud Sync](https://img.shields.io/badge/Cloud%20Sync-Any%20Netdisk%20(No%20Limits)-blue?style=flat&logo=icloud&logoColor=white)](#2-全网盘本地直存云同步对网盘零限制)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
@@ -158,6 +158,14 @@
 * **全屏透明点击劫持粉碎**：精准侦测并清除覆盖在页面正文上方的透明 <a> 诱导陷阱（Clickjacking）。
 * **【隐私模式协同拦截】**：在无痕窗口下同样生效（开启无痕授权后），且遵循最高零知识防痕规范，绝不记录任何无痕模式下的敏感网址明文！
 * **一键网页净化**：点击右上角扩展图标可随时一键净化当前页面的流氓弹窗与遮罩层。
+
+### 5. 全功能网页翻译与划词释义
+* **微软 Edge 官方免翻墙直连**：国内毫秒级极速响应，零 API Key 门槛，零本地模型显存与磁盘占用。
+* **智能视口防任务栏遮挡 (v1.0.31)**：划词弹窗具备视口边界智能感知，当靠近屏幕底部时自动朝上翻转，异步长文加载后动态纠偏，底栏操作与复制按钮绝不被 Windows 任务栏遮挡。
+* **大段长文与万字英文翻译**：内置智能自然段切片与分批并发翻译机制，支持上万字符大篇幅英文，完整保留段落换行与原排版格式。
+* **全网页双语对照 (Alt+W)**：一键开启双语对照，支持虚线、色块、高亮等多种优雅排版。
+* **输入框 3 次空格极速互翻**：在任意输入框连续敲击 3 次空格，原地快速将中文互翻为地道英文。
+* **一键总控与彻底停用**：在系统设置中取消勾选启用开关后，将彻底停用所有网页与桌面的划词、快捷键与后台翻译。
 
 ---
 

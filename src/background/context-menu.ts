@@ -21,7 +21,7 @@ export function setupContextMenus(): void {
 
     chrome.contextMenus.create({
       id: 'mytabs_toggle_bilingual',
-      title: 'MyTabs 沉浸式: 双语对照翻译本页 (Alt+W)',
+      title: 'MyTabs 翻译: 双语对照翻译本页 (Alt+W)',
       contexts: ['page']
     })
   })
