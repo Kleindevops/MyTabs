@@ -1269,6 +1269,7 @@ const props = withDefaults(
 const emit = defineEmits<{
   (e: 'close'): void
   (e: 'update-settings', s: AppSettings): void
+  (e: 'toast', msg: string): void
   (e: 'open-vault-setup'): void
   (e: 'open-change-password'): void
   (e: 'clear-vault-password'): void
@@ -1998,6 +1999,8 @@ function isDefaultEngine(engineId: string): boolean {
 function setDefaultEngine(engineId: string) {
   props.settings.defaultSearchEngineId = engineId
   saveChanges()
+  const engine = currentEngines.value.find(e => e.id === engineId)
+  emit('toast', `已将「${engine?.name || '指定引擎'}」设为默认搜索引擎`)
 }
 
 const availablePresets = computed(() => {
@@ -2082,6 +2085,10 @@ function handleSaveEngine() {
     })
     if (engineForm.value.isDefault) {
       props.settings.defaultSearchEngineId = editingEngineId.value
+    } else if (props.settings.defaultSearchEngineId === editingEngineId.value) {
+      // Fallback if user explicitly unchecked default on the current default engine
+      const fallback = props.settings.searchEngines.find(e => e.id !== editingEngineId.value)
+      props.settings.defaultSearchEngineId = fallback?.id || 'bing'
     }
   } else {
     // Add new custom engine
@@ -2101,6 +2108,7 @@ function handleSaveEngine() {
   }
 
   saveChanges()
+  emit('toast', engineForm.value.isDefault ? `已保存并设为默认引擎「${name}」` : `已保存搜索引擎「${name}」`)
   closeEngineForm()
 }
 
@@ -2116,6 +2124,7 @@ function deleteEngine(engine: SearchEngine) {
     props.settings.defaultSearchEngineId = props.settings.searchEngines[0]?.id || 'bing'
   }
   saveChanges()
+  emit('toast', `已删除搜索引擎「${engine.name}」`)
 }
 
 function handleResetSearchEngines() {
@@ -2123,6 +2132,7 @@ function handleResetSearchEngines() {
   props.settings.searchEngines = JSON.parse(JSON.stringify(DEFAULT_SEARCH_ENGINES))
   props.settings.defaultSearchEngineId = 'bing'
   saveChanges()
+  emit('toast', '已恢复出厂预设搜索引擎 (默认: Bing)')
 }
 
 function getEngineIcon(engine: SearchEngine) {

@@ -26,6 +26,7 @@
           :engines="settings.searchEngines"
           :defaultEngineId="settings.defaultSearchEngineId"
           @open-settings="openSettingsTab('search')"
+          @set-default="handleSetDefaultEngine"
         />
       </div>
 
@@ -101,7 +102,7 @@
     >
       <div
         v-if="toastMessage"
-        class="fixed bottom-20 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-2xl bg-slate-900/95 text-white text-xs font-medium border border-white/15 shadow-2xl backdrop-blur-xl flex items-center space-x-2 pointer-events-none"
+        class="fixed bottom-20 left-1/2 -translate-x-1/2 z-[100] px-4 py-2 rounded-2xl bg-slate-900/95 text-white text-xs font-medium border border-white/15 shadow-2xl backdrop-blur-xl flex items-center space-x-2 pointer-events-none"
       >
         <CheckCircle2 class="w-4 h-4 text-emerald-400 shrink-0" />
         <span>{{ toastMessage }}</span>
@@ -117,6 +118,7 @@
       :currentCategoryId="activeCategoryId"
       @close="showSettings = false"
       @update-settings="onSettingsUpdated"
+      @toast="showToast"
       @open-vault-setup="handleOpenVaultSetup"
       @open-change-password="handleOpenChangePassword"
       @clear-vault-password="handleClearVaultPassword"
@@ -841,6 +843,13 @@ function onSettingsUpdated(newSettings: AppSettings) {
 function onSettingsUpdatedAndSaved(newSettings: AppSettings) {
   settings.value = { ...newSettings }
   saveSettings(newSettings)
+}
+
+function handleSetDefaultEngine(engineId: string) {
+  settings.value.defaultSearchEngineId = engineId
+  saveSettings(settings.value)
+  const engine = (settings.value.searchEngines || []).find((e) => e.id === engineId)
+  showToast(`已将「${engine?.name || '指定引擎'}」设为默认搜索引擎`)
 }
 
 function openSettingsTab(tabId: string) {

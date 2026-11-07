@@ -21,22 +21,41 @@
         <!-- Dropdown menu -->
         <div
           v-if="showEngineMenu"
-          class="absolute left-0 top-full mt-2 w-52 rounded-2xl glass-acrylic p-1.5 space-y-1 shadow-2xl z-30 animate-in fade-in slide-in-from-top-2 max-h-80 overflow-y-auto"
+          class="absolute left-0 top-full mt-2 w-60 rounded-2xl glass-acrylic p-1.5 space-y-1 shadow-2xl z-30 animate-in fade-in slide-in-from-top-2 max-h-80 overflow-y-auto"
         >
-          <button
+          <div
             v-for="engine in availableEngines"
             :key="engine.id"
             @click="selectEngine(engine)"
             :class="[
-              'w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium transition-colors text-left',
+              'group w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium transition-colors text-left cursor-pointer',
               engine.id === currentEngine.id
                 ? 'bg-white/20 text-white font-semibold shadow-[inset_1px_1px_0_rgba(255,255,255,0.3)]'
                 : 'text-slate-300 hover:text-white hover:bg-white/10'
             ]"
           >
-            <span class="truncate">{{ engine.name }}</span>
-            <Check v-if="engine.id === currentEngine.id" class="w-3.5 h-3.5 text-white shrink-0 ml-1.5" />
-          </button>
+            <div class="flex items-center space-x-2 truncate min-w-0 flex-1">
+              <span class="truncate">{{ engine.name }}</span>
+              <span
+                v-if="engine.id === defaultEngineId"
+                class="text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-normal shrink-0"
+              >
+                默认
+              </span>
+            </div>
+
+            <div class="flex items-center space-x-1 shrink-0 ml-1.5">
+              <button
+                v-if="engine.id !== defaultEngineId"
+                @click.stop="handleSetDefault(engine)"
+                class="opacity-0 group-hover:opacity-100 text-[10px] px-1.5 py-0.5 rounded bg-white/10 hover:bg-emerald-500/30 text-slate-300 hover:text-emerald-200 transition-all border border-white/10"
+                title="设为新标签页默认搜索引擎"
+              >
+                设为默认
+              </button>
+              <Check v-if="engine.id === currentEngine.id" class="w-3.5 h-3.5 text-white shrink-0" />
+            </div>
+          </div>
 
           <!-- Shortcut to search engine settings -->
           <div class="pt-1 mt-1 border-t border-white/10">
@@ -103,6 +122,7 @@ const props = withDefaults(
 
 const emit = defineEmits<{
   (e: 'open-settings'): void
+  (e: 'set-default', engineId: string): void
 }>()
 
 const availableEngines = computed<SearchEngine[]>(() => {
@@ -121,17 +141,41 @@ const isFocused = ref(false)
 const showEngineMenu = ref(false)
 const searchInputRef = ref<HTMLInputElement | null>(null)
 
-// Keep currentEngine valid if engines list or defaultEngine changes
+// Sync currentEngine whenever defaultEngineId prop changes (e.g. after storage load or user set in settings)
 watch(
-  () => [props.engines, props.defaultEngineId],
-  () => {
-    const exists = availableEngines.value.some(e => e.id === currentEngine.value.id)
-    if (!exists) {
+  () => props.defaultEngineId,
+  (newDefId) => {
+    if (newDefId) {
+      const found = availableEngines.value.find(e => e.id === newDefId)
+      if (found) {
+        currentEngine.value = found
+      }
+    }
+  },
+  { immediate: true }
+)
+
+// Keep currentEngine valid & up-to-date if engines list changes
+watch(
+  availableEngines,
+  (newEngines) => {
+    const currentInList = newEngines.find(e => e.id === currentEngine.value.id)
+    if (currentInList) {
+      // Sync fresh properties (name, url, placeholder) in case it was modified
+      currentEngine.value = currentInList
+    } else {
       currentEngine.value = getInitialEngine()
     }
   },
   { deep: true }
 )
+
+function handleSetDefault(engine: SearchEngine) {
+  currentEngine.value = engine
+  showEngineMenu.value = false
+  emit('set-default', engine.id)
+  searchInputRef.value?.focus()
+}
 
 function selectEngine(engine: SearchEngine) {
   currentEngine.value = engine
