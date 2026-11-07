@@ -170,7 +170,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, nextTick, onMounted, onUnmounted } from 'vue'
+import { ref, computed, nextTick, onMounted, onUnmounted, watch } from 'vue'
 import { FolderInput, CheckCircle2 } from 'lucide-vue-next'
 import ClockWidget from './components/ClockWidget.vue'
 import HotNewsWidget from './components/HotNewsWidget.vue'
@@ -189,6 +189,7 @@ import { DEFAULT_SETTINGS, loadSettings, saveSettings, STORAGE_KEY } from '../sh
 import { generateSalt, createVaultVerifier, verifyVaultPassword } from '../shared/crypto'
 import { changeVaultPasswordService } from '../shared/vault-service'
 import type { AppSettings, CategoryItem, BookmarkItem } from '../shared/types'
+import { initSelectionTranslator, updateSelectionConfig } from '../content/immersive/selection-bubble'
 
 // Handle bfcache back-navigation restoration: force clean refresh if restored from cache
 if (typeof window !== 'undefined') {
@@ -327,7 +328,31 @@ onMounted(async () => {
   } catch (err) {
     console.warn('Loading settings:', err)
   }
+
+  // Initialize selection translator on NewTab
+  try {
+    const imCfg = settings.value.immersiveTranslate
+    const isTransEnabled = Boolean(imCfg?.enabled && (imCfg?.selectionTranslate ?? true))
+    const triggerMode = imCfg?.selectionTriggerMode || 'bubble'
+    const targetLang = imCfg?.targetLang || 'zh-Hans'
+    initSelectionTranslator(isTransEnabled, targetLang, triggerMode)
+  } catch (err) {
+    console.warn('Init selection translator in newtab:', err)
+  }
 })
+
+// Keep selection translator in sync with settings changes on NewTab
+watch(
+  () => settings.value.immersiveTranslate,
+  (imCfg) => {
+    if (!imCfg) return
+    const isTransEnabled = Boolean(imCfg.enabled && (imCfg.selectionTranslate ?? true))
+    const triggerMode = imCfg.selectionTriggerMode || 'bubble'
+    const targetLang = imCfg.targetLang || 'zh-Hans'
+    updateSelectionConfig(isTransEnabled, targetLang, triggerMode)
+  },
+  { deep: true }
+)
 
 function handleBookmarkContextMenu(ev: MouseEvent, bm: BookmarkItem) {
   ev.preventDefault()

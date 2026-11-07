@@ -1,5 +1,5 @@
 <template>
-  <div class="fixed inset-0 z-50 bg-slate-950/75 flex items-center justify-center p-4">
+  <div data-no-selection-translate="true" class="fixed inset-0 z-50 bg-slate-950/75 flex items-center justify-center p-4">
     <div class="w-full max-w-3xl h-[620px] rounded-3xl modal-surface shadow-2xl flex flex-col overflow-hidden border border-white/15">
       <!-- Header -->
       <div class="flex items-center justify-between px-6 py-4 border-b border-white/10 shrink-0">
@@ -246,18 +246,93 @@
                 </div>
               </div>
 
-              <!-- 4. 选中文本直接弹出翻译卡片 -->
-              <div class="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 flex items-center justify-between">
-                <div>
-                  <div class="text-xs font-semibold text-white">选中文本直接弹出翻译卡片</div>
-                  <div class="text-[11px] text-slate-400 mt-0.5">鼠标选中文本（或双击单词）直接自动弹出翻译卡片，无需额外点击，支持音标、译文与朗读</div>
+              <!-- 4. 划词翻译与触发方式 -->
+              <div class="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 space-y-3">
+                <div class="flex items-center justify-between">
+                  <div>
+                    <div class="text-xs font-semibold text-white flex items-center gap-2">
+                      <span>划词翻译功能</span>
+                      <span
+                        v-if="currentImmersiveConfig.selectionTranslate"
+                        class="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
+                      >
+                        已开启
+                      </span>
+                      <span
+                        v-else
+                        class="text-[10px] px-2 py-0.5 rounded-full bg-slate-700/50 text-slate-400 border border-slate-700"
+                      >
+                        已禁用
+                      </span>
+                    </div>
+                    <div class="text-[11px] text-slate-400 mt-0.5">
+                      在网页或桌面中选中文本、双击词句时提供即时翻译卡片、音标与语音朗读
+                    </div>
+                  </div>
+                  <input
+                    type="checkbox"
+                    v-model="currentImmersiveConfig.selectionTranslate"
+                    @change="saveChanges"
+                    class="w-4 h-4 rounded text-blue-600 accent-blue-600 cursor-pointer"
+                  />
                 </div>
-                <input
-                  type="checkbox"
-                  v-model="currentImmersiveConfig.selectionTranslate"
-                  @change="saveChanges"
-                  class="w-4 h-4 rounded text-blue-600 accent-blue-600 cursor-pointer"
-                />
+
+                <!-- 触发方式选择：是直接翻译 还是弹窗翻译 (仅在划词翻译开启时展示) -->
+                <div v-if="currentImmersiveConfig.selectionTranslate" class="pt-2.5 border-t border-slate-800/80 space-y-2">
+                  <div class="text-[11px] font-medium text-slate-300">划词触发方式：</div>
+                  <div class="grid grid-cols-2 gap-2.5">
+                    <!-- 方式 A: 弹窗翻译 (气泡图标触发) -->
+                    <button
+                      type="button"
+                      @click="setSelectionTriggerMode('bubble')"
+                      :class="[
+                        'p-3 rounded-xl text-left border transition-all flex flex-col justify-between space-y-1.5',
+                        (currentImmersiveConfig.selectionTriggerMode || 'bubble') === 'bubble'
+                          ? 'bg-blue-600/20 border-blue-500 text-blue-300 shadow-sm shadow-blue-500/10'
+                          : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-white hover:border-slate-700'
+                      ]"
+                    >
+                      <div class="flex items-center justify-between">
+                        <span class="text-xs font-semibold text-white flex items-center gap-1.5">
+                          <span
+                            class="w-2 h-2 rounded-full"
+                            :class="(currentImmersiveConfig.selectionTriggerMode || 'bubble') === 'bubble' ? 'bg-blue-400' : 'bg-slate-600'"
+                          ></span>
+                          弹窗翻译 (悬浮图标)
+                        </span>
+                        <span class="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-300 border border-blue-500/30">推荐</span>
+                      </div>
+                      <div class="text-[10px] text-slate-400 leading-relaxed">
+                        选中文本后显示悬浮“译”图标，鼠标点击或悬停时再展开翻译卡片，不干扰正常阅读与选词复制。
+                      </div>
+                    </button>
+
+                    <!-- 方式 B: 直接翻译 (直接自动弹出卡片) -->
+                    <button
+                      type="button"
+                      @click="setSelectionTriggerMode('direct')"
+                      :class="[
+                        'p-3 rounded-xl text-left border transition-all flex flex-col justify-between space-y-1.5',
+                        currentImmersiveConfig.selectionTriggerMode === 'direct'
+                          ? 'bg-blue-600/20 border-blue-500 text-blue-300 shadow-sm shadow-blue-500/10'
+                          : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-white hover:border-slate-700'
+                      ]"
+                    >
+                      <div class="flex items-center justify-between">
+                        <span class="text-xs font-semibold text-white flex items-center gap-1.5">
+                          <span
+                            class="w-2 h-2 rounded-full"
+                            :class="currentImmersiveConfig.selectionTriggerMode === 'direct' ? 'bg-blue-400' : 'bg-slate-600'"
+                          ></span>
+                          直接翻译 (直接弹出卡片)
+                        </span>
+                      </div>
+                      <div class="text-[10px] text-slate-400 leading-relaxed">
+                        鼠标选中文本（或双击单词）直接自动弹出翻译卡片，一步到位无需二次点击。
+                      </div>
+                    </button>
+                  </div>
+                </div>
               </div>
 
               <!-- 5. 输入框 3 次空格翻译 -->
@@ -1177,7 +1252,7 @@ import {
   type PopularEnginePreset
 } from '../../shared/storage'
 import { fetchBingDailyInfo, pinCurrentWallpaperService, resumeBingDailyService } from '../../shared/wallpaper'
-import type { AppSettings, PopupBlockerConfig, SearchEngine, ImmersiveTranslateConfig } from '../../shared/types'
+import type { AppSettings, PopupBlockerConfig, SearchEngine, ImmersiveTranslateConfig, SelectionTriggerMode } from '../../shared/types'
 
 const props = withDefaults(
   defineProps<{
@@ -2085,6 +2160,11 @@ function setTargetLang(langId: string) {
 
 function setBilingualStyle(styleId: 'dashed' | 'block' | 'highlight') {
   currentImmersiveConfig.value.bilingualStyle = styleId
+  saveChanges()
+}
+
+function setSelectionTriggerMode(mode: SelectionTriggerMode) {
+  currentImmersiveConfig.value.selectionTriggerMode = mode
   saveChanges()
 }
 

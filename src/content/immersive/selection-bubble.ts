@@ -1,16 +1,23 @@
-/**
- * 划词悬浮释义与发音气泡 (基于 Shadow DOM 隔离)
- * 支持单个单词查词、音标、朗读发音，以及长段落流畅翻译与一键复制
- */
+import type { SelectionTriggerMode } from './types'
 
 let hostElement: HTMLElement | null = null
 let shadowRoot: ShadowRoot | null = null
 let isSelectionBubbleEnabled = true
 let currentSelectedText = ''
 let currentTargetLang = 'zh-Hans'
+let currentTriggerMode: SelectionTriggerMode = 'bubble'
+let isInitialized = false
 
 function ensureHost(): ShadowRoot {
-  if (hostElement && shadowRoot) return shadowRoot
+  if (hostElement && shadowRoot && hostElement.isConnected) return shadowRoot
+
+  if (hostElement && !hostElement.isConnected) {
+    try {
+      hostElement.remove()
+    } catch {}
+    hostElement = null
+    shadowRoot = null
+  }
 
   hostElement = document.createElement('div')
   hostElement.id = 'mytabs-selection-host'
@@ -215,10 +222,10 @@ function speakText(text: string) {
 
 export function hideSelectionUI() {
   if (!shadowRoot) return
-  const trigger = shadowRoot.getElementById('mt-trigger')
-  if (trigger) trigger.remove()
-  const card = shadowRoot.getElementById('mt-card')
-  if (card) card.remove()
+  const triggers = shadowRoot.querySelectorAll('.mt-float-trigger, #mt-trigger')
+  triggers.forEach((t) => t.remove())
+  const cards = shadowRoot.querySelectorAll('.mt-card, #mt-card')
+  cards.forEach((c) => c.remove())
 }
 
 function showBubbleTrigger(x: number, y: number, text: string) {
@@ -248,6 +255,7 @@ function showBubbleTrigger(x: number, y: number, text: string) {
   // 支持点击直接展开
   trigger.addEventListener('click', (e) => {
     e.stopPropagation()
+    e.preventDefault()
     openTranslationCard(safeX, safeY, text)
   })
 
@@ -256,7 +264,7 @@ function showBubbleTrigger(x: number, y: number, text: string) {
   trigger.addEventListener('mouseenter', () => {
     hoverTimer = window.setTimeout(() => {
       openTranslationCard(safeX, safeY, text)
-    }, 180)
+    }, 200)
   })
   trigger.addEventListener('mouseleave', () => {
     if (hoverTimer) clearTimeout(hoverTimer)
@@ -267,8 +275,7 @@ function showBubbleTrigger(x: number, y: number, text: string) {
 
 function openTranslationCard(x: number, y: number, text: string) {
   const root = ensureHost()
-  const trigger = root.getElementById('mt-trigger')
-  if (trigger) trigger.remove()
+  hideSelectionUI()
 
   const card = document.createElement('div')
   card.id = 'mt-card'
@@ -340,6 +347,18 @@ function openTranslationCard(x: number, y: number, text: string) {
       targetLang: currentTargetLang
     },
     (res) => {
+      if (chrome.runtime.lastError) {
+        const loadingBox = card.querySelector('#mt-loading-box') as HTMLElement
+        const resultBox = card.querySelector('#mt-result-box') as HTMLElement
+        if (loadingBox) loadingBox.style.display = 'none'
+        if (resultBox) {
+          resultBox.style.display = 'block'
+          resultBox.textContent = '扩展已更新，请刷新网页后使用划词翻译'
+          resultBox.style.color = '#ef4444'
+        }
+        return
+      }
+
       const loadingBox = card.querySelector('#mt-loading-box') as HTMLElement
       const resultBox = card.querySelector('#mt-result-box') as HTMLElement
       if (loadingBox) loadingBox.style.display = 'none'
@@ -370,15 +389,29 @@ function escapeHtml(str: string): string {
 /**
  * 监听全局选区事件
  */
-export function initSelectionTranslator(enabled: boolean = true, targetLang: string = 'zh-Hans') {
+export function initSelectionTranslator(
+  enabled: boolean = true,
+  targetLang: string = 'zh-Hans',
+  triggerMode: SelectionTriggerMode = 'bubble'
+) {
   isSelectionBubbleEnabled = enabled
   currentTargetLang = targetLang
+  currentTriggerMode = triggerMode
+
+  if (isInitialized) return
+  isInitialized = true
 
   document.addEventListener('mouseup', (e) => {
     if (!isSelectionBubbleEnabled) return
 
     // 如果点击的是我们的 Shadow Host，直接忽略
     if (hostElement && (e.target === hostElement || hostElement.contains(e.target as Node))) {
+      return
+    }
+
+    // 忽略在特定的非翻译区域（如设置面板、禁止翻译的标记区域）
+    const targetEl = e.target as HTMLElement | null
+    if (targetEl?.closest?.('[data-no-selection-translate], [data-mytabs-ignore]')) {
       return
     }
 
@@ -390,12 +423,13 @@ export function initSelectionTranslator(enabled: boolean = true, targetLang: str
       }
 
       const text = selection.toString().trim()
-      // 过滤太短（<2 字符）或超长，或纯标点/空格
-      if (text.length < 2 || text.length > 5000 || /^[\s\d.,!?;:()]+$/.test(text)) {
+      // 过滤空串、超长（>5000字符）或纯标点/纯空白/纯数字
+      if (!text || text.length === 0 || text.length > 5000 || /^[\s\d.,!?;:()]+$/.test(text)) {
         hideSelectionUI()
         return
       }
 
+      if (selection.rangeCount === 0) return
       const range = selection.getRangeAt(0)
       const rect = range.getBoundingClientRect()
       if (rect.width === 0 && rect.height === 0) return
@@ -404,9 +438,12 @@ export function initSelectionTranslator(enabled: boolean = true, targetLang: str
       const anchorX = Math.round(rect.left + window.scrollX)
       const anchorY = Math.round(rect.bottom + window.scrollY)
 
-      // 选中内容立即自动弹出翻译卡片
-      openTranslationCard(anchorX, anchorY, text)
-    }, 15)
+      if (currentTriggerMode === 'direct') {
+        openTranslationCard(anchorX, anchorY, text)
+      } else {
+        showBubbleTrigger(anchorX, anchorY, text)
+      }
+    }, 20)
   })
 
   // 监听用户按下 Ctrl+C 复制事件：同样支持自动呼出翻译卡片
@@ -415,14 +452,19 @@ export function initSelectionTranslator(enabled: boolean = true, targetLang: str
     setTimeout(() => {
       const selection = window.getSelection()
       const text = selection?.toString().trim()
-      if (text && text.length >= 2 && text.length <= 5000 && !/^[\s\d.,!?;:()]+$/.test(text)) {
+      if (text && text.length >= 1 && text.length <= 5000 && !/^[\s\d.,!?;:()]+$/.test(text)) {
         try {
-          const range = selection?.getRangeAt(0)
-          const rect = range?.getBoundingClientRect()
+          if (!selection || selection.rangeCount === 0) return
+          const range = selection.getRangeAt(0)
+          const rect = range.getBoundingClientRect()
           if (rect) {
             const posX = Math.round(rect.left + window.scrollX)
             const posY = Math.round(rect.bottom + window.scrollY)
-            openTranslationCard(posX, posY, text)
+            if (currentTriggerMode === 'direct') {
+              openTranslationCard(posX, posY, text)
+            } else {
+              showBubbleTrigger(posX, posY, text)
+            }
           }
         } catch {}
       }
@@ -446,8 +488,15 @@ export function initSelectionTranslator(enabled: boolean = true, targetLang: str
   })
 }
 
-export function updateSelectionConfig(enabled: boolean, targetLang: string) {
+export function updateSelectionConfig(
+  enabled: boolean,
+  targetLang: string,
+  triggerMode: SelectionTriggerMode = 'bubble'
+) {
   isSelectionBubbleEnabled = enabled
   currentTargetLang = targetLang
-  if (!enabled) hideSelectionUI()
+  currentTriggerMode = triggerMode
+  if (!enabled) {
+    hideSelectionUI()
+  }
 }

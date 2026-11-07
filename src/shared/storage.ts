@@ -143,6 +143,7 @@ export const DEFAULT_IMMERSIVE_TRANSLATE: ImmersiveTranslateConfig = {
   targetLang: 'zh-Hans',
   bilingualStyle: 'dashed',
   selectionTranslate: true,
+  selectionTriggerMode: 'bubble',
   tripleSpaceTranslate: true
 }
 
@@ -333,7 +334,11 @@ function mergeSettings(loaded: any): AppSettings {
     defaultSearchEngineId,
     showHotNews: loaded.showHotNews !== false,
     ai: { ...DEFAULT_SETTINGS.ai, ...(loaded.ai || {}) },
-    immersiveTranslate: { ...DEFAULT_IMMERSIVE_TRANSLATE, ...(loaded.immersiveTranslate || {}) },
+    immersiveTranslate: {
+      ...DEFAULT_IMMERSIVE_TRANSLATE,
+      ...(loaded.immersiveTranslate || {}),
+      selectionTriggerMode: loaded.immersiveTranslate?.selectionTriggerMode || 'bubble'
+    },
     oneDrive: { ...DEFAULT_SETTINGS.oneDrive, ...(loaded.oneDrive || {}) },
     vaultAutoLockMinutes: typeof loaded.vaultAutoLockMinutes === 'number' ? loaded.vaultAutoLockMinutes : 5,
     privacyRules: Array.isArray(loaded.privacyRules) ? loaded.privacyRules : DEFAULT_SETTINGS.privacyRules

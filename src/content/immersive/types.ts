@@ -2,11 +2,14 @@
  * 沉浸式翻译 Content Script 类型定义
  */
 
+export type SelectionTriggerMode = 'bubble' | 'direct'
+
 export interface ImmersiveConfig {
   enabled: boolean
   targetLang: string
   bilingualStyle: 'dashed' | 'block' | 'highlight'
   selectionTranslate: boolean
+  selectionTriggerMode?: SelectionTriggerMode
   tripleSpaceTranslate: boolean
 }
 

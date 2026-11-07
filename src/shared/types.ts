@@ -136,11 +136,14 @@ export interface PopupBlockerConfig {
   stats: PopupBlockerStats         // 拦截计数统计
 }
 
+export type SelectionTriggerMode = 'bubble' | 'direct' // 'bubble': 弹窗翻译(图标触发) | 'direct': 直接翻译(选中文本立即自动弹窗卡片)
+
 export interface ImmersiveTranslateConfig {
   enabled: boolean
   targetLang: string // 默认 'zh-Hans'
   bilingualStyle: 'dashed' | 'block' | 'highlight'
-  selectionTranslate: boolean // 划词悬浮释义
+  selectionTranslate: boolean // 划词翻译功能总开关
+  selectionTriggerMode?: SelectionTriggerMode // 划词触发方式：'bubble' 弹窗翻译(悬浮图标) 或 'direct' 直接翻译
   tripleSpaceTranslate: boolean // 输入框 3 次空格翻译
 }
 

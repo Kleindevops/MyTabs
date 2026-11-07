@@ -13,6 +13,7 @@ let activeConfig: ImmersiveConfig = {
   targetLang: 'zh-Hans',
   bilingualStyle: 'dashed',
   selectionTranslate: true,
+  selectionTriggerMode: 'bubble',
   tripleSpaceTranslate: true
 }
 
@@ -177,13 +178,17 @@ export function initImmersiveTranslation(config?: Partial<ImmersiveConfig>) {
   }
 
   // 1. 初始化划词悬浮释义
-  initSelectionTranslator(activeConfig.selectionTranslate, activeConfig.targetLang)
+  const isSelectionEnabled = Boolean(activeConfig.enabled && activeConfig.selectionTranslate)
+  const triggerMode = activeConfig.selectionTriggerMode || 'bubble'
+  initSelectionTranslator(isSelectionEnabled, activeConfig.targetLang, triggerMode)
 
   // 2. 初始化输入框 3 次空格翻译
-  initTripleSpaceTranslator(activeConfig.tripleSpaceTranslate)
+  const isTripleSpaceEnabled = Boolean(activeConfig.enabled && activeConfig.tripleSpaceTranslate)
+  initTripleSpaceTranslator(isTripleSpaceEnabled)
 
   // 3. 注册全局快捷键监听 (Alt + W)
   window.addEventListener('keydown', (e) => {
+    if (!activeConfig.enabled) return
     if (e.altKey && (e.key === 'w' || e.key === 'W' || e.code === 'KeyW')) {
       e.preventDefault()
       togglePageBilingualTranslation()
@@ -194,6 +199,11 @@ export function initImmersiveTranslation(config?: Partial<ImmersiveConfig>) {
 export function updateImmersiveConfig(newConfig: Partial<ImmersiveConfig>) {
   activeConfig = { ...activeConfig, ...newConfig }
   injectTranslationStyles(activeConfig.bilingualStyle)
-  updateSelectionConfig(activeConfig.selectionTranslate, activeConfig.targetLang)
-  updateTripleSpaceConfig(activeConfig.tripleSpaceTranslate)
+
+  const isSelectionEnabled = Boolean(activeConfig.enabled && activeConfig.selectionTranslate)
+  const triggerMode = activeConfig.selectionTriggerMode || 'bubble'
+  updateSelectionConfig(isSelectionEnabled, activeConfig.targetLang, triggerMode)
+
+  const isTripleSpaceEnabled = Boolean(activeConfig.enabled && activeConfig.tripleSpaceTranslate)
+  updateTripleSpaceConfig(isTripleSpaceEnabled)
 }
