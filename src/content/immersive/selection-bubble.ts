@@ -215,14 +215,14 @@ function ensureHost(): ShadowRoot {
     }
 
     .mt-original-text {
-      color: #4b5563;
-      font-size: 12px;
-      line-height: 1.45;
-      background: #f9fafb;
-      padding: 6px 10px;
-      border-radius: 6px;
-      border-left: 3px solid #cbd5e1;
-      max-height: 80px;
+      color: #374151;
+      font-size: 12.5px;
+      line-height: 1.6;
+      background: #f8fafc;
+      padding: 8px 10px;
+      border-radius: 8px;
+      border-left: 3px solid #6366f1;
+      max-height: 120px;
       overflow-y: auto;
       word-break: break-word;
       white-space: pre-wrap;
@@ -740,9 +740,10 @@ function openTranslationCard(rect: DOMRect, text: string) {
   card.style.top = `${posY}px`
   card.addEventListener('mousedown', (e) => e.stopPropagation())
 
-  // 4. 渲染卡片结构：支持长原文折叠与语法彩色分析
+  // 4. 渲染卡片结构：默认展开语法彩色分析，超长段落才允许手动收起
   const wordCount = text.length
-  const showCollapsibleOrig = isAdaptiveSize && isLongText
+  const isSuperLong = text.length > 260
+  const showCollapsibleOrig = isAdaptiveSize && isSuperLong
 
   const isEnglish = /[a-zA-Z]{2,}/.test(text)
   const analyzedSentences: AnalyzedSentence[] = (isEnglish && isGrammarEnabled)
@@ -774,10 +775,10 @@ function openTranslationCard(rect: DOMRect, text: string) {
         <span>选区原文 · 共 ${wordCount} 字</span>
         <div style="display: flex; align-items: center; gap: 6px;">
           ${controlsHtml}
-          <button class="mt-toggle-orig-btn" id="mt-btn-toggle-orig" type="button">展开原文 ▾</button>
+          <button class="mt-toggle-orig-btn" id="mt-btn-toggle-orig" type="button">收起原文 ▴</button>
         </div>
       </div>
-      <div class="mt-original-text" id="mt-orig-text" style="display: none;">${initialContentHtml}</div>
+      <div class="mt-original-text" id="mt-orig-text">${initialContentHtml}</div>
       ${legendInitialHtml}
     </div>
     `
@@ -822,7 +823,7 @@ function openTranslationCard(rect: DOMRect, text: string) {
     card.style.top = `${posY}px`
   }
 
-  // 绑定折叠原文按钮
+  // 绑定超长文本收起/展开原文按钮
   if (showCollapsibleOrig) {
     const toggleBtn = card.querySelector('#mt-btn-toggle-orig') as HTMLButtonElement
     const origBox = card.querySelector('#mt-orig-text') as HTMLElement
@@ -830,12 +831,12 @@ function openTranslationCard(rect: DOMRect, text: string) {
     if (toggleBtn && origBox) {
       toggleBtn.addEventListener('click', (e) => {
         e.stopPropagation()
-        const isHidden = origBox.style.display === 'none'
-        origBox.style.display = isHidden ? 'block' : 'none'
+        const isCurrentlyShown = origBox.style.display !== 'none'
+        origBox.style.display = isCurrentlyShown ? 'none' : 'block'
         if (legendBox && currentGrammarMode !== 'plain') {
-          legendBox.style.display = isHidden ? 'flex' : 'none'
+          legendBox.style.display = isCurrentlyShown ? 'none' : 'flex'
         }
-        toggleBtn.textContent = isHidden ? '收起原文 ▴' : '展开原文 ▾'
+        toggleBtn.textContent = isCurrentlyShown ? '展开原文 ▾' : '收起原文 ▴'
         requestAnimationFrame(clampToViewport)
       })
     }
