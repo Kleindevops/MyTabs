@@ -6,37 +6,116 @@ export const DEFAULT_SEARCH_ENGINES: SearchEngine[] = [
   {
     id: 'bing',
     name: 'Bing',
-    url: 'https://www.bing.com/search?q=',
+    url: 'https://www.bing.com/search?q=%s',
     icon: 'Search',
-    placeholder: '微软 Bing 搜索...'
+    placeholder: '微软 Bing 搜索...',
+    isCustom: false
   },
   {
     id: 'google',
     name: 'Google',
-    url: 'https://www.google.com/search?q=',
+    url: 'https://www.google.com/search?q=%s',
     icon: 'Globe',
-    placeholder: 'Google 搜索...'
+    placeholder: 'Google 搜索...',
+    isCustom: false
   },
   {
     id: 'baidu',
     name: '百度',
-    url: 'https://www.baidu.com/s?wd=',
+    url: 'https://www.baidu.com/s?wd=%s',
     icon: 'SearchCheck',
-    placeholder: '百度一下，你就知道...'
+    placeholder: '百度一下，你就知道...',
+    isCustom: false
   },
   {
     id: 'github',
     name: 'GitHub',
-    url: 'https://github.com/search?q=',
+    url: 'https://github.com/search?q=%s',
     icon: 'Code',
-    placeholder: 'GitHub 仓库与代码搜索...'
+    placeholder: 'GitHub 仓库与代码搜索...',
+    isCustom: false
   },
   {
     id: 'bilibili',
     name: '哔哩哔哩',
-    url: 'https://search.bilibili.com/all?keyword=',
+    url: 'https://search.bilibili.com/all?keyword=%s',
     icon: 'Tv',
-    placeholder: '哔哩哔哩 (゜-゜)つロ 干杯~'
+    placeholder: '哔哩哔哩 (゜-゜)つロ 干杯~',
+    isCustom: false
+  }
+]
+
+export interface PopularEnginePreset {
+  name: string
+  url: string
+  icon: string
+  placeholder: string
+  category: string
+}
+
+export const POPULAR_SEARCH_ENGINES_PRESETS: PopularEnginePreset[] = [
+  {
+    name: 'DuckDuckGo',
+    url: 'https://duckduckgo.com/?q=%s',
+    icon: 'Shield',
+    placeholder: 'DuckDuckGo 隐私搜索...',
+    category: '隐私保护'
+  },
+  {
+    name: '知乎',
+    url: 'https://www.zhihu.com/search?type=content&q=%s',
+    icon: 'MessageSquare',
+    placeholder: '知乎 搜索问题或话题...',
+    category: '问答社区'
+  },
+  {
+    name: '微信读书',
+    url: 'https://weread.qq.com/web/search/global?keyword=%s',
+    icon: 'BookOpen',
+    placeholder: '微信读书 搜索书籍或作者...',
+    category: '阅读学习'
+  },
+  {
+    name: 'Google 学术',
+    url: 'https://scholar.google.com/scholar?q=%s',
+    icon: 'GraduationCap',
+    placeholder: 'Google Scholar 学术文献检索...',
+    category: '科研文献'
+  },
+  {
+    name: '小红书',
+    url: 'https://www.xiaohongshu.com/search_result?keyword=%s',
+    icon: 'Compass',
+    placeholder: '小红书 搜索生活经验与灵感...',
+    category: '生活灵感'
+  },
+  {
+    name: 'Yandex',
+    url: 'https://yandex.com/search/?text=%s',
+    icon: 'Search',
+    placeholder: 'Yandex 全球多语种搜索...',
+    category: '海外搜索'
+  },
+  {
+    name: 'NPM',
+    url: 'https://www.npmjs.com/search?q=%s',
+    icon: 'Package',
+    placeholder: 'NPM 搜索开源软件包...',
+    category: '开发者'
+  },
+  {
+    name: 'MDN Web',
+    url: 'https://developer.mozilla.org/zh-CN/search?q=%s',
+    icon: 'Code',
+    placeholder: 'MDN 检索 Web 技术规范与 API...',
+    category: '开发者'
+  },
+  {
+    name: '维基百科',
+    url: 'https://zh.wikipedia.org/wiki/Special:Search?search=%s',
+    icon: 'Book',
+    placeholder: '维基百科 自由的百科全书...',
+    category: '百科知识'
   }
 ]
 
@@ -122,7 +201,9 @@ export const DEFAULT_SETTINGS: AppSettings = {
   },
   popupBlocker: DEFAULT_POPUP_BLOCKER,
   showHotNews: true,
-  vaultAutoLockMinutes: 5
+  vaultAutoLockMinutes: 5,
+  searchEngines: DEFAULT_SEARCH_ENGINES,
+  defaultSearchEngineId: 'bing'
 }
 
 export const STORAGE_KEY = 'mytabs_app_settings'
@@ -214,6 +295,24 @@ function mergeSettings(loaded: any): AppSettings {
       : DEFAULT_POPUP_BLOCKER.whitelist
   }
 
+  // Search engines migration & fallback
+  let searchEngines: SearchEngine[] = Array.isArray(loaded.searchEngines) && loaded.searchEngines.length > 0
+    ? loaded.searchEngines
+    : DEFAULT_SEARCH_ENGINES
+
+  searchEngines = searchEngines.map((e: any) => ({
+    id: e.id || `custom-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    name: e.name || '搜索引擎',
+    url: e.url || 'https://www.bing.com/search?q=%s',
+    icon: e.icon || 'Search',
+    placeholder: e.placeholder || `${e.name || '网页'} 搜索...`,
+    isCustom: e.isCustom ?? !DEFAULT_SEARCH_ENGINES.some(d => d.id === e.id)
+  }))
+
+  const defaultSearchEngineId = loaded.defaultSearchEngineId && searchEngines.some(e => e.id === loaded.defaultSearchEngineId)
+    ? loaded.defaultSearchEngineId
+    : (searchEngines[0]?.id || 'bing')
+
   return {
     ...DEFAULT_SETTINGS,
     ...loaded,
@@ -221,6 +320,8 @@ function mergeSettings(loaded: any): AppSettings {
     bookmarks,
     wallpaper,
     popupBlocker,
+    searchEngines,
+    defaultSearchEngineId,
     showHotNews: loaded.showHotNews !== false,
     ai: { ...DEFAULT_SETTINGS.ai, ...(loaded.ai || {}) },
     oneDrive: { ...DEFAULT_SETTINGS.oneDrive, ...(loaded.oneDrive || {}) },

@@ -22,7 +22,11 @@
 
       <!-- Centered Multi-Engine Search Bar -->
       <div class="w-full my-3 md:my-5 max-w-2xl">
-        <SearchBar />
+        <SearchBar
+          :engines="settings.searchEngines"
+          :defaultEngineId="settings.defaultSearchEngineId"
+          @open-settings="openSettingsTab('search')"
+        />
       </div>
 
       <!-- Desktop Bookmarks Grid (Interactive desktop icons with labels, matching iTab) -->

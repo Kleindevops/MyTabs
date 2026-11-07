@@ -143,8 +143,233 @@
             </div>
           </div>
 
+          <!-- 搜索引擎管理与自定义网址 -->
+          <div v-else-if="activeTab === 'search'" class="space-y-4">
+            <div class="flex items-start justify-between gap-4">
+              <div>
+                <h3 class="text-sm font-semibold text-white flex items-center gap-1.5">
+                  <Search class="w-4 h-4 text-blue-400" />
+                  搜索引擎管理与自定义网址
+                </h3>
+                <p class="text-xs text-slate-400 mt-1">
+                  自定义主桌面聚合搜索框的搜索引擎。支持添加任意自定义搜索网址（使用 %s 代替关键词），支持设置默认引擎及快捷轮换。
+                </p>
+              </div>
+              <div class="flex items-center gap-2 shrink-0">
+                <button
+                  @click="openAddEngineForm"
+                  class="px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-medium shadow-md shadow-blue-600/20 transition-all flex items-center space-x-1.5"
+                >
+                  <Plus class="w-3.5 h-3.5" />
+                  <span>添加搜索引擎</span>
+                </button>
+                <button
+                  @click="handleResetSearchEngines"
+                  title="恢复为系统出厂预设的 5 款经典搜索引擎"
+                  class="p-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors"
+                >
+                  <RotateCcw class="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
+
+            <!-- 添加 / 编辑搜索引擎表单卡片 -->
+            <div
+              v-if="showEngineForm"
+              class="p-4 rounded-2xl bg-slate-900/90 border border-blue-500/30 space-y-3.5 shadow-xl transition-all"
+            >
+              <div class="flex items-center justify-between border-b border-white/10 pb-2.5">
+                <div class="text-xs font-semibold text-white flex items-center gap-1.5">
+                  <Edit2 v-if="editingEngineId" class="w-3.5 h-3.5 text-blue-400" />
+                  <Plus v-else class="w-3.5 h-3.5 text-blue-400" />
+                  <span>{{ editingEngineId ? '编辑搜索引擎' : '添加自定义搜索引擎' }}</span>
+                </div>
+                <button
+                  @click="closeEngineForm"
+                  class="p-1 rounded-full text-slate-400 hover:text-white hover:bg-white/10 transition-colors"
+                >
+                  <X class="w-4 h-4" />
+                </button>
+              </div>
+
+              <div class="space-y-3 text-xs">
+                <!-- 引擎名称 -->
+                <div>
+                  <label class="block text-slate-300 mb-1 font-medium">引擎名称 <span class="text-rose-400">*</span></label>
+                  <input
+                    type="text"
+                    v-model="engineForm.name"
+                    placeholder="例如: DuckDuckGo、知乎、Google 学术"
+                    class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 transition-colors"
+                  />
+                </div>
+
+                <!-- 搜索网址 (URL) -->
+                <div>
+                  <label class="block text-slate-300 mb-1 font-medium">
+                    搜索网址 (URL) <span class="text-rose-400">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    v-model="engineForm.url"
+                    placeholder="例如: https://duckduckgo.com/?q=%s"
+                    class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white placeholder-slate-500 font-mono text-xs focus:outline-none focus:border-blue-500 transition-colors"
+                  />
+                  <div class="mt-1.5 text-[11px] text-sky-400/90 flex items-start gap-1 bg-sky-500/10 p-2 rounded-lg border border-sky-500/20">
+                    <Lightbulb class="w-3.5 h-3.5 shrink-0 mt-0.5 text-sky-400" />
+                    <span>在网址中使用 <code class="px-1 py-0.5 rounded bg-sky-950/60 font-mono text-sky-300 font-bold">%s</code> 代替搜索关键词。若未包含 %s，系统在回车搜索时会自动拼接到末尾。</span>
+                  </div>
+                </div>
+
+                <!-- 搜索提示词 (可选) -->
+                <div>
+                  <label class="block text-slate-300 mb-1 font-medium">输入框占位提示词 (可选)</label>
+                  <input
+                    type="text"
+                    v-model="engineForm.placeholder"
+                    :placeholder="engineForm.name ? `${engineForm.name} 搜索...` : '例如: 输入搜索词...'"
+                    class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 transition-colors"
+                  />
+                </div>
+
+                <!-- 设为默认勾选 -->
+                <div class="flex items-center space-x-2 pt-1">
+                  <input
+                    type="checkbox"
+                    id="set-as-default-engine"
+                    v-model="engineForm.isDefault"
+                    class="w-4 h-4 rounded text-blue-600 accent-blue-600 cursor-pointer"
+                  />
+                  <label for="set-as-default-engine" class="text-slate-300 cursor-pointer select-none">
+                    设为默认搜索引擎（打开新标签页时优先使用）
+                  </label>
+                </div>
+              </div>
+
+              <!-- 表单操作按钮 -->
+              <div class="flex items-center justify-end space-x-2 pt-2 border-t border-slate-800">
+                <button
+                  @click="closeEngineForm"
+                  class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium transition-colors"
+                >
+                  取消
+                </button>
+                <button
+                  @click="handleSaveEngine"
+                  class="px-4 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold shadow-md shadow-blue-600/30 transition-all flex items-center space-x-1"
+                >
+                  <Check class="w-3.5 h-3.5" />
+                  <span>{{ editingEngineId ? '保存修改' : '确认添加' }}</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- 常用搜索引擎快捷推荐模板 (One-Click Presets) -->
+            <div class="p-3.5 rounded-2xl bg-slate-900/60 border border-slate-800 space-y-2">
+              <div class="flex items-center justify-between text-xs">
+                <div class="font-medium text-slate-300 flex items-center gap-1.5">
+                  <Sparkles class="w-3.5 h-3.5 text-amber-400" />
+                  <span>常用搜索引擎一键添加</span>
+                </div>
+                <span class="text-[11px] text-slate-400">点击即可快速加入列表</span>
+              </div>
+              <div class="flex flex-wrap gap-1.5 pt-1">
+                <button
+                  v-for="preset in availablePresets"
+                  :key="preset.name"
+                  @click="applyEnginePreset(preset)"
+                  class="px-2.5 py-1 rounded-lg text-xs font-medium bg-white/5 hover:bg-blue-600/20 text-slate-300 hover:text-blue-300 border border-white/5 hover:border-blue-500/30 transition-all flex items-center space-x-1.5 group"
+                  :title="preset.url"
+                >
+                  <Plus class="w-3 h-3 text-slate-400 group-hover:text-blue-400" />
+                  <span>{{ preset.name }}</span>
+                  <span class="text-[10px] text-slate-400 group-hover:text-blue-300/80">({{ preset.category }})</span>
+                </button>
+                <div v-if="availablePresets.length === 0" class="text-xs text-slate-500 py-1">
+                  所有常用预设搜索引擎均已添加
+                </div>
+              </div>
+            </div>
+
+            <!-- 搜索引擎列表展示 -->
+            <div class="space-y-2">
+              <div class="text-xs font-medium text-slate-400 flex items-center justify-between px-1">
+                <span>已启用的搜索引擎 (共 {{ currentEngines.length }} 款)</span>
+                <span class="text-[11px] text-slate-500">可在桌面搜索框按 Tab 快速轮换</span>
+              </div>
+
+              <div class="space-y-2">
+                <div
+                  v-for="engine in currentEngines"
+                  :key="engine.id"
+                  class="p-3.5 rounded-2xl bg-slate-900/80 border border-slate-800 hover:border-slate-700/80 transition-all flex items-center justify-between gap-3 shadow-md"
+                >
+                  <div class="flex items-center space-x-3 min-w-0">
+                    <div class="w-8 h-8 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center shrink-0 text-slate-300">
+                      <component :is="getEngineIcon(engine)" class="w-4 h-4 text-blue-400" />
+                    </div>
+                    <div class="min-w-0">
+                      <div class="text-xs font-semibold text-white flex items-center gap-2">
+                        <span>{{ engine.name }}</span>
+                        <!-- 默认标签 -->
+                        <span
+                          v-if="isDefaultEngine(engine.id)"
+                          class="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-normal"
+                        >
+                          默认
+                        </span>
+                        <!-- 自定义标签 -->
+                        <span
+                          v-if="engine.isCustom"
+                          class="text-[10px] px-1.5 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 font-normal"
+                        >
+                          自定义
+                        </span>
+                      </div>
+                      <div class="text-[11px] text-slate-400 font-mono mt-0.5 truncate max-w-sm" :title="engine.url">
+                        {{ engine.url }}
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- 动作按钮组 -->
+                  <div class="flex items-center space-x-1.5 shrink-0">
+                    <!-- 设为默认按钮 -->
+                    <button
+                      v-if="!isDefaultEngine(engine.id)"
+                      @click="setDefaultEngine(engine.id)"
+                      class="text-[11px] px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white transition-colors"
+                      title="设为新标签页默认搜索引擎"
+                    >
+                      设为默认
+                    </button>
+
+                    <!-- 编辑按钮 -->
+                    <button
+                      @click="editEngine(engine)"
+                      class="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-slate-400 hover:text-slate-200 transition-colors"
+                      title="编辑此搜索引擎"
+                    >
+                      <Edit2 class="w-3.5 h-3.5" />
+                    </button>
+
+                    <!-- 删除按钮 -->
+                    <button
+                      @click="deleteEngine(engine)"
+                      :disabled="currentEngines.length <= 1"
+                      class="p-1.5 rounded-lg bg-white/5 hover:bg-rose-500/20 text-slate-400 hover:text-rose-300 transition-colors disabled:opacity-30 disabled:hover:bg-white/5 disabled:hover:text-slate-400"
+                      title="删除此搜索引擎"
+                    >
+                      <Trash2 class="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <!-- 1. 数据备份与云盘同步 (自定义目录与文件) -->
-          <div v-if="activeTab === 'onedrive'" class="space-y-4">
+          <div v-else-if="activeTab === 'onedrive'" class="space-y-4">
             <div>
               <h3 class="text-sm font-semibold text-white flex items-center gap-1.5">
                 <Cloud class="w-4 h-4 text-sky-400" />
@@ -795,7 +1020,8 @@ import {
   Settings, X, Cloud, Lock, ShieldCheck, Sparkles, Palette,
   FolderSync, RefreshCw, Download, Upload, Trash2, Check, Pin,
   BookOpen, Compass, Video, LayoutGrid, Lightbulb, ArrowRight, Calendar, Clock, Flame,
-  AlertCircle, CheckCircle2
+  AlertCircle, CheckCircle2, Search, Plus, Edit2, RotateCcw, Globe, SearchCheck, Tv, Code,
+  MessageSquare, GraduationCap, Package
 } from 'lucide-vue-next'
 import { AI_PRESETS } from '../../shared/ai-client'
 import {
@@ -807,9 +1033,17 @@ import {
   DEFAULT_BACKUP_FILENAME,
   getEffectiveFileName
 } from '../../shared/onedrive'
-import { exportSettingsAsJSON, importSettingsFromJSON, saveSettings, DEFAULT_POPUP_BLOCKER } from '../../shared/storage'
+import {
+  exportSettingsAsJSON,
+  importSettingsFromJSON,
+  saveSettings,
+  DEFAULT_POPUP_BLOCKER,
+  DEFAULT_SEARCH_ENGINES,
+  POPULAR_SEARCH_ENGINES_PRESETS,
+  type PopularEnginePreset
+} from '../../shared/storage'
 import { fetchBingDailyInfo, pinCurrentWallpaperService, resumeBingDailyService } from '../../shared/wallpaper'
-import type { AppSettings, PopupBlockerConfig } from '../../shared/types'
+import type { AppSettings, PopupBlockerConfig, SearchEngine } from '../../shared/types'
 
 const props = withDefaults(
   defineProps<{
@@ -1008,6 +1242,7 @@ watch(() => props.currentCategoryId, () => {
 const tabs = computed(() => {
   const allTabs = [
     { id: 'guide', name: '功能介绍', icon: BookOpen },
+    { id: 'search', name: '搜索引擎', icon: Search },
     { id: 'onedrive', name: '数据备份同步', icon: Cloud },
     { id: 'vault', name: '个人空间锁', icon: Lock },
     { id: 'ai', name: 'AI 助手模型', icon: Sparkles },
@@ -1024,6 +1259,7 @@ const selectedGuideCategory = ref('all')
 
 const guideCategories = [
   { id: 'all', name: '全部功能' },
+  { id: 'search', name: '搜索引擎' },
   { id: 'desktop', name: '常用桌面' },
   { id: 'onedrive', name: '数据备份同步' },
   { id: 'ai', name: 'AI 助手' },
@@ -1032,6 +1268,29 @@ const guideCategories = [
 ]
 
 const guideItems = [
+  {
+    id: 'g-search',
+    category: 'search',
+    categoryName: '桌面聚合搜索引擎',
+    title: '自定义搜索引擎与快捷轮换',
+    badge: '高效聚合',
+    badgeColor: 'bg-blue-500/20 text-blue-300 border-blue-500/30',
+    icon: Search,
+    iconColor: 'text-blue-400',
+    targetTab: 'search',
+    whatIsIt: [
+      '桌面中央强大的多引擎聚合搜索框，支持在必应、谷歌、百度、GitHub、B站等多个主流引擎间瞬间切换。',
+      '支持任意自定义添加搜索引擎网址，使用 %s 占位符定义关键词搜索位置。',
+      '支持指定默认搜索引擎，并在搜索框内使用 Tab 键按顺序快速轮换引擎。'
+    ],
+    howToUse: [
+      '自定义添加：前往【设置】->【搜索引擎】，点击【添加搜索引擎】，输入名称与带 %s 的搜索网址（如 https://duckduckgo.com/?q=%s）。',
+      '快捷预设推荐：面板内提供 DuckDuckGo、知乎、微信读书、小红书、Google 学术等热门引擎，支持一键快速加入列表。',
+      '设置默认引擎：在引擎卡片右侧点击【设为默认】，打开新标签页时将优先启用该引擎。',
+      '键盘快速轮换：在桌面搜索框处于聚焦状态时，直接按下 Tab 键即可依次切换下一个搜索引擎。'
+    ],
+    tips: '若搜索网址中未包含 %s 占位符，系统在回车搜索时会自动将用户输入的关键词直接拼接到网址末尾，兼具灵活性与兼容性。'
+  },
   {
     id: 'g-security',
     category: 'security',
@@ -1473,6 +1732,178 @@ function selectGradient(val: string) {
 function onColorPickerChange(e: Event) {
   const color = (e.target as HTMLInputElement).value
   selectGradient(color)
+}
+
+// Search Engine State & Handlers
+const showEngineForm = ref(false)
+const editingEngineId = ref<string | null>(null)
+const engineForm = ref<{
+  name: string
+  url: string
+  placeholder: string
+  isDefault: boolean
+}>({
+  name: '',
+  url: '',
+  placeholder: '',
+  isDefault: false
+})
+
+const currentEngines = computed<SearchEngine[]>(() => {
+  if (!props.settings.searchEngines || props.settings.searchEngines.length === 0) {
+    props.settings.searchEngines = JSON.parse(JSON.stringify(DEFAULT_SEARCH_ENGINES))
+  }
+  return props.settings.searchEngines
+})
+
+function isDefaultEngine(engineId: string): boolean {
+  const defId = props.settings.defaultSearchEngineId || 'bing'
+  return defId === engineId
+}
+
+function setDefaultEngine(engineId: string) {
+  props.settings.defaultSearchEngineId = engineId
+  saveChanges()
+}
+
+const availablePresets = computed(() => {
+  const existingNames = new Set(currentEngines.value.map(e => e.name.toLowerCase().trim()))
+  const existingUrls = new Set(currentEngines.value.map(e => e.url.toLowerCase().trim()))
+  return POPULAR_SEARCH_ENGINES_PRESETS.filter(p => {
+    return !existingNames.has(p.name.toLowerCase().trim()) && !existingUrls.has(p.url.toLowerCase().trim())
+  })
+})
+
+function openAddEngineForm() {
+  editingEngineId.value = null
+  engineForm.value = {
+    name: '',
+    url: '',
+    placeholder: '',
+    isDefault: false
+  }
+  showEngineForm.value = true
+}
+
+function editEngine(engine: SearchEngine) {
+  editingEngineId.value = engine.id
+  engineForm.value = {
+    name: engine.name,
+    url: engine.url,
+    placeholder: engine.placeholder || '',
+    isDefault: isDefaultEngine(engine.id)
+  }
+  showEngineForm.value = true
+}
+
+function closeEngineForm() {
+  showEngineForm.value = false
+  editingEngineId.value = null
+}
+
+function applyEnginePreset(preset: PopularEnginePreset) {
+  const newEngine: SearchEngine = {
+    id: `engine-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+    name: preset.name,
+    url: preset.url,
+    icon: preset.icon,
+    placeholder: preset.placeholder,
+    isCustom: true
+  }
+  props.settings.searchEngines = [...currentEngines.value, newEngine]
+  saveChanges()
+}
+
+function handleSaveEngine() {
+  const name = engineForm.value.name.trim()
+  let url = engineForm.value.url.trim()
+  if (!name) {
+    alert('请输入搜索引擎名称')
+    return
+  }
+  if (!url) {
+    alert('请输入搜索网址 (URL)')
+    return
+  }
+
+  // Prepend protocol if missing
+  if (!/^https?:\/\//i.test(url)) {
+    url = `https://${url}`
+  }
+
+  const placeholder = engineForm.value.placeholder.trim() || `${name} 搜索...`
+
+  if (editingEngineId.value) {
+    // Edit existing engine
+    props.settings.searchEngines = currentEngines.value.map(e => {
+      if (e.id === editingEngineId.value) {
+        return {
+          ...e,
+          name,
+          url,
+          placeholder
+        }
+      }
+      return e
+    })
+    if (engineForm.value.isDefault) {
+      props.settings.defaultSearchEngineId = editingEngineId.value
+    }
+  } else {
+    // Add new custom engine
+    const newId = `custom-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`
+    const newEngine: SearchEngine = {
+      id: newId,
+      name,
+      url,
+      placeholder,
+      isCustom: true,
+      icon: 'Search'
+    }
+    props.settings.searchEngines = [...currentEngines.value, newEngine]
+    if (engineForm.value.isDefault) {
+      props.settings.defaultSearchEngineId = newId
+    }
+  }
+
+  saveChanges()
+  closeEngineForm()
+}
+
+function deleteEngine(engine: SearchEngine) {
+  if (currentEngines.value.length <= 1) {
+    alert('至少需要保留一个搜索引擎')
+    return
+  }
+  if (!confirm(`确定删除搜索引擎「${engine.name}」吗？`)) return
+
+  props.settings.searchEngines = currentEngines.value.filter(e => e.id !== engine.id)
+  if (props.settings.defaultSearchEngineId === engine.id) {
+    props.settings.defaultSearchEngineId = props.settings.searchEngines[0]?.id || 'bing'
+  }
+  saveChanges()
+}
+
+function handleResetSearchEngines() {
+  if (!confirm('确定将搜索引擎恢复为系统出厂的 5 款预设引擎吗？（自定义添加的引擎将被清除）')) return
+  props.settings.searchEngines = JSON.parse(JSON.stringify(DEFAULT_SEARCH_ENGINES))
+  props.settings.defaultSearchEngineId = 'bing'
+  saveChanges()
+}
+
+function getEngineIcon(engine: SearchEngine) {
+  const idOrName = (engine.id + ' ' + engine.name).toLowerCase()
+  if (idOrName.includes('google') && !idOrName.includes('scholar') && !idOrName.includes('学术')) return Globe
+  if (idOrName.includes('github') || idOrName.includes('mdn') || idOrName.includes('code')) return Code
+  if (idOrName.includes('bilibili') || idOrName.includes('哔哩')) return Tv
+  if (idOrName.includes('baidu') || idOrName.includes('百度')) return SearchCheck
+  if (idOrName.includes('duck') || idOrName.includes('shield')) return ShieldCheck
+  if (idOrName.includes('zhihu') || idOrName.includes('知乎')) return MessageSquare
+  if (idOrName.includes('weread') || idOrName.includes('微信读书') || idOrName.includes('wiki') || idOrName.includes('维基')) return BookOpen
+  if (idOrName.includes('scholar') || idOrName.includes('学术')) return GraduationCap
+  if (idOrName.includes('xiaohongshu') || idOrName.includes('小红书')) return Compass
+  if (idOrName.includes('npm') || idOrName.includes('package')) return Package
+  return Search
 }
 
 async function saveChanges() {

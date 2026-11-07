@@ -23,8 +23,9 @@ export interface SearchEngine {
   id: string
   name: string
   url: string
-  icon: string
-  placeholder: string
+  icon?: string
+  placeholder?: string
+  isCustom?: boolean
 }
 
 export interface WallpaperConfig {
@@ -151,4 +152,6 @@ export interface AppSettings {
   pet?: PetConfig
   schedules?: ScheduleItem[]
   fixedReminders?: FixedReminderItem[]
+  searchEngines?: SearchEngine[]
+  defaultSearchEngineId?: string
 }
