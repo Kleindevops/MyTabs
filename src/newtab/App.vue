@@ -181,7 +181,7 @@ import VaultLockModal from './components/VaultLockModal.vue'
 import ChangePasswordModal from './components/ChangePasswordModal.vue'
 import AddBookmarkModal from './components/AddBookmarkModal.vue'
 
-import { DEFAULT_SETTINGS, loadSettings, saveSettings } from '../shared/storage'
+import { DEFAULT_SETTINGS, loadSettings, saveSettings, STORAGE_KEY } from '../shared/storage'
 import { generateSalt, createVaultVerifier, verifyVaultPassword } from '../shared/crypto'
 import { changeVaultPasswordService } from '../shared/vault-service'
 import type { AppSettings, CategoryItem, BookmarkItem } from '../shared/types'
@@ -287,14 +287,38 @@ const displayedBookmarks = computed(() => {
   return list.filter((bm) => bm.categoryId === activeCategoryId.value)
 })
 
+let storageListener: ((changes: { [key: string]: chrome.storage.StorageChange }, areaName: string) => void) | null = null
+
+function setupStorageSync() {
+  if (typeof chrome === 'undefined' || !chrome.storage?.onChanged) return
+  if (storageListener) return // prevent duplicate binding
+
+  storageListener = (changes, areaName) => {
+    if (areaName !== 'local' || !changes[STORAGE_KEY]?.newValue) return
+
+    const incoming = changes[STORAGE_KEY].newValue as AppSettings
+    if (!incoming) return
+
+    // Safely update settings in memory reactively across all tabs
+    settings.value = incoming
+
+    // If current activeCategoryId was deleted in another tab, fallback safely
+    const hasCategory = (incoming.categories || []).some(c => c.id === activeCategoryId.value)
+    if (!hasCategory && incoming.categories && incoming.categories.length > 0) {
+      activeCategoryId.value = incoming.categories[0].id
+    }
+  }
+
+  chrome.storage.onChanged.addListener(storageListener)
+}
+
 onMounted(async () => {
   try {
+    setupStorageSync()
     const loaded = await loadSettings()
     if (loaded && loaded.categories && loaded.categories.length > 0) {
       settings.value = loaded
       activeCategoryId.value = loaded.categories[0].id
-      // Ensure any migrated category names or enriched icons are saved
-      await saveSettings(loaded, false)
     }
   } catch (err) {
     console.error('Error loading settings:', err)
@@ -479,6 +503,10 @@ function stopVaultAutoLockTimer() {
 
 onUnmounted(() => {
   stopVaultAutoLockTimer()
+  if (storageListener && typeof chrome !== 'undefined' && chrome.storage?.onChanged) {
+    chrome.storage.onChanged.removeListener(storageListener)
+    storageListener = null
+  }
 })
 
 function handleCloseHotNews() {
@@ -730,17 +758,43 @@ function handleDeleteCategory(cat: CategoryItem) {
   showToast(`已删除分类「${cat.name}」`)
 }
 
-function handleAddBookmarkSave(bmData: Omit<BookmarkItem, 'id'>) {
-  const newBm: BookmarkItem = {
-    id: `bm-${Date.now()}`,
-    ...bmData
+async function handleAddBookmarkSave(bmData: Omit<BookmarkItem, 'id'>) {
+  try {
+    // 1. Fetch freshest settings from storage to avoid overwriting changes from other tabs
+    const latest = await loadSettings()
+    const list = Array.isArray(latest.bookmarks) ? [...latest.bookmarks] : []
+
+    const newBm: BookmarkItem = {
+      id: `bm-${Date.now()}`,
+      ...bmData
+    }
+
+    list.push(newBm)
+    latest.bookmarks = list
+    settings.value = latest
+
+    // 2. Await physical disk write
+    await saveSettings(latest)
+
+    // 3. Switch to the category of the new bookmark if different from current
+    if (activeCategoryId.value !== newBm.categoryId) {
+      activeCategoryId.value = newBm.categoryId
+    }
+
+    // 4. Auto-flip to target page and ping-highlight the new bookmark icon
+    nextTick(() => {
+      setTimeout(() => {
+        bookmarkGridRef.value?.locateBookmark(newBm.id)
+      }, 50)
+    })
+
+    showToast(`已成功添加「${newBm.title}」并定位到图标`)
+  } catch (err) {
+    console.error('Failed to add bookmark:', err)
+    showToast('添加书签失败，请重试')
+  } finally {
+    showAddBookmark.value = false
   }
-  if (!settings.value.bookmarks) {
-    settings.value.bookmarks = []
-  }
-  settings.value.bookmarks.push(newBm)
-  saveSettings(settings.value)
-  showAddBookmark.value = false
 }
 
 function handleDeleteBookmark(id: string) {

@@ -125,7 +125,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   vaultAutoLockMinutes: 5
 }
 
-const STORAGE_KEY = 'mytabs_app_settings'
+export const STORAGE_KEY = 'mytabs_app_settings'
 
 function mergeSettings(loaded: any): AppSettings {
   if (!loaded) return { ...DEFAULT_SETTINGS }
@@ -290,32 +290,52 @@ export async function saveSettings(settings: AppSettings, triggerOneDrive = true
 }
 
 export async function updatePopupBlockerStats(delta: number = 1): Promise<PopupBlockerStats> {
-  const settings = await loadSettings()
   const today = new Date().toISOString().slice(0, 10)
-  if (!settings.popupBlocker) {
-    settings.popupBlocker = { ...DEFAULT_POPUP_BLOCKER }
-  }
-  if (settings.popupBlocker.stats.lastDate !== today) {
-    settings.popupBlocker.stats.todayBlocked = 0
-    settings.popupBlocker.stats.lastDate = today
-  }
-  settings.popupBlocker.stats.todayBlocked += delta
-  settings.popupBlocker.stats.totalBlocked += delta
-  await saveSettings(settings, false)
-  return settings.popupBlocker.stats
+  return new Promise<PopupBlockerStats>((resolve) => {
+    if (typeof chrome !== 'undefined' && chrome.storage?.local) {
+      chrome.storage.local.get([STORAGE_KEY], (res) => {
+        const settings = res?.[STORAGE_KEY] ? res[STORAGE_KEY] : { ...DEFAULT_SETTINGS }
+        if (!settings.popupBlocker) {
+          settings.popupBlocker = { ...DEFAULT_POPUP_BLOCKER }
+        }
+        if (settings.popupBlocker.stats.lastDate !== today) {
+          settings.popupBlocker.stats.todayBlocked = 0
+          settings.popupBlocker.stats.lastDate = today
+        }
+        settings.popupBlocker.stats.todayBlocked += delta
+        settings.popupBlocker.stats.totalBlocked += delta
+        chrome.storage.local.set({ [STORAGE_KEY]: settings }, () => {
+          resolve(settings.popupBlocker.stats)
+        })
+      })
+    } else {
+      resolve({ totalBlocked: 0, todayBlocked: 0, lastDate: today })
+    }
+  })
 }
 
 export async function resetPopupBlockerStats(): Promise<void> {
-  const settings = await loadSettings()
-  if (!settings.popupBlocker) {
-    settings.popupBlocker = { ...DEFAULT_POPUP_BLOCKER }
-  }
-  settings.popupBlocker.stats = {
-    totalBlocked: 0,
-    todayBlocked: 0,
-    lastDate: new Date().toISOString().slice(0, 10)
-  }
-  await saveSettings(settings, false)
+  const today = new Date().toISOString().slice(0, 10)
+  return new Promise<void>((resolve) => {
+    if (typeof chrome !== 'undefined' && chrome.storage?.local) {
+      chrome.storage.local.get([STORAGE_KEY], (res) => {
+        const settings = res?.[STORAGE_KEY] ? res[STORAGE_KEY] : { ...DEFAULT_SETTINGS }
+        if (!settings.popupBlocker) {
+          settings.popupBlocker = { ...DEFAULT_POPUP_BLOCKER }
+        }
+        settings.popupBlocker.stats = {
+          totalBlocked: 0,
+          todayBlocked: 0,
+          lastDate: today
+        }
+        chrome.storage.local.set({ [STORAGE_KEY]: settings }, () => {
+          resolve()
+        })
+      })
+    } else {
+      resolve()
+    }
+  })
 }
 
 export function exportSettingsAsJSON(settings: AppSettings): void {

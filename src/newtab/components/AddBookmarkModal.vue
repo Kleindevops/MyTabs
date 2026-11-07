@@ -157,15 +157,18 @@
           <button
             type="button"
             @click="$emit('cancel')"
-            class="flex-1 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium transition-colors"
+            :disabled="isSubmitting"
+            class="flex-1 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium transition-colors disabled:opacity-50"
           >
             取消
           </button>
           <button
             type="submit"
-            class="flex-1 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-medium shadow-md shadow-blue-600/30 transition-colors"
+            :disabled="isSubmitting"
+            class="flex-1 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-medium shadow-md shadow-blue-600/30 transition-colors disabled:opacity-50 flex items-center justify-center space-x-1.5"
           >
-            保存添加
+            <span v-if="isSubmitting">保存中...</span>
+            <span v-else>保存添加</span>
           </button>
         </div>
       </form>
@@ -202,6 +205,7 @@ const emit = defineEmits<{
   (e: 'cancel'): void
 }>()
 
+const isSubmitting = ref(false)
 const title = ref('')
 const url = ref('https://')
 const icon = ref('')
@@ -332,6 +336,9 @@ function handleFileUpload(e: Event) {
 }
 
 function handleSubmit() {
+  if (isSubmitting.value) return
+  isSubmitting.value = true
+
   let targetUrl = url.value.trim()
   if (!targetUrl.startsWith('http://') && !targetUrl.startsWith('https://')) {
     targetUrl = `https://${targetUrl}`

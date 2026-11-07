@@ -1,5 +1,5 @@
 import type { PopupBlockerConfig, PopupBlockerStats } from '../shared/types'
-import { DEFAULT_POPUP_BLOCKER, loadSettings, saveSettings } from '../shared/storage'
+import { DEFAULT_POPUP_BLOCKER, loadSettings, STORAGE_KEY } from '../shared/storage'
 
 let cachedConfig: PopupBlockerConfig = { ...DEFAULT_POPUP_BLOCKER }
 
@@ -83,15 +83,20 @@ async function recordBlock(sourceTabId: number, targetUrl: string, isIncognito: 
     }
   } catch {}
 
-  // Save stats to storage silently
+  // Save stats to storage silently with atomic patch (never overwrite bookmarks)
   try {
-    const settings = await loadSettings()
-    if (!settings.popupBlocker) {
-      settings.popupBlocker = { ...cachedConfig }
-    } else {
-      settings.popupBlocker.stats = cachedConfig.stats
+    if (typeof chrome !== 'undefined' && chrome.storage?.local) {
+      chrome.storage.local.get([STORAGE_KEY], (res) => {
+        if (res?.[STORAGE_KEY]) {
+          const s = res[STORAGE_KEY]
+          if (!s.popupBlocker) {
+            s.popupBlocker = { ...cachedConfig }
+          }
+          s.popupBlocker.stats = { ...cachedConfig.stats }
+          chrome.storage.local.set({ [STORAGE_KEY]: s })
+        }
+      })
     }
-    await saveSettings(settings, false)
   } catch {}
 
   // Privacy protection: Under incognito, NEVER log or persist specific URLs to safeguard user privacy!
