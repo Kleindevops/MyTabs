@@ -98,7 +98,7 @@ async function openInIncognito(url: string) {
     }
     return { success: true, reused: false, isAllowed }
   } catch (err) {
-    console.error('Failed to create incognito window:', err)
+    console.warn('Failed to create incognito window:', err)
     return { success: false, error: String(err), isAllowed }
   }
 }

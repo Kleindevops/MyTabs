@@ -392,7 +392,7 @@ function onDockDrop(e: DragEvent) {
       bmId = data.bookmarkId
     }
   } catch (err) {
-    console.error('Error handling dock drop:', err)
+    console.warn('Handling dock drop:', err)
   }
   if (!bmId) {
     bmId = e.dataTransfer?.getData('text/plain') || null
@@ -583,7 +583,7 @@ function onCategoryDrop(e: DragEvent, cat: CategoryItem) {
       bmId = data.bookmarkId;
     }
   } catch (err) {
-    console.error("Error handling category drop:", err);
+    console.warn("Handling category drop:", err);
   }
   if (!bmId) {
     bmId = e.dataTransfer?.getData("text/plain") || null;

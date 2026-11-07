@@ -1372,7 +1372,7 @@ async function pinCurrentBingWallpaper() {
       todayBingUrl.value = info.url
     }
   } catch (err) {
-    console.error('Failed to pin wallpaper:', err)
+    console.warn('Failed to pin wallpaper:', err)
     alert('固定壁纸失败，请重试')
   } finally {
     isPinningBing.value = false
@@ -1384,7 +1384,7 @@ async function resumeBingDaily() {
     const nextSettings = await resumeBingDailyService(props.settings)
     emit('update-settings', nextSettings)
   } catch (err) {
-    console.error('Failed to resume daily wallpaper:', err)
+    console.warn('Failed to resume daily wallpaper:', err)
   }
 }
 

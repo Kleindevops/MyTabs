@@ -321,7 +321,7 @@ onMounted(async () => {
       activeCategoryId.value = loaded.categories[0].id
     }
   } catch (err) {
-    console.error('Error loading settings:', err)
+    console.warn('Loading settings:', err)
   }
 })
 
@@ -790,7 +790,7 @@ async function handleAddBookmarkSave(bmData: Omit<BookmarkItem, 'id'>) {
 
     showToast(`已成功添加「${newBm.title}」并定位到图标`)
   } catch (err) {
-    console.error('Failed to add bookmark:', err)
+    console.warn('Failed to add bookmark:', err)
     showToast('添加书签失败，请重试')
   } finally {
     showAddBookmark.value = false
