@@ -10,6 +10,8 @@ export interface ImmersiveConfig {
   bilingualStyle: 'dashed' | 'block' | 'highlight'
   selectionTranslate: boolean
   selectionTriggerMode?: SelectionTriggerMode
+  selectionAdaptiveSize?: boolean
+  selectionResizable?: boolean
   tripleSpaceTranslate: boolean
 }
 

@@ -6,6 +6,8 @@ let isSelectionBubbleEnabled = true
 let currentSelectedText = ''
 let currentTargetLang = 'zh-Hans'
 let currentTriggerMode: SelectionTriggerMode = 'bubble'
+let isAdaptiveSize = true
+let isResizable = true
 let isInitialized = false
 
 function ensureHost(): ShadowRoot {
@@ -100,6 +102,13 @@ function ensureHost(): ShadowRoot {
       overflow: hidden;
     }
 
+    .mt-card.mt-card-resizable {
+      resize: both;
+      overflow: auto;
+      min-width: 320px;
+      min-height: 160px;
+    }
+
     @keyframes mt-card-in {
       from {
         opacity: 0;
@@ -174,6 +183,28 @@ function ensureHost(): ShadowRoot {
       justify-content: space-between;
     }
 
+    .mt-toggle-orig-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: #4f46e5;
+      font-size: 11px;
+      font-weight: 500;
+      padding: 1px 6px;
+      border-radius: 4px;
+      transition: all 0.15s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 2px;
+      text-transform: none;
+      letter-spacing: normal;
+    }
+
+    .mt-toggle-orig-btn:hover {
+      background: #eef2ff;
+      color: #3730a3;
+    }
+
     .mt-original-text {
       color: #4b5563;
       font-size: 12px;
@@ -204,9 +235,10 @@ function ensureHost(): ShadowRoot {
       line-height: 1.6;
       word-break: break-word;
       white-space: pre-wrap;
-      max-height: 320px;
+      max-height: 420px;
       overflow-y: auto;
       padding-right: 4px;
+      flex: 1;
     }
 
     .mt-loading {
@@ -245,6 +277,13 @@ function ensureHost(): ShadowRoot {
       }
       .mt-section-title {
         color: #64748b;
+      }
+      .mt-toggle-orig-btn {
+        color: #818cf8;
+      }
+      .mt-toggle-orig-btn:hover {
+        background: #312e81;
+        color: #c7d2fe;
       }
       .mt-original-text {
         background: #0f172a;
@@ -338,40 +377,101 @@ function openTranslationCard(rect: DOMRect, text: string) {
   const card = document.createElement('div')
   card.id = 'mt-card'
   card.className = 'mt-card'
+  if (isResizable) {
+    card.classList.add('mt-card-resizable')
+  }
 
-  const cardWidth = 380
   const viewportW = window.innerWidth
   const viewportH = window.innerHeight
+  const isLongText = text.length > 80
 
-  // 计算卡片水平坐标（防止左右超出屏幕）
+  // 1. 宽度自适应计算
+  let cardWidth = 380
+  if (isAdaptiveSize) {
+    if (isLongText) {
+      cardWidth = Math.min(540, viewportW - 32)
+    } else if (text.length > 30) {
+      cardWidth = Math.min(430, viewportW - 32)
+    } else {
+      cardWidth = 360
+    }
+  }
+  card.style.width = `${cardWidth}px`
+
+  // 2. 计算卡片水平坐标（防止左右超出屏幕）
   let posX = rect.left + window.scrollX
   if (posX + cardWidth > viewportW + window.scrollX - 16) {
     posX = viewportW + window.scrollX - cardWidth - 16
   }
   if (posX < window.scrollX + 16) posX = window.scrollX + 16
-
-  // 计算视口上方与下方可用高度空间
-  const spaceBelow = viewportH - rect.bottom - SAFE_BOTTOM_GAP
-  const spaceAbove = rect.top - SAFE_TOP_GAP
-  // 若下方可用空间不足 260px 且上方空间更大，则朝上方翻转展开
-  const isUpward = spaceBelow < 260 && spaceAbove > spaceBelow
-
-  const availableHeight = isUpward ? spaceAbove : spaceBelow
-  const maxCardHeight = Math.min(520, Math.max(180, Math.floor(availableHeight - 12)))
-
-  card.style.maxHeight = `${maxCardHeight}px`
   card.style.left = `${posX}px`
 
-  // 垂直位置初步计算
-  let posY = isUpward
-    ? rect.top + window.scrollY - 8
-    : rect.bottom + window.scrollY + 8
+  // 3. 计算视口上方与下方可用高度空间与自适应停靠
+  const spaceBelow = viewportH - rect.bottom - SAFE_BOTTOM_GAP
+  const spaceAbove = rect.top - SAFE_TOP_GAP
+  let isUpward = false
+  let maxCardHeight = 460
+  let posY = rect.bottom + window.scrollY + 8
 
+  if (isAdaptiveSize) {
+    const targetHeight = isLongText ? 480 : 280
+    const maxAvailable = Math.max(220, viewportH - SAFE_TOP_GAP - SAFE_BOTTOM_GAP)
+    maxCardHeight = Math.min(540, Math.min(targetHeight, maxAvailable))
+
+    if (spaceBelow >= maxCardHeight + 8) {
+      isUpward = false
+      posY = rect.bottom + window.scrollY + 8
+    } else if (spaceAbove >= maxCardHeight + 8) {
+      isUpward = true
+      posY = Math.max(window.scrollY + SAFE_TOP_GAP, rect.top + window.scrollY - maxCardHeight - 8)
+    } else {
+      // 上下空间都较为局促（如选区本身跨度很大、贴近屏幕边缘）
+      // 智能在视口安全范围内停靠，避免被屏幕底边挤扁
+      if (spaceBelow >= spaceAbove) {
+        isUpward = false
+        const clientTop = Math.max(SAFE_TOP_GAP, Math.min(rect.bottom + 8, viewportH - SAFE_BOTTOM_GAP - maxCardHeight))
+        posY = window.scrollY + clientTop
+      } else {
+        isUpward = true
+        const clientTop = Math.max(SAFE_TOP_GAP, rect.top - maxCardHeight - 8)
+        posY = window.scrollY + clientTop
+      }
+    }
+  } else {
+    isUpward = spaceBelow < 260 && spaceAbove > spaceBelow
+    const availableHeight = isUpward ? spaceAbove : spaceBelow
+    maxCardHeight = Math.min(520, Math.max(180, Math.floor(availableHeight - 12)))
+    posY = isUpward ? rect.top + window.scrollY - 8 : rect.bottom + window.scrollY + 8
+  }
+
+  card.style.maxHeight = `${maxCardHeight}px`
   card.style.top = `${posY}px`
   card.addEventListener('mousedown', (e) => e.stopPropagation())
 
-  // 渲染卡片结构：明确展示字数、支持全文多段翻译与滚动
+  // 4. 渲染卡片结构：支持长原文折叠与充裕译文展示
   const wordCount = text.length
+  const showCollapsibleOrig = isAdaptiveSize && isLongText
+
+  const origSectionHtml = showCollapsibleOrig
+    ? `
+    <div class="mt-original-box">
+      <div class="mt-section-title">
+        <span>选区原文 · 共 ${wordCount} 字</span>
+        <button class="mt-toggle-orig-btn" id="mt-btn-toggle-orig" type="button">展开原文 ▾</button>
+      </div>
+      <div class="mt-original-text" id="mt-orig-text" style="display: none;">${escapeHtml(text)}</div>
+    </div>
+    `
+    : `
+    <div class="mt-original-box">
+      <div class="mt-section-title">
+        <span>选区原文</span>
+        <span>共 ${wordCount} 字符</span>
+      </div>
+      <div class="mt-original-text">${escapeHtml(text)}</div>
+    </div>
+    `
+
   card.innerHTML = `
     <div class="mt-header">
       <div class="mt-brand">
@@ -383,13 +483,7 @@ function openTranslationCard(rect: DOMRect, text: string) {
         <button class="mt-icon-btn" id="mt-btn-copy" title="复制">📋 复制</button>
       </div>
     </div>
-    <div class="mt-original-box">
-      <div class="mt-section-title">
-        <span>选区原文</span>
-        <span>共 ${wordCount} 字符</span>
-      </div>
-      <div class="mt-original-text">${escapeHtml(text)}</div>
-    </div>
+    ${origSectionHtml}
     <div class="mt-result-container">
       <div class="mt-loading" id="mt-loading-box">
         <div class="mt-spinner"></div>
@@ -401,11 +495,26 @@ function openTranslationCard(rect: DOMRect, text: string) {
 
   root.appendChild(card)
 
-  // 如果朝上展开，将卡片底部对准选区上方
-  if (isUpward) {
+  // 如果非自适应且朝上展开，将卡片底部对准选区上方
+  if (isUpward && !isAdaptiveSize) {
     const cardH = card.offsetHeight
     posY = Math.max(window.scrollY + SAFE_TOP_GAP, rect.top + window.scrollY - cardH - 8)
     card.style.top = `${posY}px`
+  }
+
+  // 绑定折叠原文按钮
+  if (showCollapsibleOrig) {
+    const toggleBtn = card.querySelector('#mt-btn-toggle-orig') as HTMLButtonElement
+    const origBox = card.querySelector('#mt-orig-text') as HTMLElement
+    if (toggleBtn && origBox) {
+      toggleBtn.addEventListener('click', (e) => {
+        e.stopPropagation()
+        const isHidden = origBox.style.display === 'none'
+        origBox.style.display = isHidden ? 'block' : 'none'
+        toggleBtn.textContent = isHidden ? '收起原文 ▴' : '展开原文 ▾'
+        requestAnimationFrame(clampToViewport)
+      })
+    }
   }
 
   // 绑定朗读与复制按钮
@@ -434,18 +543,9 @@ function openTranslationCard(rect: DOMRect, text: string) {
       const curTop = parseFloat(card.style.top) || 0
       const safeTop = Math.max(window.scrollY + SAFE_TOP_GAP, curTop - overflow)
       card.style.top = `${safeTop}px`
-
-      // 调整译文容器的内部滚动限高，杜绝撑破卡片
-      const resultBox = card.querySelector('#mt-result-box') as HTMLElement
-      if (resultBox) {
-        const remainingForContent = window.innerHeight - SAFE_BOTTOM_GAP - (cardRect.top - (curTop - safeTop)) - 140
-        if (remainingForContent > 80) {
-          resultBox.style.maxHeight = `${remainingForContent}px`
-        }
-      }
     }
 
-    if (isUpward) {
+    if (isUpward && !isAdaptiveSize) {
       const cardH = card.offsetHeight
       const upwardTop = Math.max(window.scrollY + SAFE_TOP_GAP, rect.top + window.scrollY - cardH - 8)
       card.style.top = `${upwardTop}px`
@@ -507,11 +607,15 @@ function escapeHtml(str: string): string {
 export function initSelectionTranslator(
   enabled: boolean = true,
   targetLang: string = 'zh-Hans',
-  triggerMode: SelectionTriggerMode = 'bubble'
+  triggerMode: SelectionTriggerMode = 'bubble',
+  adaptiveSize: boolean = true,
+  resizable: boolean = true
 ) {
   isSelectionBubbleEnabled = enabled
   currentTargetLang = targetLang
   currentTriggerMode = triggerMode
+  isAdaptiveSize = adaptiveSize
+  isResizable = resizable
 
   if (isInitialized) return
   isInitialized = true
@@ -600,11 +704,15 @@ export function initSelectionTranslator(
 export function updateSelectionConfig(
   enabled: boolean,
   targetLang: string,
-  triggerMode: SelectionTriggerMode = 'bubble'
+  triggerMode: SelectionTriggerMode = 'bubble',
+  adaptiveSize: boolean = true,
+  resizable: boolean = true
 ) {
   isSelectionBubbleEnabled = enabled
   currentTargetLang = targetLang
   currentTriggerMode = triggerMode
+  isAdaptiveSize = adaptiveSize
+  isResizable = resizable
   if (!enabled) {
     hideSelectionUI()
   }

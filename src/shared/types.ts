@@ -144,6 +144,8 @@ export interface ImmersiveTranslateConfig {
   bilingualStyle: 'dashed' | 'block' | 'highlight'
   selectionTranslate: boolean // 划词翻译功能总开关
   selectionTriggerMode?: SelectionTriggerMode // 划词触发方式：'bubble' 弹窗翻译(悬浮图标) 或 'direct' 直接翻译
+  selectionAdaptiveSize?: boolean // 弹窗自适应开关（根据长短句智能调整宽高并折叠长原文）
+  selectionResizable?: boolean // 支持手动拉伸（允许拖拽右下角自由改变窗口大小）
   tripleSpaceTranslate: boolean // 输入框 3 次空格翻译
 }
 

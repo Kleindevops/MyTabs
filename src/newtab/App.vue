@@ -337,7 +337,9 @@ onMounted(async () => {
     const isTransEnabled = Boolean(imCfg?.enabled && (imCfg?.selectionTranslate ?? true))
     const triggerMode = imCfg?.selectionTriggerMode || 'bubble'
     const targetLang = imCfg?.targetLang || 'zh-Hans'
-    initSelectionTranslator(isTransEnabled, targetLang, triggerMode)
+    const adaptiveSize = imCfg?.selectionAdaptiveSize !== false
+    const resizable = imCfg?.selectionResizable !== false
+    initSelectionTranslator(isTransEnabled, targetLang, triggerMode, adaptiveSize, resizable)
   } catch (err) {
     console.warn('Init selection translator in newtab:', err)
   }
@@ -351,7 +353,9 @@ watch(
     const isTransEnabled = Boolean(imCfg.enabled && (imCfg.selectionTranslate ?? true))
     const triggerMode = imCfg.selectionTriggerMode || 'bubble'
     const targetLang = imCfg.targetLang || 'zh-Hans'
-    updateSelectionConfig(isTransEnabled, targetLang, triggerMode)
+    const adaptiveSize = imCfg.selectionAdaptiveSize !== false
+    const resizable = imCfg.selectionResizable !== false
+    updateSelectionConfig(isTransEnabled, targetLang, triggerMode, adaptiveSize, resizable)
   },
   { deep: true }
 )

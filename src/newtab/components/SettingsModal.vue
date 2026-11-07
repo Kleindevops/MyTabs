@@ -347,6 +347,39 @@
                       </button>
                     </div>
                   </div>
+
+                  <!-- 弹窗自适应与手动拉伸设置 -->
+                  <div class="pt-3 border-t border-slate-800/80 space-y-2.5">
+                    <div class="flex items-center justify-between">
+                      <div>
+                        <div class="text-xs font-semibold text-white">弹窗自适应</div>
+                        <div class="text-[11px] text-slate-400 mt-0.5">
+                          根据划选文本长短智能调整弹窗宽高，长段落原文智能折叠，确保译文充裕饱满不被压扁
+                        </div>
+                      </div>
+                      <input
+                        type="checkbox"
+                        v-model="currentImmersiveConfig.selectionAdaptiveSize"
+                        @change="saveChanges"
+                        class="w-4 h-4 rounded text-blue-600 accent-blue-600 cursor-pointer shrink-0"
+                      />
+                    </div>
+
+                    <div class="flex items-center justify-between">
+                      <div>
+                        <div class="text-xs font-semibold text-white">支持手动拉伸</div>
+                        <div class="text-[11px] text-slate-400 mt-0.5">
+                          允许鼠标拖拽翻译弹窗右下角自由调整窗口尺寸，随心掌控阅读区域
+                        </div>
+                      </div>
+                      <input
+                        type="checkbox"
+                        v-model="currentImmersiveConfig.selectionResizable"
+                        @change="saveChanges"
+                        class="w-4 h-4 rounded text-blue-600 accent-blue-600 cursor-pointer shrink-0"
+                      />
+                    </div>
+                  </div>
                 </div>
 
                 <!-- 5. 输入框 3 次空格翻译 -->

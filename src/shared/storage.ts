@@ -144,6 +144,8 @@ export const DEFAULT_IMMERSIVE_TRANSLATE: ImmersiveTranslateConfig = {
   bilingualStyle: 'dashed',
   selectionTranslate: true,
   selectionTriggerMode: 'bubble',
+  selectionAdaptiveSize: true,
+  selectionResizable: true,
   tripleSpaceTranslate: true
 }
 
@@ -337,7 +339,9 @@ function mergeSettings(loaded: any): AppSettings {
     immersiveTranslate: {
       ...DEFAULT_IMMERSIVE_TRANSLATE,
       ...(loaded.immersiveTranslate || {}),
-      selectionTriggerMode: loaded.immersiveTranslate?.selectionTriggerMode || 'bubble'
+      selectionTriggerMode: loaded.immersiveTranslate?.selectionTriggerMode || 'bubble',
+      selectionAdaptiveSize: loaded.immersiveTranslate?.selectionAdaptiveSize !== false,
+      selectionResizable: loaded.immersiveTranslate?.selectionResizable !== false
     },
     oneDrive: { ...DEFAULT_SETTINGS.oneDrive, ...(loaded.oneDrive || {}) },
     vaultAutoLockMinutes: typeof loaded.vaultAutoLockMinutes === 'number' ? loaded.vaultAutoLockMinutes : 5,
