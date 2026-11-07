@@ -143,6 +143,139 @@
             </div>
           </div>
 
+          <!-- 沉浸式翻译配置面板 -->
+          <div v-else-if="activeTab === 'translate'" class="space-y-4">
+            <div>
+              <h3 class="text-sm font-semibold text-white flex items-center gap-1.5">
+                <Languages class="w-4 h-4 text-indigo-400" />
+                沉浸式翻译 (双语对照与划词释义)
+              </h3>
+              <p class="text-xs text-slate-400 mt-1">
+                采用微软 Edge 官方免翻墙、免 API Key 国内极速直连通道，毫秒级响应，无需在本地部署大模型，完全零磁盘与显存占用。
+              </p>
+            </div>
+
+            <!-- 核心状态卡片 / 引擎信息 -->
+            <div class="p-3.5 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-between">
+              <div class="flex items-center space-x-3">
+                <div class="w-8 h-8 rounded-xl bg-indigo-500/20 text-indigo-300 flex items-center justify-center font-bold text-sm">
+                  译
+                </div>
+                <div>
+                  <div class="text-xs font-semibold text-white flex items-center gap-2">
+                    <span>微软 Edge 官方直连引擎</span>
+                    <span class="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">国内极速直连 · 0配置</span>
+                  </div>
+                  <div class="text-[11px] text-slate-400 mt-0.5">支持整页长篇段落对照、长句流畅解析、抗限流与零知识隐私</div>
+                </div>
+              </div>
+              <div class="text-right">
+                <span class="text-[11px] font-mono text-indigo-300 bg-indigo-950/60 px-2 py-1 rounded-md border border-indigo-800">
+                  快捷键: Alt + W
+                </span>
+              </div>
+            </div>
+
+            <!-- 细项开关列表 -->
+            <div class="space-y-3">
+              <!-- 1. 功能总开关 -->
+              <div class="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 flex items-center justify-between">
+                <div>
+                  <div class="text-xs font-semibold text-white">启用沉浸式翻译功能</div>
+                  <div class="text-[11px] text-slate-400 mt-0.5">在所有网页支持快捷键唤起双语对照、划词气泡与输入框翻译</div>
+                </div>
+                <input
+                  type="checkbox"
+                  v-model="currentImmersiveConfig.enabled"
+                  @change="saveChanges"
+                  class="w-4 h-4 rounded text-blue-600 accent-blue-600 cursor-pointer"
+                />
+              </div>
+
+              <!-- 2. 目标语言选择 -->
+              <div class="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 space-y-2">
+                <div class="text-xs font-semibold text-white">默认目标翻译语言</div>
+                <div class="text-[11px] text-slate-400">网页外文将默认自动翻译为该目标语言：</div>
+                <div class="grid grid-cols-3 gap-2 pt-1">
+                  <button
+                    v-for="lang in [
+                      { id: 'zh-Hans', name: '简体中文 (推荐)' },
+                      { id: 'zh-Hant', name: '繁体中文' },
+                      { id: 'en', name: 'English (英语)' },
+                      { id: 'ja', name: '日本語 (日语)' },
+                      { id: 'ko', name: '한국어 (韩语)' },
+                      { id: 'fr', name: 'Français (法语)' }
+                    ]"
+                    :key="lang.id"
+                    @click="setTargetLang(lang.id)"
+                    :class="[
+                      'p-2.5 rounded-xl text-xs font-medium border text-left transition-all',
+                      currentImmersiveConfig.targetLang === lang.id
+                        ? 'bg-blue-600/20 border-blue-500 text-blue-300'
+                        : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-white hover:border-slate-700'
+                    ]"
+                  >
+                    {{ lang.name }}
+                  </button>
+                </div>
+              </div>
+
+              <!-- 3. 双语对照译文排版样式 -->
+              <div class="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 space-y-2">
+                <div class="text-xs font-semibold text-white">双语对照译文排版样式</div>
+                <div class="text-[11px] text-slate-400">选择页面段落插入译文时的视觉呈现风格：</div>
+                <div class="grid grid-cols-3 gap-2 pt-1">
+                  <button
+                    v-for="st in [
+                      { id: 'dashed', name: '虚线优雅 (默认)', desc: '段落下方附带浅灰虚线，轻盈不喧宾夺主' },
+                      { id: 'block', name: '微底色块', desc: '微透明蓝底卡片与左侧强调条，层次分明' },
+                      { id: 'highlight', name: '淡黄高亮', desc: '温润荧光高亮底纹，适合研读精读' }
+                    ]"
+                    :key="st.id"
+                    @click="setBilingualStyle(st.id)"
+                    :class="[
+                      'p-2.5 rounded-xl text-xs border text-left transition-all flex flex-col justify-between',
+                      currentImmersiveConfig.bilingualStyle === st.id
+                        ? 'bg-blue-600/20 border-blue-500 text-blue-300'
+                        : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-white hover:border-slate-700'
+                    ]"
+                  >
+                    <div class="font-medium text-white mb-1">{{ st.name }}</div>
+                    <div class="text-[10px] text-slate-400 leading-tight">{{ st.desc }}</div>
+                  </button>
+                </div>
+              </div>
+
+              <!-- 4. 划词悬浮释义与发音气泡 -->
+              <div class="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 flex items-center justify-between">
+                <div>
+                  <div class="text-xs font-semibold text-white">划词悬浮释义与朗读气泡</div>
+                  <div class="text-[11px] text-slate-400 mt-0.5">选中文本时浮现快捷微标，支持单词音标、长句多行排版、真人语音朗读与一键复制</div>
+                </div>
+                <input
+                  type="checkbox"
+                  v-model="currentImmersiveConfig.selectionTranslate"
+                  @change="saveChanges"
+                  class="w-4 h-4 rounded text-blue-600 accent-blue-600 cursor-pointer"
+                />
+              </div>
+
+              <!-- 5. 输入框 3 次空格翻译 -->
+              <div class="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 flex items-center justify-between">
+                <div>
+                  <div class="text-xs font-semibold text-white">输入框连按 3 次空格极速互翻</div>
+                  <div class="text-[11px] text-slate-400 mt-0.5">在任何输入框打中文连敲 3 次空格即刻原地翻译为地道英文（反之亦然），无需切换外部工具</div>
+                </div>
+                <input
+                  type="checkbox"
+                  v-model="currentImmersiveConfig.tripleSpaceTranslate"
+                  @change="saveChanges"
+                  class="w-4 h-4 rounded text-blue-600 accent-blue-600 cursor-pointer"
+                />
+              </div>
+            </div>
+          </div>
+
           <!-- 搜索引擎管理与自定义网址 -->
           <div v-else-if="activeTab === 'search'" class="space-y-4">
             <div class="flex items-start justify-between gap-4">
@@ -1021,7 +1154,7 @@ import {
   FolderSync, RefreshCw, Download, Upload, Trash2, Check, Pin,
   BookOpen, Compass, Video, LayoutGrid, Lightbulb, ArrowRight, Calendar, Clock, Flame,
   AlertCircle, CheckCircle2, Search, Plus, Edit2, RotateCcw, Globe, SearchCheck, Tv, Code,
-  MessageSquare, GraduationCap, Package
+  MessageSquare, GraduationCap, Package, Languages
 } from 'lucide-vue-next'
 import { AI_PRESETS } from '../../shared/ai-client'
 import {
@@ -1039,11 +1172,12 @@ import {
   saveSettings,
   DEFAULT_POPUP_BLOCKER,
   DEFAULT_SEARCH_ENGINES,
+  DEFAULT_IMMERSIVE_TRANSLATE,
   POPULAR_SEARCH_ENGINES_PRESETS,
   type PopularEnginePreset
 } from '../../shared/storage'
 import { fetchBingDailyInfo, pinCurrentWallpaperService, resumeBingDailyService } from '../../shared/wallpaper'
-import type { AppSettings, PopupBlockerConfig, SearchEngine } from '../../shared/types'
+import type { AppSettings, PopupBlockerConfig, SearchEngine, ImmersiveTranslateConfig } from '../../shared/types'
 
 const props = withDefaults(
   defineProps<{
@@ -1242,6 +1376,7 @@ watch(() => props.currentCategoryId, () => {
 const tabs = computed(() => {
   const allTabs = [
     { id: 'guide', name: '功能介绍', icon: BookOpen },
+    { id: 'translate', name: '沉浸式翻译', icon: Languages },
     { id: 'search', name: '搜索引擎', icon: Search },
     { id: 'onedrive', name: '数据备份同步', icon: Cloud },
     { id: 'vault', name: '个人空间锁', icon: Lock },
@@ -1259,6 +1394,7 @@ const selectedGuideCategory = ref('all')
 
 const guideCategories = [
   { id: 'all', name: '全部功能' },
+  { id: 'translate', name: '沉浸式翻译' },
   { id: 'search', name: '搜索引擎' },
   { id: 'desktop', name: '常用桌面' },
   { id: 'onedrive', name: '数据备份同步' },
@@ -1268,6 +1404,29 @@ const guideCategories = [
 ]
 
 const guideItems = [
+  {
+    id: 'g-translate',
+    category: 'translate',
+    categoryName: '沉浸式翻译与双语阅读',
+    title: '全网页双语对照、划词释义与输入框3次空格翻译',
+    badge: '免翻墙 · 0本地显存',
+    badgeColor: 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30',
+    icon: Languages,
+    iconColor: 'text-indigo-400',
+    targetTab: 'translate',
+    whatIsIt: [
+      '基于微软 Edge 官方免翻墙、免 API Key 国内极速直连通道，毫秒级响应，无需在本地部署大模型，完全零显存与磁盘负担。',
+      '全页沉浸式双语对照：段落下贴合插入柔和译文，保留原文排版，自动保护代码块不乱码。',
+      '划词悬浮释义气泡：选中文本浮起微标，支持音标、长句多行排版、真人语音朗读与一键复制。',
+      '输入框 3 次空格翻译：连续敲 3 次空格直接把中文原地变为地道英文（或英文变中文）。'
+    ],
+    howToUse: [
+      '双语对照快捷键：在任意英文/外文网页中，按下 Alt + W 快捷键（或右键菜单），自动开始逐段双语对照，再次按下可随心隐藏/显示译文。',
+      '划词翻译与朗读：鼠标选中文本后，点击右下角浮起的“译”字图标，即可查看释义与发音。',
+      '输入框快速翻译：在搜索框、邮件撰写或社交平台输入框打中文后，连续敲击 3 次空格键，内容即刻自动原地替换为英文。'
+    ],
+    tips: '国内直连引擎稳定抗封，长段落与学术论文均可流畅翻译，不消耗任何第三方商业 Token 额度。'
+  },
   {
     id: 'g-search',
     category: 'search',
@@ -1904,6 +2063,29 @@ function getEngineIcon(engine: SearchEngine) {
   if (idOrName.includes('xiaohongshu') || idOrName.includes('小红书')) return Compass
   if (idOrName.includes('npm') || idOrName.includes('package')) return Package
   return Search
+}
+
+// Immersive Translate helpers
+const currentImmersiveConfig = computed<ImmersiveTranslateConfig>({
+  get() {
+    if (!props.settings.immersiveTranslate) {
+      props.settings.immersiveTranslate = JSON.parse(JSON.stringify(DEFAULT_IMMERSIVE_TRANSLATE))
+    }
+    return props.settings.immersiveTranslate
+  },
+  set(val) {
+    props.settings.immersiveTranslate = val
+  }
+})
+
+function setTargetLang(langId: string) {
+  currentImmersiveConfig.value.targetLang = langId
+  saveChanges()
+}
+
+function setBilingualStyle(styleId: 'dashed' | 'block' | 'highlight') {
+  currentImmersiveConfig.value.bilingualStyle = styleId
+  saveChanges()
 }
 
 async function saveChanges() {

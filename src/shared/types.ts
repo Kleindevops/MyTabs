@@ -136,6 +136,14 @@ export interface PopupBlockerConfig {
   stats: PopupBlockerStats         // 拦截计数统计
 }
 
+export interface ImmersiveTranslateConfig {
+  enabled: boolean
+  targetLang: string // 默认 'zh-Hans'
+  bilingualStyle: 'dashed' | 'block' | 'highlight'
+  selectionTranslate: boolean // 划词悬浮释义
+  tripleSpaceTranslate: boolean // 输入框 3 次空格翻译
+}
+
 export interface AppSettings {
   version: string
   categories: CategoryItem[]
@@ -145,6 +153,7 @@ export interface AppSettings {
   privacyRules: PrivacyRule[]
   oneDrive: OneDriveSyncConfig
   popupBlocker?: PopupBlockerConfig
+  immersiveTranslate?: ImmersiveTranslateConfig
   showHotNews?: boolean
   salt?: string // PBKDF2 salt for private vault
   vaultVerifier?: string // Encrypted test string to verify unlock password

@@ -4,6 +4,7 @@ import { setupContextMenus } from './context-menu'
 import { fetchSiteMetadata } from './site-meta'
 import { setupPopupBlocker } from './popup-blocker'
 import { loadSettings } from '../shared/storage'
+import { batchTranslateViaEdge, translateSingleText } from '../shared/translation'
 
 // Initialize core background modules
 setupSniffer()
@@ -152,6 +153,28 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       (chrome.sidePanel as any).open({ tabId }).catch(() => {})
     }
     sendResponse({ success: true })
+    return true
+  }
+
+  if (message.type === 'TRANSLATE_BATCH_TEXTS' && Array.isArray(message.texts)) {
+    batchTranslateViaEdge(message.texts, message.targetLang || 'zh-Hans', message.fromLang)
+      .then((results) => {
+        sendResponse({ success: true, results })
+      })
+      .catch((err) => {
+        sendResponse({ success: false, error: String(err) })
+      })
+    return true
+  }
+
+  if (message.type === 'TRANSLATE_SINGLE_TEXT' && typeof message.text === 'string') {
+    translateSingleText(message.text, message.targetLang || 'zh-Hans', message.fromLang)
+      .then((translated) => {
+        sendResponse({ success: true, translated })
+      })
+      .catch((err) => {
+        sendResponse({ success: false, error: String(err) })
+      })
     return true
   }
 })

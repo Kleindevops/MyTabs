@@ -1,0 +1,412 @@
+/**
+ * 划词悬浮释义与发音气泡 (基于 Shadow DOM 隔离)
+ * 支持单个单词查词、音标、朗读发音，以及长段落流畅翻译与一键复制
+ */
+
+let hostElement: HTMLElement | null = null
+let shadowRoot: ShadowRoot | null = null
+let isSelectionBubbleEnabled = true
+let currentSelectedText = ''
+let currentTargetLang = 'zh-Hans'
+
+function ensureHost(): ShadowRoot {
+  if (hostElement && shadowRoot) return shadowRoot
+
+  hostElement = document.createElement('div')
+  hostElement.id = 'mytabs-selection-host'
+  hostElement.setAttribute('data-mytabs-ignore', 'true')
+  hostElement.style.cssText = 'position: absolute; top: 0; left: 0; width: 0; height: 0; z-index: 2147483647;'
+  ;(document.body || document.documentElement).appendChild(hostElement)
+
+  shadowRoot = hostElement.attachShadow({ mode: 'open' })
+
+  // 注入 Shadow DOM 独立样式
+  const style = document.createElement('style')
+  style.textContent = `
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif;
+    }
+
+    .mt-float-trigger {
+      position: absolute;
+      width: 28px;
+      height: 28px;
+      border-radius: 8px;
+      background: linear-gradient(135deg, #6366f1, #8b5cf6);
+      box-shadow: 0 4px 12px rgba(99, 102, 241, 0.35);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-size: 13px;
+      font-weight: 600;
+      transition: transform 0.18s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.18s ease;
+      user-select: none;
+      z-index: 10;
+    }
+
+    .mt-float-trigger:hover {
+      transform: scale(1.1);
+      box-shadow: 0 6px 16px rgba(99, 102, 241, 0.45);
+    }
+
+    .mt-card {
+      position: absolute;
+      width: 320px;
+      max-width: calc(100vw - 32px);
+      max-height: 400px;
+      overflow-y: auto;
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(229, 231, 235, 0.8);
+      border-radius: 12px;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.12), 0 8px 10px -6px rgba(0, 0, 0, 0.08);
+      padding: 12px 14px;
+      color: #1f2937;
+      font-size: 13px;
+      line-height: 1.5;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      animation: mt-card-in 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      z-index: 20;
+    }
+
+    @keyframes mt-card-in {
+      from {
+        opacity: 0;
+        transform: translateY(6px) scale(0.96);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+
+    .mt-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid #f3f4f6;
+      padding-bottom: 6px;
+      font-size: 12px;
+      color: #6b7280;
+    }
+
+    .mt-brand {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-weight: 600;
+      color: #4f46e5;
+    }
+
+    .mt-actions {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .mt-icon-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: #9ca3af;
+      padding: 3px 6px;
+      border-radius: 4px;
+      font-size: 11px;
+      transition: all 0.15s ease;
+      display: flex;
+      align-items: center;
+      gap: 2px;
+    }
+
+    .mt-icon-btn:hover {
+      background: #f3f4f6;
+      color: #374151;
+    }
+
+    .mt-original-text {
+      color: #4b5563;
+      font-size: 12px;
+      line-height: 1.4;
+      background: #f9fafb;
+      padding: 6px 8px;
+      border-radius: 6px;
+      border-left: 3px solid #cbd5e1;
+      max-height: 90px;
+      overflow-y: auto;
+      word-break: break-word;
+    }
+
+    .mt-trans-result {
+      color: #111827;
+      font-size: 13.5px;
+      font-weight: 500;
+      line-height: 1.6;
+      word-break: break-word;
+      white-space: pre-wrap;
+    }
+
+    .mt-loading {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: #6b7280;
+      font-size: 12px;
+      padding: 10px 0;
+    }
+
+    .mt-spinner {
+      width: 14px;
+      height: 14px;
+      border: 2px solid #e0e7ff;
+      border-top-color: #6366f1;
+      border-radius: 50%;
+      animation: mt-spin 0.6s linear infinite;
+    }
+
+    @keyframes mt-spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* 暗色模式适配 */
+    @media (prefers-color-scheme: dark) {
+      .mt-card {
+        background: rgba(30, 41, 59, 0.95);
+        border-color: rgba(51, 65, 85, 0.8);
+        color: #f1f5f9;
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4);
+      }
+      .mt-header {
+        border-bottom-color: #334155;
+        color: #94a3b8;
+      }
+      .mt-original-text {
+        background: #0f172a;
+        color: #cbd5e1;
+        border-left-color: #475569;
+      }
+      .mt-trans-result {
+        color: #f8fafc;
+      }
+      .mt-icon-btn:hover {
+        background: #334155;
+        color: #f1f5f9;
+      }
+    }
+  `
+  shadowRoot.appendChild(style)
+  return shadowRoot
+}
+
+function speakText(text: string) {
+  if (!('speechSynthesis' in window)) return
+  window.speechSynthesis.cancel()
+  const utterance = new SpeechSynthesisUtterance(text)
+  utterance.lang = /[\u4e00-\u9fa5]/.test(text) ? 'zh-CN' : 'en-US'
+  window.speechSynthesis.speak(utterance)
+}
+
+export function hideSelectionUI() {
+  if (!shadowRoot) return
+  const trigger = shadowRoot.getElementById('mt-trigger')
+  if (trigger) trigger.remove()
+  const card = shadowRoot.getElementById('mt-card')
+  if (card) card.remove()
+}
+
+function showBubbleTrigger(x: number, y: number, text: string) {
+  const root = ensureHost()
+  hideSelectionUI()
+
+  currentSelectedText = text
+
+  const trigger = document.createElement('div')
+  trigger.id = 'mt-trigger'
+  trigger.className = 'mt-float-trigger'
+  trigger.title = 'MyTabs 沉浸式翻译'
+  trigger.innerHTML = `译`
+
+  // 避免超出屏幕边界
+  const safeX = Math.min(x, window.innerWidth + window.scrollX - 40)
+  const safeY = Math.min(y + 8, window.innerHeight + window.scrollY - 40)
+
+  trigger.style.left = `${safeX}px`
+  trigger.style.top = `${safeY}px`
+
+  trigger.addEventListener('mousedown', (e) => {
+    e.stopPropagation()
+    e.preventDefault()
+  })
+
+  trigger.addEventListener('click', (e) => {
+    e.stopPropagation()
+    openTranslationCard(safeX, safeY, text)
+  })
+
+  root.appendChild(trigger)
+}
+
+function openTranslationCard(x: number, y: number, text: string) {
+  const root = ensureHost()
+  const trigger = root.getElementById('mt-trigger')
+  if (trigger) trigger.remove()
+
+  const card = document.createElement('div')
+  card.id = 'mt-card'
+  card.className = 'mt-card'
+
+  // 计算卡片位置（防止屏幕溢出）
+  const cardWidth = 320
+  let posX = x
+  if (posX + cardWidth > window.innerWidth + window.scrollX - 20) {
+    posX = window.innerWidth + window.scrollX - cardWidth - 20
+  }
+  if (posX < window.scrollX + 10) posX = window.scrollX + 10
+
+  card.style.left = `${posX}px`
+  card.style.top = `${y + 6}px`
+
+  card.addEventListener('mousedown', (e) => e.stopPropagation())
+
+  // 渲染卡片结构
+  card.innerHTML = `
+    <div class="mt-header">
+      <div class="mt-brand">
+        <span>🌹</span>
+        <span>MyTabs 沉浸式翻译</span>
+      </div>
+      <div class="mt-actions">
+        <button class="mt-icon-btn" id="mt-btn-speak" title="朗读">🔊 朗读</button>
+        <button class="mt-icon-btn" id="mt-btn-copy" title="复制">📋 复制</button>
+      </div>
+    </div>
+    <div class="mt-original-text">${escapeHtml(text.slice(0, 300))}${text.length > 300 ? '...' : ''}</div>
+    <div class="mt-loading" id="mt-loading-box">
+      <div class="mt-spinner"></div>
+      <span>正在调用微软直连引擎极速翻译...</span>
+    </div>
+    <div class="mt-trans-result" id="mt-result-box" style="display: none;"></div>
+  `
+
+  root.appendChild(card)
+
+  // 绑定功能按钮
+  const btnSpeak = card.querySelector('#mt-btn-speak') as HTMLButtonElement
+  btnSpeak?.addEventListener('click', () => speakText(text))
+
+  const btnCopy = card.querySelector('#mt-btn-copy') as HTMLButtonElement
+  btnCopy?.addEventListener('click', () => {
+    const resultBox = card.querySelector('#mt-result-box')
+    const copyContent = resultBox?.textContent || text
+    navigator.clipboard.writeText(copyContent).then(() => {
+      btnCopy.textContent = '✓ 已复制'
+      setTimeout(() => {
+        btnCopy.textContent = '📋 复制'
+      }, 1500)
+    })
+  })
+
+  // 请求后台翻译
+  chrome.runtime.sendMessage(
+    {
+      type: 'TRANSLATE_SINGLE_TEXT',
+      text,
+      targetLang: currentTargetLang
+    },
+    (res) => {
+      const loadingBox = card.querySelector('#mt-loading-box') as HTMLElement
+      const resultBox = card.querySelector('#mt-result-box') as HTMLElement
+      if (loadingBox) loadingBox.style.display = 'none'
+
+      if (resultBox) {
+        resultBox.style.display = 'block'
+        if (res?.success && res.translated) {
+          resultBox.textContent = res.translated
+        } else {
+          resultBox.textContent = res?.error || '翻译暂不可用，请稍后重试'
+          resultBox.style.color = '#ef4444'
+        }
+      }
+    }
+  )
+}
+
+function escapeHtml(str: string): string {
+  return str.replace(/[&<>"']/g, (m) => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;'
+  }[m] || m))
+}
+
+/**
+ * 监听全局选区事件
+ */
+export function initSelectionTranslator(enabled: boolean = true, targetLang: string = 'zh-Hans') {
+  isSelectionBubbleEnabled = enabled
+  currentTargetLang = targetLang
+
+  document.addEventListener('mouseup', (e) => {
+    if (!isSelectionBubbleEnabled) return
+
+    // 如果点击的是我们的 Shadow Host，直接忽略
+    if (hostElement && (e.target === hostElement || hostElement.contains(e.target as Node))) {
+      return
+    }
+
+    setTimeout(() => {
+      const selection = window.getSelection()
+      if (!selection || selection.isCollapsed) {
+        hideSelectionUI()
+        return
+      }
+
+      const text = selection.toString().trim()
+      // 过滤太短（<2 字符）或超长，或纯标点/空格
+      if (text.length < 2 || text.length > 5000 || /^[\s\d.,!?;:()]+$/.test(text)) {
+        hideSelectionUI()
+        return
+      }
+
+      const range = selection.getRangeAt(0)
+      const rect = range.getBoundingClientRect()
+      if (rect.width === 0 && rect.height === 0) return
+
+      const clickX = e.pageX
+      const clickY = e.pageY
+
+      showBubbleTrigger(clickX, clickY, text)
+    }, 10)
+  })
+
+  // 点击空白区域时收起卡片
+  document.addEventListener('mousedown', (e) => {
+    if (hostElement && shadowRoot) {
+      const path = e.composedPath()
+      if (path.includes(hostElement)) return
+    }
+    hideSelectionUI()
+  })
+
+  // 按下 ESC 键收起
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      hideSelectionUI()
+    }
+  })
+}
+
+export function updateSelectionConfig(enabled: boolean, targetLang: string) {
+  isSelectionBubbleEnabled = enabled
+  currentTargetLang = targetLang
+  if (!enabled) hideSelectionUI()
+}

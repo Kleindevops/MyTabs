@@ -1,4 +1,4 @@
-import type { AppSettings, SearchEngine, PopupBlockerConfig, PopupBlockerStats } from './types'
+import type { AppSettings, SearchEngine, PopupBlockerConfig, PopupBlockerStats, ImmersiveTranslateConfig } from './types'
 import { writeBackupToOneDrive } from './onedrive'
 import { PRESET_SITE_ICONS, extractHostname, findPresetForDomain, getFaviconCandidates, suggestTitleFromUrl } from './favicon'
 
@@ -138,6 +138,14 @@ export const DEFAULT_POPUP_BLOCKER: PopupBlockerConfig = {
   }
 }
 
+export const DEFAULT_IMMERSIVE_TRANSLATE: ImmersiveTranslateConfig = {
+  enabled: true,
+  targetLang: 'zh-Hans',
+  bilingualStyle: 'dashed',
+  selectionTranslate: true,
+  tripleSpaceTranslate: true
+}
+
 export const DEFAULT_SETTINGS: AppSettings = {
   version: '1.0.0',
   categories: [
@@ -200,6 +208,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
     backupFileName: 'mytabs_backup.json'
   },
   popupBlocker: DEFAULT_POPUP_BLOCKER,
+  immersiveTranslate: DEFAULT_IMMERSIVE_TRANSLATE,
   showHotNews: true,
   vaultAutoLockMinutes: 5,
   searchEngines: DEFAULT_SEARCH_ENGINES,
@@ -324,6 +333,7 @@ function mergeSettings(loaded: any): AppSettings {
     defaultSearchEngineId,
     showHotNews: loaded.showHotNews !== false,
     ai: { ...DEFAULT_SETTINGS.ai, ...(loaded.ai || {}) },
+    immersiveTranslate: { ...DEFAULT_IMMERSIVE_TRANSLATE, ...(loaded.immersiveTranslate || {}) },
     oneDrive: { ...DEFAULT_SETTINGS.oneDrive, ...(loaded.oneDrive || {}) },
     vaultAutoLockMinutes: typeof loaded.vaultAutoLockMinutes === 'number' ? loaded.vaultAutoLockMinutes : 5,
     privacyRules: Array.isArray(loaded.privacyRules) ? loaded.privacyRules : DEFAULT_SETTINGS.privacyRules

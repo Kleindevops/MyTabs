@@ -1,4 +1,5 @@
-// Content script: DOM Media Detector, Webpage Article Text Extractor & Smart Popup Interceptor
+// Content script: DOM Media Detector, Webpage Article Text Extractor, Smart Popup Interceptor & Immersive Translator
+import { initImmersiveTranslation, togglePageBilingualTranslation, updateImmersiveConfig } from './immersive'
 
 // ==========================================
 // 1. Media Detection
@@ -219,23 +220,38 @@ try {
 
 // Sync settings updates in real time
 chrome.storage.onChanged.addListener((changes, areaName) => {
-  if (areaName === 'local' && changes.mytabs_app_settings?.newValue?.popupBlocker) {
-    const config = changes.mytabs_app_settings.newValue.popupBlocker
-    popupBlockerEnabled = config.enabled
-    blockModalOverlays = config.blockModalOverlays
-    blockClickjacking = config.blockClickjacking
-    restoreScroll = config.restoreScroll
-    isCurrentSiteWhitelisted = checkHostnameWhitelisted(config.whitelist)
-    if (popupBlockerEnabled && !isCurrentSiteWhitelisted) {
-      injectWindowOpenHook()
-      runBlockerCycle()
+  if (areaName === 'local' && changes.mytabs_app_settings?.newValue) {
+    const newSettings = changes.mytabs_app_settings.newValue
+    if (newSettings.popupBlocker) {
+      const config = newSettings.popupBlocker
+      popupBlockerEnabled = config.enabled
+      blockModalOverlays = config.blockModalOverlays
+      blockClickjacking = config.blockClickjacking
+      restoreScroll = config.restoreScroll
+      isCurrentSiteWhitelisted = checkHostnameWhitelisted(config.whitelist)
+      if (popupBlockerEnabled && !isCurrentSiteWhitelisted) {
+        injectWindowOpenHook()
+        runBlockerCycle()
+      }
+    }
+    if (newSettings.immersiveTranslate) {
+      updateImmersiveConfig(newSettings.immersiveTranslate)
     }
   }
 })
 
-// Initialize scan and observer
+// Initialize scan, observer & immersive translator
 scanDOMMedia()
 runBlockerCycle()
+
+try {
+  chrome.storage.local.get(['mytabs_app_settings'], (res) => {
+    const settings = res?.mytabs_app_settings
+    initImmersiveTranslation(settings?.immersiveTranslate)
+  })
+} catch {
+  initImmersiveTranslation()
+}
 
 let debounceTimer: number | null = null
 const observer = new MutationObserver(() => {
@@ -265,6 +281,12 @@ chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
     cleanInPageModals()
     document.body.style.setProperty('overflow', 'auto', 'important')
     document.documentElement.style.setProperty('overflow', 'auto', 'important')
+    sendResponse({ success: true })
+    return true
+  }
+
+  if (request.type === 'TOGGLE_PAGE_BILINGUAL') {
+    togglePageBilingualTranslation()
     sendResponse({ success: true })
     return true
   }
