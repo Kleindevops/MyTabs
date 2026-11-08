@@ -166,6 +166,7 @@ export interface AppSettings {
   salt?: string // PBKDF2 salt for private vault
   vaultVerifier?: string // Encrypted test string to verify unlock password
   vaultAutoLockMinutes?: number // 个人空间解开后再次自动锁上的时间限制 (分钟，0为不自动上锁)
+  enableVaultUrlChecker?: boolean // 是否在个人空间底部显示网址可用性检查工具
   pet?: PetConfig
   schedules?: ScheduleItem[]
   fixedReminders?: FixedReminderItem[]

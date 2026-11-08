@@ -216,6 +216,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   immersiveTranslate: DEFAULT_IMMERSIVE_TRANSLATE,
   showHotNews: true,
   vaultAutoLockMinutes: 5,
+  enableVaultUrlChecker: false,
   searchEngines: DEFAULT_SEARCH_ENGINES,
   defaultSearchEngineId: 'bing'
 }
@@ -349,6 +350,7 @@ function mergeSettings(loaded: any): AppSettings {
     },
     oneDrive: { ...DEFAULT_SETTINGS.oneDrive, ...(loaded.oneDrive || {}) },
     vaultAutoLockMinutes: typeof loaded.vaultAutoLockMinutes === 'number' ? loaded.vaultAutoLockMinutes : 5,
+    enableVaultUrlChecker: typeof loaded.enableVaultUrlChecker === 'boolean' ? loaded.enableVaultUrlChecker : false,
     privacyRules: Array.isArray(loaded.privacyRules) ? loaded.privacyRules : DEFAULT_SETTINGS.privacyRules
   }
 }

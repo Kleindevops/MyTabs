@@ -68,6 +68,7 @@
       @locate-bookmark="handleLocateBookmark"
       @pin-bookmark="handlePinBookmarkFromDrag"
       @exit-vault="handleLockVault"
+      @open-url-checker="showUrlCheckerModal = true"
     />
 
     <!-- Floating Draggable & Collapsible Hot News Widget -->
@@ -168,6 +169,17 @@
       @save="handleSaveEditBookmark"
       @cancel="showEditBookmarkModal = false"
     />
+
+    <!-- 7. Vault URL Health Checker Modal -->
+    <VaultUrlCheckModal
+      v-if="showUrlCheckerModal"
+      :bookmarks="settings.bookmarks || []"
+      :categories="settings.categories || []"
+      :activeCategoryId="activeCategoryId"
+      @close="showUrlCheckerModal = false"
+      @delete-bookmark="handleDeleteBookmarkFromChecker"
+      @delete-multiple-bookmarks="handleDeleteMultipleBookmarksFromChecker"
+    />
   </div>
 </template>
 
@@ -186,6 +198,7 @@ import SettingsModal from './components/SettingsModal.vue'
 import VaultLockModal from './components/VaultLockModal.vue'
 import ChangePasswordModal from './components/ChangePasswordModal.vue'
 import AddBookmarkModal from './components/AddBookmarkModal.vue'
+import VaultUrlCheckModal from './components/VaultUrlCheckModal.vue'
 
 import { DEFAULT_SETTINGS, loadSettings, saveSettings, STORAGE_KEY } from '../shared/storage'
 import { generateSalt, createVaultVerifier, verifyVaultPassword } from '../shared/crypto'
@@ -215,6 +228,7 @@ const showAddBookmark = ref(false)
 const addBookmarkDefaultPinned = ref(false)
 const showEditIconModal = ref(false)
 const showEditBookmarkModal = ref(false)
+const showUrlCheckerModal = ref(false)
 
 const hasActiveModal = computed(() => {
   return showSettings.value ||
@@ -222,7 +236,8 @@ const hasActiveModal = computed(() => {
     showChangePasswordModal.value ||
     showAddBookmark.value ||
     showEditIconModal.value ||
-    showEditBookmarkModal.value
+    showEditBookmarkModal.value ||
+    showUrlCheckerModal.value
 })
 
 const contextMenuVisible = ref(false)
@@ -838,6 +853,19 @@ function handleDeleteBookmark(id: string) {
   if (!confirm(`确定删除书签 "${title}" 吗？`)) return
   settings.value.bookmarks = (settings.value.bookmarks || []).filter((b) => b.id !== id)
   saveSettings(settings.value)
+}
+
+function handleDeleteBookmarkFromChecker(id: string) {
+  settings.value.bookmarks = (settings.value.bookmarks || []).filter((b) => b.id !== id)
+  saveSettings(settings.value)
+  showToast('已删除失效网址')
+}
+
+function handleDeleteMultipleBookmarksFromChecker(ids: string[]) {
+  const set = new Set(ids)
+  settings.value.bookmarks = (settings.value.bookmarks || []).filter((b) => !set.has(b.id))
+  saveSettings(settings.value)
+  showToast(`已批量清理 ${ids.length} 个失效网址`)
 }
 
 function onSettingsUpdated(newSettings: AppSettings) {

@@ -962,6 +962,33 @@
               </div>
             </div>
 
+            <!-- Vault URL Health Checker Tool Setting -->
+            <div class="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 space-y-3.5 text-xs">
+              <div class="flex items-center justify-between">
+                <div>
+                  <div class="font-medium text-slate-200 flex items-center gap-1.5">
+                    <Activity class="w-4 h-4 text-amber-400" />
+                    <span>网址可用性检查功能</span>
+                  </div>
+                  <div class="text-[11px] text-slate-400 mt-0.5">
+                    启动后在个人空间底部的搜索栏后面显示【网址检查】入口，可一键排查无法正常打开的网址并直接删除。
+                  </div>
+                </div>
+                <!-- Toggle Switch -->
+                <button
+                  type="button"
+                  @click="toggleVaultUrlChecker"
+                  class="relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none"
+                  :class="settings.enableVaultUrlChecker ? 'bg-amber-500' : 'bg-slate-700'"
+                >
+                  <span
+                    class="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"
+                    :class="settings.enableVaultUrlChecker ? 'translate-x-5' : 'translate-x-0'"
+                  />
+                </button>
+              </div>
+            </div>
+
             <!-- Privacy Guarantee FAQ -->
             <div class="p-4 rounded-2xl bg-slate-900/50 border border-slate-800 text-xs space-y-2.5">
               <div class="font-semibold text-slate-200 flex items-center gap-1.5">
@@ -1348,7 +1375,7 @@ import {
   FolderSync, RefreshCw, Download, Upload, Trash2, Check, Pin,
   BookOpen, Compass, Video, LayoutGrid, Lightbulb, ArrowRight, Calendar, Clock, Flame,
   AlertCircle, CheckCircle2, Search, Plus, Edit2, RotateCcw, Globe, SearchCheck, Tv, Code,
-  MessageSquare, GraduationCap, Package, Languages
+  MessageSquare, GraduationCap, Package, Languages, Activity
 } from 'lucide-vue-next'
 import { AI_PRESETS } from '../../shared/ai-client'
 import {
@@ -1514,6 +1541,12 @@ function onCustomAutoLockInput(e: Event) {
   if (!isNaN(val) && val >= 0) {
     setAutoLockMinutes(val)
   }
+}
+
+function toggleVaultUrlChecker() {
+  props.settings.enableVaultUrlChecker = !props.settings.enableVaultUrlChecker
+  saveChanges()
+  emit('toast', props.settings.enableVaultUrlChecker ? '已启用网址可用性检查功能' : '已停用网址可用性检查功能')
 }
 
 // Wallpaper Subtabs & State

@@ -6,7 +6,7 @@
 > **为极致隐私与高效工作流而生。**  
 > 独创「桌面隐形暗门·密码锁个人空间」，外表是优雅极简的 iTab / Windows 风格高颜值新标签页，暗藏端到端加密个人空间；全网盘本地直存云同步、原生流媒体资源嗅探、侧边栏 AI 智能副驾驶一应俱全。
 
-[![Version](https://img.shields.io/badge/Version-v1.0.36-blue.svg)](package.json)
+[![Version](https://img.shields.io/badge/Version-v1.0.37-blue.svg)](package.json)
 [![Chrome Extension](https://img.shields.io/badge/Chrome-Extension-4285F4?style=flat&logo=googlechrome&logoColor=white)](https://developer.chrome.com/docs/extensions/)
 [![Edge Addon](https://img.shields.io/badge/Microsoft%20Edge-Supported-0078D7?style=flat&logo=microsoftedge&logoColor=white)](https://microsoftedge.microsoft.com/)
 [![Web Translate](https://img.shields.io/badge/Translate-Edge%20Official%20Direct-success?style=flat&logo=googletranslate&logoColor=white)](#全功能网页翻译与划词释义)
@@ -67,7 +67,11 @@
   * **主密码管理**：自由修改主密码、清除密码或手动一键立即锁闭。
   * **智能超时自动重新上锁**：离开电脑忘记关网页？支持自定义解锁后的回锁倒计时（预设 **1分钟、3分钟、5分钟、10分钟、15分钟、30分钟** 或手动输入任意分钟数）。倒计时归零后自动退出私人空间并加锁，退回常规分类，保护隐私万无一失。
 
-### 4. 强制无痕隔离与物理零记录
+### 4. 网址可用性检查与失效链接清理 (v1.0.37)
+* **连通性真实排查**：在个人空间底部的搜索栏后面增设【网址检查】入口（在系统设置的「个人空间锁」中开启后动态呈现）。采用真实网络探测机制，精准排查 404 死链、50x 宕机、连接超时与域名解析失效。
+* **弹窗可视化与一键清理**：检测弹窗直观列出所有无法打开的网址及详细失败原因。每个失效条目右侧配有醒目的「✕」按钮，支持即点即删；同时支持「一键清理全部失效」，让个人专属网址库始终清爽健康。
+
+### 5. 强制无痕隔离与物理零记录
 * **脱离浏览器原生书签栏**：个人空间网址数据存放于独立沙盒中，在浏览器的书签栏、书签管理器（`Ctrl+Shift+O`）中绝无任何蛛丝马迹。
 * **强制无痕窗口打开**：在私人收藏夹内点击任意网站，扩展将强制在 Chrome / Edge 原生**【无痕隐私窗口 (Incognito)】**中拉起，**不留历史记录（`Ctrl+H` 绝无痕迹）**、关窗即刻物理销毁 Cookies 与缓存。
 

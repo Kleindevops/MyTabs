@@ -31,6 +31,17 @@
         @open="openBookmark"
       />
 
+      <!-- Vault URL Health Checker Button (Only in Vault & enabled in Settings) -->
+      <button
+        v-if="isCurrentVaultCategory && isVaultUnlocked && settings?.enableVaultUrlChecker"
+        @click="$emit('open-url-checker')"
+        title="网址检查 (检测个人空间网址是否可用)"
+        class="group flex items-center space-x-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl transition-all duration-200 border text-xs font-medium glass-panel-light hover:bg-white/20 text-white/90 border-white/15 shadow-sm hover:border-amber-400/50"
+      >
+        <Activity class="w-3.5 h-3.5 text-amber-300 group-hover:scale-110 transition-transform" />
+        <span class="hidden sm:inline">网址检查</span>
+      </button>
+
       <!-- Start Menu Popup -->
       <div
         v-if="showStartMenu"
@@ -273,7 +284,7 @@
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import {
   LayoutGrid, ChevronLeft, ChevronRight, Plus, Minus, Check,
-  Cloud, Sparkles, Settings, Folder, Lock, Pin
+  Cloud, Sparkles, Settings, Folder, Lock, Pin, Activity
 } from 'lucide-vue-next'
 import type { CategoryItem, BookmarkItem, AppSettings } from '../../shared/types'
 import { isSmallFavicon } from '../../shared/favicon'
@@ -303,6 +314,7 @@ const emit = defineEmits<{
   (e: 'locate-bookmark', bm: BookmarkItem): void
   (e: 'pin-bookmark', bookmarkId: string): void
   (e: 'exit-vault'): void
+  (e: 'open-url-checker'): void
 }>()
 
 function handleExitVault() {
