@@ -35,8 +35,9 @@
         <BookmarkGrid
           ref="bookmarkGridRef"
           :bookmarks="displayedBookmarks"
-          :categories="settings.categories || []"
+          :categories="urlCheckerCategories"
           :activeCategoryId="activeCategoryId"
+      :isInVault="isCurrentInVault"
           @add-bookmark="openAddBookmarkFromDesktop"
           @contextmenu="handleBookmarkContextMenu"
           @drag-start="handleBookmarkDragStart"
@@ -50,7 +51,7 @@
     <WindowsTaskbar
       :categories="settings.categories || []"
       :activeCategoryId="activeCategoryId"
-      :bookmarks="settings.bookmarks || []"
+      :bookmarks="urlCheckerBookmarks"
       :settings="settings"
       :isDragging="isDraggingBookmark"
       :draggedBookmark="draggedBookmarkItem"
@@ -173,9 +174,10 @@
     <!-- 7. Vault URL Health Checker Modal -->
     <VaultUrlCheckModal
       v-if="showUrlCheckerModal"
-      :bookmarks="settings.bookmarks || []"
-      :categories="settings.categories || []"
+      :bookmarks="urlCheckerBookmarks"
+      :categories="urlCheckerCategories"
       :activeCategoryId="activeCategoryId"
+      :isInVault="isCurrentInVault"
       @close="showUrlCheckerModal = false"
       @delete-bookmark="handleDeleteBookmarkFromChecker"
       @delete-multiple-bookmarks="handleDeleteMultipleBookmarksFromChecker"
@@ -263,6 +265,25 @@ const isCurrentInVault = computed(() => {
   if (activeCategoryId.value === 'cat-vault') return true
   const currentCat = (settings.value.categories || []).find((c) => c.id === activeCategoryId.value)
   return !!currentCat?.isPrivate
+})
+
+// 网址检查隔离数据流：在默认模式下坚决阻断任何个人空间网址与私密分类
+const urlCheckerBookmarks = computed(() => {
+  const all = settings.value.bookmarks || []
+  if (isCurrentInVault.value) {
+    // 个人空间解锁状态：严格只检测个人空间内部专属网址
+    return all.filter(b => b.isPrivate || b.categoryId === 'cat-vault' || (settings.value.categories || []).find(c => c.id === b.categoryId)?.isPrivate)
+  }
+  // 默认模式：严格只传递常规公共网址，绝不包含个人空间网址
+  return all.filter(b => !b.isPrivate && b.categoryId !== 'cat-vault' && !(settings.value.categories || []).find(c => c.id === b.categoryId)?.isPrivate)
+})
+
+const urlCheckerCategories = computed(() => {
+  const all = settings.value.categories || []
+  if (isCurrentInVault.value) {
+    return all.filter(c => c.isPrivate || c.id === 'cat-vault')
+  }
+  return all.filter(c => !c.isPrivate && c.id !== 'cat-vault')
 })
 
 const availableMoveCategories = computed(() => {
