@@ -9,6 +9,7 @@ export interface BookmarkItem {
   encryptedData?: string // Ciphertext if sensitive
   openInIncognito?: boolean // Open in private incognito window
   isPinnedToTaskbar?: boolean // 是否钉选常驻到底部任务栏 (Pin to Taskbar Dock)
+  notes?: string // 网址备注/备忘信息（仅编辑主页时查看与编辑）
 }
 
 export interface CategoryItem {

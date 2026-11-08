@@ -71,6 +71,20 @@
           </div>
         </div>
 
+        <!-- Notes / Remarks Field -->
+        <div>
+          <label class="block text-slate-300 mb-1 font-medium flex items-center justify-between">
+            <span>网址备注 / 备忘</span>
+            <span class="text-[10px] text-emerald-400 font-normal">仅在编辑主页时可见</span>
+          </label>
+          <textarea
+            v-model="notes"
+            rows="3"
+            placeholder="输入关于此网址的备忘或补充信息（如账号备注、使用提示等）..."
+            class="w-full bg-slate-900 border border-slate-700/80 rounded-xl px-3 py-2 text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 text-xs resize-none leading-relaxed"
+          ></textarea>
+        </div>
+
         <!-- Open in Incognito toggle -->
         <div class="flex items-center justify-between p-2.5 rounded-xl bg-slate-900/60 border border-slate-800">
           <div>
@@ -128,6 +142,7 @@ const url = ref(props.bookmark.url)
 const categoryId = ref(props.bookmark.categoryId)
 const bgColor = ref(props.bookmark.bgColor || 'transparent')
 const openInIncognito = ref(props.bookmark.openInIncognito || false)
+const notes = ref(props.bookmark.notes || '')
 
 const availableCategories = computed(() => {
   const isBookmarkVault = props.bookmark.categoryId === 'cat-vault' || props.bookmark.isPrivate || !!props.categories?.find(c => c.id === props.bookmark.categoryId)?.isPrivate
@@ -184,7 +199,8 @@ function handleSubmit() {
     bgColor: bgColor.value,
     isPrivate: selectedCategory?.isPrivate || false,
     openInIncognito: isCurrentCategoryPrivate.value || openInIncognito.value,
-    isPinnedToTaskbar: props.bookmark.isPinnedToTaskbar
+    isPinnedToTaskbar: props.bookmark.isPinnedToTaskbar,
+    notes: notes.value.trim() ? notes.value.trim() : undefined
   })
 }
 </script>
