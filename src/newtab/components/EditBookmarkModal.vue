@@ -1,14 +1,22 @@
 <template>
-  <div class="fixed inset-0 z-50 bg-slate-950/75 flex items-center justify-center p-4">
-    <div class="w-full max-w-md rounded-3xl modal-surface p-6 shadow-2xl space-y-4 border border-white/15">
-      <div class="flex items-center justify-between pb-2 border-b border-white/10">
+  <div class="fixed inset-0 z-50 bg-slate-950/75 flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+    <div class="w-full max-w-md rounded-3xl modal-surface shadow-2xl border border-white/15 flex flex-col max-h-[90vh] overflow-hidden my-auto">
+      <!-- 1. Header (Pinned at top) -->
+      <div class="px-5 py-3.5 sm:px-6 sm:py-4 border-b border-white/10 flex items-center justify-between shrink-0">
         <h3 class="text-sm font-semibold text-white flex items-center space-x-2">
           <span>编辑网站主页信息</span>
         </h3>
-        <button @click="$emit('cancel')" class="text-white/60 hover:text-white text-xs p-1">✕</button>
+        <button
+          @click="$emit('cancel')"
+          class="text-white/60 hover:text-white hover:bg-white/10 text-xs p-1.5 rounded-lg transition-colors"
+          title="关闭"
+        >
+          ✕
+        </button>
       </div>
 
-      <form @submit.prevent="handleSubmit" class="space-y-3.5 text-xs">
+      <!-- 2. Scrollable Form Body -->
+      <form id="edit-bookmark-form" @submit.prevent="handleSubmit" class="flex-1 overflow-y-auto px-5 py-4 sm:px-6 space-y-3.5 text-xs">
         <div>
           <label class="block text-slate-300 mb-1 font-medium">网站标题</label>
           <input
@@ -71,17 +79,20 @@
           </div>
         </div>
 
-        <!-- Notes / Remarks Field -->
+        <!-- Notes / Remarks Field (Synchronized & Backed up to JSON) -->
         <div>
           <label class="block text-slate-300 mb-1 font-medium flex items-center justify-between">
-            <span>网址备注 / 备忘</span>
+            <span class="flex items-center gap-1.5">
+              <span>网址备注 / 备忘</span>
+              <span class="text-[10px] text-blue-400/80 font-normal">（自动包含在数据备份中）</span>
+            </span>
             <span class="text-[10px] text-emerald-400 font-normal">仅在编辑主页时可见</span>
           </label>
           <textarea
             v-model="notes"
-            rows="3"
+            rows="2"
             placeholder="输入关于此网址的备忘或补充信息（如账号备注、使用提示等）..."
-            class="w-full bg-slate-900 border border-slate-700/80 rounded-xl px-3 py-2 text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 text-xs resize-none leading-relaxed"
+            class="w-full bg-slate-900 border border-slate-700/80 rounded-xl px-3 py-2 text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 text-xs resize-none leading-relaxed min-h-[50px]"
           ></textarea>
         </div>
 
@@ -101,23 +112,25 @@
             class="w-4 h-4 rounded text-amber-500 accent-amber-500 cursor-pointer disabled:opacity-60"
           />
         </div>
-
-        <div class="flex items-center space-x-2 pt-3 border-t border-white/10">
-          <button
-            type="button"
-            @click="$emit('cancel')"
-            class="flex-1 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium transition-colors"
-          >
-            取消
-          </button>
-          <button
-            type="submit"
-            class="flex-1 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-medium shadow-md shadow-blue-600/30 transition-colors"
-          >
-            保存修改
-          </button>
-        </div>
       </form>
+
+      <!-- 3. Fixed Footer (Buttons Always Visible On-Screen!) -->
+      <div class="px-5 py-3 sm:px-6 border-t border-white/10 bg-slate-900/80 backdrop-blur-md shrink-0 flex items-center space-x-3">
+        <button
+          type="button"
+          @click="$emit('cancel')"
+          class="flex-1 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium transition-colors text-xs"
+        >
+          取消
+        </button>
+        <button
+          type="submit"
+          form="edit-bookmark-form"
+          class="flex-1 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-medium shadow-md shadow-blue-600/30 transition-colors text-xs"
+        >
+          保存修改
+        </button>
+      </div>
     </div>
   </div>
 </template>

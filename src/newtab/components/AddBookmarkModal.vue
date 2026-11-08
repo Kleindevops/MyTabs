@@ -1,51 +1,59 @@
 <template>
-  <div class="fixed inset-0 z-50 bg-slate-950/75 flex items-center justify-center p-4">
-    <div class="w-full max-w-md rounded-3xl modal-surface p-6 shadow-2xl space-y-4 border border-white/15">
-      <div class="flex items-center justify-between pb-2 border-b border-white/10">
+  <div class="fixed inset-0 z-50 bg-slate-950/75 flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+    <div class="w-full max-w-md rounded-3xl modal-surface shadow-2xl border border-white/15 flex flex-col max-h-[90vh] overflow-hidden my-auto">
+      <!-- 1. Header (Pinned at top) -->
+      <div class="px-5 py-3.5 sm:px-6 sm:py-4 border-b border-white/10 flex items-center justify-between shrink-0">
         <h3 class="text-sm font-semibold text-white flex items-center space-x-2">
           <span>添加常用网站</span>
         </h3>
-        <button @click="$emit('cancel')" class="text-white/60 hover:text-white text-xs p-1">✕</button>
+        <button
+          @click="$emit('cancel')"
+          class="text-white/60 hover:text-white hover:bg-white/10 text-xs p-1.5 rounded-lg transition-colors"
+          title="关闭"
+        >
+          ✕
+        </button>
       </div>
 
-      <!-- Live Preview Badge -->
-      <div class="flex items-center space-x-4 p-3 rounded-2xl bg-white/5 border border-white/10">
-        <div
-          class="w-14 h-14 rounded-2xl flex items-center justify-center relative overflow-hidden shrink-0 transition-all"
-          :class="[
-            bgColor === 'transparent'
-              ? (isSmallFavicon(icon)
-                  ? 'bg-white/15 border border-white/20 shadow-md backdrop-blur-md'
-                  : (icon ? 'bg-transparent border border-transparent' : 'bg-white/15 border border-white/20 shadow-lg')
-                )
-              : 'border border-white/20 shadow-lg'
-          ]"
-          :style="bgColor !== 'transparent' ? { backgroundColor: bgColor } : { backgroundColor: 'transparent' }"
-        >
-          <img
-            v-if="icon"
-            :src="icon"
-            :alt="title || 'Preview'"
+      <!-- 2. Scrollable Form Body -->
+      <form id="add-bookmark-form" @submit.prevent="handleSubmit" class="flex-1 overflow-y-auto px-5 py-4 sm:px-6 space-y-3.5 text-xs">
+        <!-- Live Preview Badge -->
+        <div class="flex items-center space-x-3.5 p-3 rounded-2xl bg-white/5 border border-white/10">
+          <div
+            class="w-12 h-12 rounded-2xl flex items-center justify-center relative overflow-hidden shrink-0 transition-all"
             :class="[
-              'object-contain',
-              isSmallFavicon(icon) ? 'w-6 h-6 max-w-[24px] max-h-[24px]' : 'w-9 h-9 rounded-lg'
+              bgColor === 'transparent'
+                ? (isSmallFavicon(icon)
+                    ? 'bg-white/15 border border-white/20 shadow-md backdrop-blur-md'
+                    : (icon ? 'bg-transparent border border-transparent' : 'bg-white/15 border border-white/20 shadow-lg')
+                  )
+                : 'border border-white/20 shadow-lg'
             ]"
-            @error="handleIconLoadError"
-          />
-          <span v-else class="text-xl font-bold text-white tracking-wider drop-shadow-md">
-            {{ title ? title.slice(0, 1).toUpperCase() : 'W' }}
-          </span>
-        </div>
-        <div class="flex-1 min-w-0">
-          <div class="text-sm font-semibold text-white truncate">{{ title || '网站名称预览' }}</div>
-          <div class="text-xs text-slate-400 font-mono truncate">{{ url || 'https://example.com' }}</div>
-          <div class="text-[10px] text-blue-400 mt-0.5">
-            {{ icon ? '已自动获取官方高清图标' : '输入网址自动获取图标' }}
+            :style="bgColor !== 'transparent' ? { backgroundColor: bgColor } : { backgroundColor: 'transparent' }"
+          >
+            <img
+              v-if="icon"
+              :src="icon"
+              :alt="title || 'Preview'"
+              :class="[
+                'object-contain',
+                isSmallFavicon(icon) ? 'w-5 h-5 max-w-[20px] max-h-[20px]' : 'w-8 h-8 rounded-lg'
+              ]"
+              @error="handleIconLoadError"
+            />
+            <span v-else class="text-lg font-bold text-white tracking-wider drop-shadow-md">
+              {{ title ? title.slice(0, 1).toUpperCase() : 'W' }}
+            </span>
+          </div>
+          <div class="flex-1 min-w-0">
+            <div class="text-sm font-semibold text-white truncate">{{ title || '网站名称预览' }}</div>
+            <div class="text-xs text-slate-400 font-mono truncate">{{ url || 'https://example.com' }}</div>
+            <div class="text-[10px] text-blue-400 mt-0.5">
+              {{ icon ? '已自动获取官方高清图标' : '输入网址自动获取图标' }}
+            </div>
           </div>
         </div>
-      </div>
 
-      <form @submit.prevent="handleSubmit" class="space-y-3.5 text-xs">
         <div>
           <label class="block text-slate-300 mb-1 font-medium">网址 URL</label>
           <div class="relative">
@@ -136,17 +144,20 @@
           </div>
         </div>
 
-        <!-- Notes / Remarks Field -->
+        <!-- Notes / Remarks Field (Synchronized & Backed up to JSON) -->
         <div>
           <label class="block text-slate-300 mb-1 font-medium flex items-center justify-between">
-            <span>网址备注 / 备忘</span>
+            <span class="flex items-center gap-1.5">
+              <span>网址备注 / 备忘</span>
+              <span class="text-[10px] text-blue-400/80 font-normal">（自动包含在数据备份中）</span>
+            </span>
             <span class="text-[10px] text-slate-400 font-normal">仅在编辑主页时可见</span>
           </label>
           <textarea
             v-model="notes"
-            rows="3"
+            rows="2"
             placeholder="输入关于此网址的备忘或补充信息（如账号备注、使用提示等）..."
-            class="w-full bg-slate-900 border border-slate-700/80 rounded-xl px-3 py-2 text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 text-xs resize-none leading-relaxed"
+            class="w-full bg-slate-900 border border-slate-700/80 rounded-xl px-3 py-2 text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 text-xs resize-none leading-relaxed min-h-[50px]"
           ></textarea>
         </div>
 
@@ -166,26 +177,28 @@
             class="w-4 h-4 rounded text-amber-500 accent-amber-500 cursor-pointer disabled:opacity-60"
           />
         </div>
-
-        <div class="flex items-center space-x-2 pt-3 border-t border-white/10">
-          <button
-            type="button"
-            @click="$emit('cancel')"
-            :disabled="isSubmitting"
-            class="flex-1 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium transition-colors disabled:opacity-50"
-          >
-            取消
-          </button>
-          <button
-            type="submit"
-            :disabled="isSubmitting"
-            class="flex-1 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-medium shadow-md shadow-blue-600/30 transition-colors disabled:opacity-50 flex items-center justify-center space-x-1.5"
-          >
-            <span v-if="isSubmitting">保存中...</span>
-            <span v-else>保存添加</span>
-          </button>
-        </div>
       </form>
+
+      <!-- 3. Fixed Footer (Buttons Always Visible On-Screen!) -->
+      <div class="px-5 py-3 sm:px-6 border-t border-white/10 bg-slate-900/80 backdrop-blur-md shrink-0 flex items-center space-x-3">
+        <button
+          type="button"
+          @click="$emit('cancel')"
+          :disabled="isSubmitting"
+          class="flex-1 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium transition-colors disabled:opacity-50 text-xs"
+        >
+          取消
+        </button>
+        <button
+          type="submit"
+          form="add-bookmark-form"
+          :disabled="isSubmitting"
+          class="flex-1 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-medium shadow-md shadow-blue-600/30 transition-colors disabled:opacity-50 flex items-center justify-center space-x-1.5 text-xs"
+        >
+          <span v-if="isSubmitting">保存中...</span>
+          <span v-else>保存添加</span>
+        </button>
+      </div>
     </div>
   </div>
 </template>

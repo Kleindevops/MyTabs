@@ -1,41 +1,48 @@
 <template>
-  <div class="fixed inset-0 z-50 bg-slate-950/75 flex items-center justify-center p-4">
-    <div class="w-full max-w-md rounded-3xl modal-surface p-6 shadow-2xl space-y-4 border border-white/15">
-      <div class="flex items-center justify-between pb-2 border-b border-white/10">
+  <div class="fixed inset-0 z-50 bg-slate-950/75 flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+    <div class="w-full max-w-md rounded-3xl modal-surface shadow-2xl border border-white/15 flex flex-col max-h-[90vh] overflow-hidden my-auto">
+      <!-- 1. Header (Pinned at top) -->
+      <div class="px-5 py-3.5 sm:px-6 sm:py-4 border-b border-white/10 flex items-center justify-between shrink-0">
         <h3 class="text-sm font-semibold text-white flex items-center space-x-2">
           <span>编辑网站图标</span>
         </h3>
-        <button @click="$emit('cancel')" class="text-white/60 hover:text-white text-xs p-1">✕</button>
-      </div>
-
-      <!-- Live Preview -->
-      <div class="flex flex-col items-center justify-center py-4 bg-white/5 rounded-2xl border border-white/10">
-        <div
-          class="w-16 h-16 rounded-2xl flex items-center justify-center transition-all duration-300 relative overflow-hidden"
-          :class="[
-            bgColor === 'transparent'
-              ? (icon ? 'bg-transparent border border-transparent' : 'bg-white/15 border border-white/20 backdrop-blur-md shadow-xl')
-              : 'border border-white/20 backdrop-blur-md shadow-xl'
-          ]"
-          :style="bgColor !== 'transparent' ? { backgroundColor: bgColor } : { backgroundColor: 'transparent' }"
+        <button
+          @click="$emit('cancel')"
+          class="text-white/60 hover:text-white hover:bg-white/10 text-xs p-1.5 rounded-lg transition-colors"
+          title="关闭"
         >
-          <img
-            v-if="icon"
-            :src="icon"
-            :alt="bookmark.title"
-            class="w-11 h-11 rounded-lg object-contain"
-            @error="onImageError"
-          />
-          <span v-else class="text-2xl font-bold text-white tracking-wider drop-shadow-md">
-            {{ customText || bookmark.title?.slice(0, 1).toUpperCase() || 'W' }}
-          </span>
-        </div>
-        <span class="mt-2 text-xs font-medium text-white/90">{{ bookmark.title }}</span>
-        <span class="text-[10px] text-white/40 font-mono truncate max-w-[260px]">{{ bookmark.url }}</span>
+          ✕
+        </button>
       </div>
 
-      <!-- Tabs / Method selector -->
-      <div class="space-y-3.5 text-xs">
+      <!-- 2. Scrollable Body -->
+      <div class="flex-1 overflow-y-auto px-5 py-4 sm:px-6 space-y-3.5 text-xs">
+        <!-- Live Preview -->
+        <div class="flex flex-col items-center justify-center py-4 bg-white/5 rounded-2xl border border-white/10">
+          <div
+            class="w-16 h-16 rounded-2xl flex items-center justify-center transition-all duration-300 relative overflow-hidden"
+            :class="[
+              bgColor === 'transparent'
+                ? (icon ? 'bg-transparent border border-transparent' : 'bg-white/15 border border-white/20 backdrop-blur-md shadow-xl')
+                : 'border border-white/20 backdrop-blur-md shadow-xl'
+            ]"
+            :style="bgColor !== 'transparent' ? { backgroundColor: bgColor } : { backgroundColor: 'transparent' }"
+          >
+            <img
+              v-if="icon"
+              :src="icon"
+              :alt="bookmark.title"
+              class="w-11 h-11 rounded-lg object-contain"
+              @error="onImageError"
+            />
+            <span v-else class="text-2xl font-bold text-white tracking-wider drop-shadow-md">
+              {{ customText || bookmark.title?.slice(0, 1).toUpperCase() || 'W' }}
+            </span>
+          </div>
+          <span class="mt-2 text-xs font-medium text-white/90">{{ bookmark.title }}</span>
+          <span class="text-[10px] text-white/40 font-mono truncate max-w-[260px]">{{ bookmark.url }}</span>
+        </div>
+
         <!-- 1. Auto Favicon Candidates -->
         <div>
           <div class="flex items-center justify-between mb-1.5">
@@ -121,24 +128,24 @@
             />
           </div>
         </div>
+      </div>
 
-        <!-- Actions -->
-        <div class="flex items-center space-x-2 pt-3 border-t border-white/10">
-          <button
-            type="button"
-            @click="$emit('cancel')"
-            class="flex-1 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium transition-colors"
-          >
-            取消
-          </button>
-          <button
-            type="button"
-            @click="handleSave"
-            class="flex-1 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-medium shadow-md shadow-blue-600/30 transition-colors"
-          >
-            保存图标
-          </button>
-        </div>
+      <!-- 3. Fixed Footer (Buttons Always Visible) -->
+      <div class="px-5 py-3 sm:px-6 border-t border-white/10 bg-slate-900/80 backdrop-blur-md shrink-0 flex items-center space-x-3">
+        <button
+          type="button"
+          @click="$emit('cancel')"
+          class="flex-1 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium transition-colors text-xs"
+        >
+          取消
+        </button>
+        <button
+          type="button"
+          @click="handleSave"
+          class="flex-1 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-medium shadow-md shadow-blue-600/30 transition-colors text-xs"
+        >
+          保存图标
+        </button>
       </div>
     </div>
   </div>
