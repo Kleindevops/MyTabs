@@ -37,8 +37,129 @@
 
         <!-- Right Content Body -->
         <div class="flex-1 overflow-y-auto p-6 space-y-6">
+                    <!-- 1. 功能管理与开关总览 (用户最容易找到的核心控制面板) -->
+          <div v-if="activeTab === 'features'" class="space-y-4">
+            <div>
+              <h3 class="text-sm font-semibold text-white flex items-center gap-1.5">
+                <Sliders class="w-4 h-4 text-blue-400" />
+                系统功能开关与管理
+              </h3>
+              <p class="text-xs text-slate-400 mt-1">
+                自由启闭各项桌面功能与工具，开关切换后将即时自动保存并生效。
+              </p>
+            </div>
+
+            <div class="space-y-3.5 text-xs">
+              <!-- A. 网址可用性检查功能 开关 (核心重点) -->
+              <div class="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 hover:border-slate-700/80 transition-all space-y-3">
+                <div class="flex items-center justify-between">
+                  <div class="space-y-1 pr-4">
+                    <div class="font-medium text-slate-200 flex items-center gap-2">
+                      <Activity class="w-4 h-4 text-amber-400 shrink-0" />
+                      <span class="text-sm">网址检查功能 (连通性排查)</span>
+                      <span
+                        class="text-[10px] px-2 py-0.5 rounded-full border font-normal"
+                        :class="settings.enableVaultUrlChecker ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30' : 'bg-white/5 text-slate-400 border-white/10'"
+                      >
+                        {{ settings.enableVaultUrlChecker ? '已开启 (底部搜索栏后常驻)' : '已停用' }}
+                      </span>
+                    </div>
+                    <div class="text-[11px] text-slate-400 leading-relaxed">
+                      开启后，在<b>新标签页底部的搜索栏后面将显示【网址检查】入口</b>。一键排查所有网址是否还能正常打开，自动检测 404 死链、服务器宕机与连接超时，并支持弹窗点击「✕」按钮快速删除失效网址。
+                    </div>
+                  </div>
+
+                  <!-- Toggle Switch -->
+                  <button
+                    type="button"
+                    @click="toggleVaultUrlChecker"
+                    class="relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none"
+                    :class="settings.enableVaultUrlChecker ? 'bg-amber-500' : 'bg-slate-700'"
+                  >
+                    <span
+                      class="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"
+                      :class="settings.enableVaultUrlChecker ? 'translate-x-5' : 'translate-x-0'"
+                    />
+                  </button>
+                </div>
+              </div>
+
+              <!-- B. 桌面实时热搜榜卡片 开关 -->
+              <div class="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 hover:border-slate-700/80 transition-all">
+                <div class="flex items-center justify-between">
+                  <div class="space-y-1 pr-4">
+                    <div class="font-medium text-slate-200 flex items-center gap-2">
+                      <Flame class="w-4 h-4 text-rose-400 shrink-0" />
+                      <span class="text-sm">桌面实时热搜榜卡片</span>
+                      <span
+                        class="text-[10px] px-2 py-0.5 rounded-full border font-normal"
+                        :class="settings.showHotNews !== false ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30' : 'bg-white/5 text-slate-400 border-white/10'"
+                      >
+                        {{ settings.showHotNews !== false ? '已显示' : '已隐藏' }}
+                      </span>
+                    </div>
+                    <div class="text-[11px] text-slate-400">
+                      在新标签页右侧浮动展示全网热点榜单（百度、微博、知乎、B站），支持一键折叠与位置拖拽。
+                    </div>
+                  </div>
+                  <input
+                    type="checkbox"
+                    :checked="settings.showHotNews !== false"
+                    @change="toggleHotNews"
+                    class="w-4 h-4 rounded text-blue-600 accent-blue-600 cursor-pointer shrink-0"
+                  />
+                </div>
+              </div>
+
+              <!-- C. 划词悬浮释义气泡 开关 -->
+              <div class="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 hover:border-slate-700/80 transition-all">
+                <div class="flex items-center justify-between">
+                  <div class="space-y-1 pr-4">
+                    <div class="font-medium text-slate-200 flex items-center gap-2">
+                      <Languages class="w-4 h-4 text-sky-400 shrink-0" />
+                      <span class="text-sm">网页划词翻译与真人发音气泡</span>
+                    </div>
+                    <div class="text-[11px] text-slate-400">
+                      选中文本时浮现翻译微标气泡，展示音标与地道译文。
+                    </div>
+                  </div>
+                  <input
+                    type="checkbox"
+                    v-model="currentImmersiveConfig.selectionTranslate"
+                    @change="saveChanges"
+                    class="w-4 h-4 rounded text-blue-600 accent-blue-600 cursor-pointer shrink-0"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
           <!-- 0. 功能介绍与使用手册 -->
-          <div v-if="activeTab === 'guide'" class="space-y-4">
+          <div v-else-if="activeTab === 'guide'" class="space-y-4">
+            <!-- 网址检查功能快捷开关 -->
+            <div class="p-4 rounded-2xl bg-gradient-to-r from-amber-500/15 to-blue-500/15 border border-amber-500/30 flex items-center justify-between shadow-lg">
+              <div class="space-y-0.5 pr-2">
+                <div class="text-xs font-semibold text-white flex items-center gap-1.5">
+                  <Activity class="w-4 h-4 text-amber-400" />
+                  <span>网址检查功能 (在底部搜索栏后显示)</span>
+                </div>
+                <div class="text-[11px] text-slate-300">
+                  一键排查无法打开的死链并支持弹窗逐项清理，开启后立即在底部呈现。
+                </div>
+              </div>
+              <button
+                type="button"
+                @click="toggleVaultUrlChecker"
+                class="relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none"
+                :class="settings.enableVaultUrlChecker ? 'bg-amber-500' : 'bg-slate-700'"
+              >
+                <span
+                  class="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"
+                  :class="settings.enableVaultUrlChecker ? 'translate-x-5' : 'translate-x-0'"
+                />
+              </button>
+            </div>
+
             <div>
               <h3 class="text-sm font-semibold text-white flex items-center gap-1.5">
                 <BookOpen class="w-4 h-4 text-blue-400" />
@@ -1375,7 +1496,7 @@ import {
   FolderSync, RefreshCw, Download, Upload, Trash2, Check, Pin,
   BookOpen, Compass, Video, LayoutGrid, Lightbulb, ArrowRight, Calendar, Clock, Flame,
   AlertCircle, CheckCircle2, Search, Plus, Edit2, RotateCcw, Globe, SearchCheck, Tv, Code,
-  MessageSquare, GraduationCap, Package, Languages, Activity
+  MessageSquare, GraduationCap, Package, Languages, Activity, Sliders
 } from 'lucide-vue-next'
 import { AI_PRESETS } from '../../shared/ai-client'
 import {
@@ -1426,7 +1547,7 @@ const isVaultActive = computed(() => {
   return props.currentCategoryId === 'cat-vault'
 })
 
-const activeTab = ref(props.initialTab || 'guide')
+const activeTab = ref(props.initialTab || 'features')
 const isIncognitoAllowed = ref(false)
 const newWhitelistDomain = ref('')
 
@@ -1602,19 +1723,16 @@ watch(() => props.currentCategoryId, () => {
 
 // Tab navigation list: vault settings is strictly exclusive to 个人空间
 const tabs = computed(() => {
-  const allTabs = [
-    { id: 'guide', name: '功能介绍', icon: BookOpen },
-    { id: 'translate', name: '翻译', icon: Languages },
+  return [
+    { id: 'features', name: '功能开关', icon: Sliders },
+    { id: 'guide', name: '使用手册', icon: BookOpen },
+    { id: 'vault', name: '个人空间锁', icon: Lock },
+    { id: 'translate', name: '翻译设置', icon: Languages },
     { id: 'search', name: '搜索引擎', icon: Search },
     { id: 'onedrive', name: '数据备份同步', icon: Cloud },
-    { id: 'vault', name: '个人空间锁', icon: Lock },
     { id: 'ai', name: 'AI 助手模型', icon: Sparkles },
     { id: 'wallpaper', name: '壁纸个性化', icon: Palette }
   ]
-  if (!isVaultActive.value) {
-    return allTabs.filter(t => t.id !== 'vault')
-  }
-  return allTabs
 })
 
 // Guide State & Data

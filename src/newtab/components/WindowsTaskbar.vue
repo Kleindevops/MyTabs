@@ -31,15 +31,16 @@
         @open="openBookmark"
       />
 
-      <!-- Vault URL Health Checker Button (Only in Vault & enabled in Settings) -->
+      <!-- URL Health Checker Button (Visible whenever enabled in settings) -->
       <button
-        v-if="isCurrentVaultCategory && isVaultUnlocked && settings?.enableVaultUrlChecker"
+        v-if="settings?.enableVaultUrlChecker"
         @click="$emit('open-url-checker')"
-        title="网址检查 (检测个人空间网址是否可用)"
+        :title="isCurrentVaultCategory ? '网址检查 (检测个人空间网址是否可用)' : '网址检查 (检测网址是否可正常打开)'"
         class="group flex items-center space-x-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl transition-all duration-200 border text-xs font-medium glass-panel-light hover:bg-white/20 text-white/90 border-white/15 shadow-sm hover:border-amber-400/50"
       >
         <Activity class="w-3.5 h-3.5 text-amber-300 group-hover:scale-110 transition-transform" />
         <span class="hidden sm:inline">网址检查</span>
+        <span v-if="isCurrentVaultCategory" class="text-[9px] px-1.5 py-0.2 rounded bg-amber-500/25 text-amber-200 hidden md:inline">个人空间</span>
       </button>
 
       <!-- Start Menu Popup -->

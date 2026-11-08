@@ -14,11 +14,11 @@
             <h3 class="text-sm font-semibold text-white flex items-center gap-2">
               <span>网址可用性检查</span>
               <span class="text-[10px] font-normal px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                个人空间专属
+                {{ isCurrentInVault ? '个人空间' : '智能检测' }}
               </span>
             </h3>
             <p class="text-[11px] text-slate-400 mt-0.5">
-              检测个人空间网址是否还能正常打开，一键排查并清理失效死链
+              检测已添加网址是否还能正常打开，一键排查并清理失效死链
             </p>
           </div>
         </div>
@@ -51,6 +51,39 @@
               <CheckCircle2 class="w-3.5 h-3.5 mr-1.5 shrink-0" />
               检查完成，全部 {{ progress.total }} 个网址均能正常打开
             </span>
+          </div>
+
+                    <!-- Scope Selector (Vault vs All) -->
+          <div class="flex items-center space-x-1.5 p-0.5 rounded-xl bg-white/5 border border-white/10 text-[11px]">
+            <button
+              v-if="hasVaultBookmarks"
+              @click="setScope('vault')"
+              :class="[
+                'px-2 py-0.5 rounded-lg transition-all',
+                currentScope === 'vault' ? 'bg-amber-500/30 text-amber-200 font-medium' : 'text-slate-400 hover:text-white'
+              ]"
+            >
+              个人空间
+            </button>
+            <button
+              @click="setScope('all')"
+              :class="[
+                'px-2 py-0.5 rounded-lg transition-all',
+                currentScope === 'all' ? 'bg-blue-600/40 text-blue-200 font-medium' : 'text-slate-400 hover:text-white'
+              ]"
+            >
+              全部网址
+            </button>
+            <button
+              v-if="activeCategoryName && !isCurrentInVault"
+              @click="setScope('current')"
+              :class="[
+                'px-2 py-0.5 rounded-lg transition-all',
+                currentScope === 'current' ? 'bg-emerald-600/40 text-emerald-200 font-medium' : 'text-slate-400 hover:text-white'
+              ]"
+            >
+              {{ activeCategoryName }}
+            </button>
           </div>
 
           <!-- Filter Pills -->
@@ -297,14 +330,44 @@ const progressPercent = computed(() => {
   return Math.min(100, Math.round((progress.value.checked / progress.value.total) * 100))
 })
 
-// Filter targets: strictly bookmarks belonging to personal space (Vault)
+const isCurrentInVault = computed(() => {
+  if (props.activeCategoryId === 'cat-vault') return true
+  const curCat = props.categories?.find(c => c.id === props.activeCategoryId)
+  return !!curCat?.isPrivate
+})
+
+const activeCategoryName = computed(() => {
+  return props.categories?.find(c => c.id === props.activeCategoryId)?.name || ''
+})
+
+const hasVaultBookmarks = computed(() => {
+  return (props.bookmarks || []).some(bm => bm.categoryId === 'cat-vault' || bm.isPrivate)
+})
+
+const currentScope = ref<'vault' | 'current' | 'all'>(
+  isCurrentInVault.value ? 'vault' : 'all'
+)
+
+function setScope(scope: 'vault' | 'current' | 'all') {
+  currentScope.value = scope
+  startFullCheck()
+}
+
+// Filter targets based on selected scope
 const targetBookmarks = computed(() => {
-  return (props.bookmarks || []).filter((bm) => {
-    if (bm.categoryId === 'cat-vault') return true
-    if (bm.isPrivate) return true
-    const parentCat = props.categories?.find((c) => c.id === bm.categoryId)
-    return !!parentCat?.isPrivate
-  })
+  const all = props.bookmarks || []
+  if (currentScope.value === 'vault') {
+    return all.filter((bm) => {
+      if (bm.categoryId === 'cat-vault') return true
+      if (bm.isPrivate) return true
+      const parentCat = props.categories?.find((c) => c.id === bm.categoryId)
+      return !!parentCat?.isPrivate
+    })
+  } else if (currentScope.value === 'current' && props.activeCategoryId) {
+    return all.filter((bm) => bm.categoryId === props.activeCategoryId)
+  }
+  // 'all': all bookmarks
+  return all
 })
 
 const failedResults = computed(() => {

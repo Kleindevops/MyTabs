@@ -221,7 +221,7 @@ const isVaultUnlocked = ref<boolean>(false)
 
 // Modals & Context Menu State
 const showSettings = ref(false)
-const settingsInitialTab = ref('guide')
+const settingsInitialTab = ref('features')
 const showVaultModal = ref(false)
 const showChangePasswordModal = ref(false)
 const showAddBookmark = ref(false)
