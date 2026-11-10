@@ -1,5 +1,6 @@
 <template>
-  <div data-no-selection-translate="true" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+  <!-- Fullscreen dark mask (no backdrop-filter blur to guarantee 0% GPU shader cost) -->
+  <div data-no-selection-translate="true" class="fixed inset-0 z-50 bg-slate-950/85 flex items-center justify-center p-4">
     <div
       class="w-full max-w-xl max-h-[85vh] rounded-3xl modal-surface shadow-2xl flex flex-col overflow-hidden border border-white/15 animate-in fade-in zoom-in-95 duration-150"
       style="contain: paint;"
@@ -8,19 +9,19 @@
       <div class="flex items-center justify-between px-6 py-4 border-b border-white/10 shrink-0">
         <div class="flex items-center space-x-2.5">
           <div
-            class="w-8 h-8 rounded-xl flex items-center justify-center border"
+            class="w-8 h-8 rounded-xl flex items-center justify-center border font-mono text-xs font-bold"
             :class="[
               isVaultMode
                 ? 'bg-amber-500/15 border-amber-500/30 text-amber-300'
                 : 'bg-blue-500/15 border-blue-500/30 text-blue-400'
             ]"
           >
-            <Activity class="w-4 h-4" />
+            HTTP
           </div>
           <div>
             <h3 class="text-sm font-semibold text-white flex items-center gap-2">
-              <span>网址可用性检查</span>
-              <!-- Strict Mode Capsule: Vault vs Public (Never leaked in default mode) -->
+              <span>网址可用性检查 (HTTP 状态码排查)</span>
+              <!-- Strict Mode Capsule: Vault vs Public -->
               <span
                 v-if="isVaultMode"
                 class="text-[10px] font-normal px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30"
@@ -35,7 +36,7 @@
               </span>
             </h3>
             <p class="text-[11px] text-slate-400 mt-0.5">
-              {{ isVaultMode ? '可指定分类排查个人空间私密网址可用性，检测 404 死链与故障并一键清理' : '可指定分类排查已添加网址是否能正常打开，排查并清理失效死链' }}
+              访问网址并读取真实 HTTP 返回码（200 正常、404 死链、50x 宕机、超时等）直接判断可用性
             </p>
           </div>
         </div>
@@ -108,19 +109,19 @@
           <!-- Status text -->
           <div class="flex items-center space-x-2 min-w-0">
             <span v-if="isChecking" class="flex items-center text-amber-300 font-medium truncate">
-              <Loader2 class="w-3.5 h-3.5 animate-spin mr-1.5 shrink-0" style="transform: translateZ(0); will-change: transform;" />
-              正在检查 ({{ progress.checked }} / {{ progress.total }})...
+              <span class="w-2 h-2 rounded-full bg-amber-400 mr-2 shrink-0"></span>
+              正在检查: 已读取 {{ progress.checked }} / 共 {{ progress.total }} 个网址状态码...
             </span>
             <span v-else-if="!hasChecked" class="text-slate-400 truncate">
-              {{ targetBookmarks.length === 0 ? '当前分类下暂无网址' : `待检查：共 ${targetBookmarks.length} 个网址，开启开关即可开始检查` }}
+              {{ targetBookmarks.length === 0 ? '当前分类下暂无网址' : `待检查：共 ${targetBookmarks.length} 个网址，开启开关开始读取状态码` }}
             </span>
             <span v-else-if="failedResults.length > 0" class="flex items-center text-rose-400 font-medium truncate">
               <AlertCircle class="w-3.5 h-3.5 mr-1.5 shrink-0" />
-              发现 {{ failedResults.length }} 个无法正常打开的失效网址
+              排查完成，发现 {{ failedResults.length }} 个失效网址 (404/宕机/超时)
             </span>
             <span v-else class="flex items-center text-emerald-400 font-medium truncate">
               <CheckCircle2 class="w-3.5 h-3.5 mr-1.5 shrink-0" />
-              全部 {{ progress.total }} 个网址均能正常打开
+              排查完成，全部 {{ progress.total }} 个网址返回码均正常
             </span>
           </div>
 
@@ -135,7 +136,7 @@
                   : 'text-slate-400 hover:text-white hover:bg-white/5'
               ]"
             >
-              <span>无法打开</span>
+              <span>失效异常</span>
               <span class="px-1.5 py-0.2 rounded-full text-[10px] bg-rose-500/30 text-rose-200">
                 {{ failedResults.length }}
               </span>
@@ -156,14 +157,6 @@
             </button>
           </div>
         </div>
-
-        <!-- Progress Track (Hardware-accelerated scaleX, 0 Layout Reflow) -->
-        <div v-if="isChecking" class="w-full bg-slate-800 rounded-full h-1.5 mt-1 overflow-hidden">
-          <div
-            class="bg-gradient-to-r from-amber-500 to-rose-500 h-1.5 rounded-full transition-transform duration-200 ease-out origin-left will-change-transform"
-            :style="{ transform: `scaleX(${progressPercent / 100})` }"
-          ></div>
-        </div>
       </div>
 
       <!-- Main Body: Results / Bookmarks List -->
@@ -183,7 +176,7 @@
         <div v-else-if="!hasChecked && !isChecking" class="space-y-2">
           <div class="text-[11px] text-slate-400 pb-1 flex items-center justify-between">
             <span>当前分类待检测清单 (共 {{ targetBookmarks.length }} 项)</span>
-            <span class="text-blue-400 font-medium">点击右上角开关或底部按钮开始检测</span>
+            <span class="text-blue-400 font-medium">点击右上角开关或底部按钮开始排查</span>
           </div>
           <div
             v-for="item in targetBookmarks"
@@ -191,8 +184,8 @@
             class="flex items-center justify-between p-3 rounded-2xl border border-white/10 bg-white/5 transition-colors"
           >
             <div class="flex items-center space-x-3 min-w-0 pr-3">
-              <div class="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 border bg-white/5 border-white/10 text-slate-400">
-                <Globe class="w-4 h-4" />
+              <div class="w-10 h-7 rounded-lg flex items-center justify-center shrink-0 border border-white/10 bg-white/5 text-[10px] font-mono font-medium text-slate-400">
+                待测
               </div>
               <div class="min-w-0">
                 <div class="flex items-center space-x-2">
@@ -200,7 +193,7 @@
                     {{ item.title || '未命名网址' }}
                   </span>
                   <span class="text-[10px] font-mono px-2 py-0.5 rounded-md bg-white/10 text-slate-400 border border-white/10 shrink-0">
-                    待检查
+                    等待读取返回码
                   </span>
                 </div>
                 <div class="text-[11px] text-slate-400 font-mono truncate mt-0.5">
@@ -211,26 +204,7 @@
           </div>
         </div>
 
-        <!-- 3. Checking Spinner (Initial connection state when no result ready yet) -->
-        <div v-else-if="isChecking && checkResults.length === 0" class="flex flex-col items-center justify-center py-12 text-center space-y-3">
-          <Loader2 class="w-8 h-8 text-amber-400 animate-spin" style="transform: translateZ(0); will-change: transform;" />
-          <div class="text-xs text-slate-300 font-medium">正在建立后台无头网络连通性探测...</div>
-          <div class="text-[11px] text-slate-500">超轻量 1 字节分片嗅探，实时排查 404 死链与故障</div>
-        </div>
-
-        <!-- 4. Checking in Failed filter, but no dead links found yet -->
-        <div
-          v-else-if="isChecking && activeFilter === 'failed' && failedResults.length === 0"
-          class="flex flex-col items-center justify-center py-12 text-center space-y-3"
-        >
-          <div class="w-10 h-10 rounded-2xl bg-emerald-500/15 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
-            <CheckCircle2 class="w-5 h-5" />
-          </div>
-          <div class="text-xs text-slate-300 font-medium">目前已检测 {{ progress.checked }} / {{ progress.total }} 项，暂未发现失效死链</div>
-          <div class="text-[11px] text-slate-500">若排查到无法打开的网址将实时显示在此处</div>
-        </div>
-
-        <!-- 5. All OK Prompt (Finished checking & no dead links found in failed filter) -->
+        <!-- 3. All OK Prompt (Finished checking & no dead links found in failed filter) -->
         <div
           v-else-if="!isChecking && failedResults.length === 0 && activeFilter === 'failed'"
           class="flex flex-col items-center justify-center py-10 text-center space-y-3 p-6 rounded-2xl bg-emerald-500/5 border border-emerald-500/20"
@@ -239,43 +213,45 @@
             <CheckCircle2 class="w-6 h-6" />
           </div>
           <div class="text-sm font-semibold text-emerald-300">
-            {{ isVaultMode ? '所选分类下的所有网址均可正常打开！' : '所选分类下的所有网址均可正常打开！' }}
+            所有检测网址返回码均正常，未发现 404 死链！
           </div>
           <div class="text-xs text-slate-400 max-w-sm">
-            未检测到任何 404 失效页面、服务器宕机或域名解析异常。
+            所有网址均已成功建立网络连接并返回正常响应码。
           </div>
           <button
             @click="activeFilter = 'all'"
             class="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/15 text-xs text-slate-200 transition-colors"
           >
-            查看所有正常网址 ({{ checkResults.length }})
+            查看全部网址的详细返回码 ({{ checkResults.length }})
           </button>
         </div>
 
-        <!-- 6. Result Items List -->
+        <!-- 4. Result Items List: Display Return Codes Directly -->
         <div v-else class="space-y-2">
           <div
             v-for="item in displayedResults"
             :key="item.bookmarkId"
-            class="group flex items-center justify-between p-3 rounded-2xl border transition-all duration-150"
+            class="flex items-center justify-between p-3 rounded-2xl border transition-colors"
             :class="[
               item.status === 'failed'
-                ? 'bg-rose-500/10 border-rose-500/25 hover:border-rose-500/40 hover:bg-rose-500/15'
-                : 'bg-white/5 border-white/10 hover:border-white/20 hover:bg-white/10'
+                ? 'bg-rose-500/10 border-rose-500/25'
+                : 'bg-white/5 border-white/10'
             ]"
           >
-            <!-- Bookmark Info -->
+            <!-- Bookmark Info with Status Code on Left -->
             <div class="flex items-center space-x-3 min-w-0 pr-3">
+              <!-- Clear HTTP Return Code Badge -->
               <div
-                class="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 border"
+                class="w-12 h-7 rounded-lg flex items-center justify-center shrink-0 border font-mono text-[11px] font-bold tracking-tight"
                 :class="[
                   item.status === 'failed'
                     ? 'bg-rose-500/20 border-rose-500/30 text-rose-300'
-                    : 'bg-emerald-500/15 border-emerald-500/25 text-emerald-300'
+                    : (item.statusCode === 401 || item.statusCode === 403)
+                      ? 'bg-amber-500/20 border-amber-500/30 text-amber-300'
+                      : 'bg-emerald-500/15 border-emerald-500/25 text-emerald-300'
                 ]"
               >
-                <AlertCircle v-if="item.status === 'failed'" class="w-4 h-4" />
-                <CheckCircle2 v-else class="w-4 h-4" />
+                {{ item.statusCode > 0 ? item.statusCode : (item.status === 'failed' ? 'ERR' : 'OK') }}
               </div>
 
               <div class="min-w-0">
@@ -283,18 +259,18 @@
                   <span class="text-xs font-semibold text-white truncate max-w-[180px] sm:max-w-xs">
                     {{ item.title || '未命名网址' }}
                   </span>
-                  <!-- Status Capsule -->
+                  <!-- Status Capsule (Explains the return code) -->
                   <span
                     v-if="item.status === 'failed'"
                     class="text-[10px] font-mono px-2 py-0.5 rounded-md bg-rose-500/25 text-rose-200 border border-rose-500/40 shrink-0"
                   >
-                    {{ item.reason || '无法打开' }}
+                    {{ item.reason || item.statusText || '无法访问' }}
                   </span>
                   <span
                     v-else
                     class="text-[10px] font-mono px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 shrink-0"
                   >
-                    {{ item.statusCode ? `HTTP ${item.statusCode} 正常` : '可正常打开' }}
+                    {{ item.statusText || (item.statusCode ? `HTTP ${item.statusCode} 正常` : '正常可访问') }}
                   </span>
                 </div>
 
@@ -332,10 +308,10 @@
       <div class="px-6 py-3.5 border-t border-white/10 bg-white/[0.02] flex items-center justify-between shrink-0">
         <div class="text-xs text-slate-400">
           <span v-if="failedResults.length > 0">
-            点击右侧 <b class="text-rose-400">✕</b> 按钮即可立即删除对应的失效网址
+            发现失效网址，点击右侧 <b class="text-rose-400">✕</b> 按钮即可删除
           </span>
           <span v-else-if="hasChecked">
-            共排查 {{ checkResults.length }} 个网址
+            共排查 {{ checkResults.length }} 个网址状态码
           </span>
           <span v-else>
             已就绪，当前分类共 {{ targetBookmarks.length }} 个网址
@@ -392,14 +368,12 @@ import {
   X,
   AlertCircle,
   CheckCircle2,
-  Loader2,
   RefreshCw,
   Trash2,
   Lock,
   Play,
   Square,
-  ChevronDown,
-  Globe
+  ChevronDown
 } from 'lucide-vue-next'
 import type { BookmarkItem, CategoryItem } from '../../shared/types'
 import { checkBookmarkList, checkUrlViaBackground, type UrlCheckResult } from '../../shared/url-checker'
@@ -437,11 +411,6 @@ const progress = ref({
   total: 0
 })
 
-const progressPercent = computed(() => {
-  if (progress.value.total === 0) return 0
-  return Math.min(100, Math.round((progress.value.checked / progress.value.total) * 100))
-})
-
 // Determine whether currently in Vault (Personal Space) mode
 const isVaultMode = computed(() => {
   if (props.isInVault) return true
@@ -464,14 +433,12 @@ const availableCategories = computed(() => {
 const targetSourceBookmarks = computed(() => {
   const source = props.bookmarks || []
   if (!isVaultMode.value) {
-    // Default mode: strictly ONLY regular public bookmarks (physical isolation guarantee)
     return source.filter(bm => {
       if (bm.isPrivate || bm.categoryId === 'cat-vault') return false
       const parentCat = props.categories?.find(c => c.id === bm.categoryId)
       return !parentCat?.isPrivate
     })
   } else {
-    // Vault mode: strictly ONLY personal space bookmarks
     return source.filter(bm => {
       if (bm.isPrivate || bm.categoryId === 'cat-vault') return true
       const parentCat = props.categories?.find(c => c.id === bm.categoryId)
@@ -604,7 +571,8 @@ async function recheckSingle(item: UrlCheckResult) {
     const updated: UrlCheckResult = {
       ...item,
       status: res.ok ? 'ok' : 'failed',
-      statusCode: res.statusCode,
+      statusCode: res.statusCode || 0,
+      statusText: res.statusText,
       reason: res.reason,
       checkedAt: Date.now()
     }

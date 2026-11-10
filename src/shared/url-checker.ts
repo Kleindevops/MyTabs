@@ -5,18 +5,18 @@ export interface UrlCheckResult {
   url: string
   title: string
   status: 'ok' | 'failed'
-  statusCode?: number
+  statusCode: number
+  statusText?: string
   reason?: string
   checkedAt: number
 }
 
 /**
- * 真实检测单个网址是否能正常打开
- * 核心优化：
- * 1. 优先以 HEAD 请求嗅探状态码，杜绝数据体（Body）下载
- * 2. 遇到不支持 HEAD 的站点，采用带 Range: bytes=0-0 的超轻量 GET 探测，只接收 1 字节即掐断连接
- * 3. 严格设置 cache: 'no-store'，防止触发浏览器 GPU 纹理与本地缓存分配
- * 4. 收到响应头后立即 controller.abort()，坚决不让浏览器接收多余数据
+ * 极简、轻量、直接获取 HTTP 返回码的核心探测函数
+ * 核心机制：
+ * 1. 优先使用 HEAD 请求嗅探状态码（绝大部分网站直接返回 Header，0 数据体传输）
+ * 2. 对拒斥 HEAD 的站点（405/400），改用带 Range: bytes=0-0 的 GET 请求只读取 1 字节
+ * 3. 拿到状态码第一毫秒立即 abort() 掐断连接，绝不下载任何网页和媒体数据，0 GPU 压力
  */
 export async function checkSingleUrl(
   url: string,
@@ -24,11 +24,12 @@ export async function checkSingleUrl(
   abortSignal?: AbortSignal
 ): Promise<{
   ok: boolean
-  statusCode?: number
+  statusCode: number
+  statusText?: string
   reason?: string
 }> {
   if (abortSignal?.aborted) {
-    return { ok: false, reason: '已取消检查' }
+    return { ok: false, statusCode: 0, statusText: '已取消', reason: '已取消检查' }
   }
 
   let targetUrl = url.trim()
@@ -36,186 +37,129 @@ export async function checkSingleUrl(
     targetUrl = 'https://' + targetUrl
   }
 
-  // 1. 尝试以轻量 HEAD 请求快速嗅探状态码（零 Body 传输）
-  try {
-    const controller = new AbortController()
-    const timer = setTimeout(() => controller.abort(), timeoutMs)
-    if (abortSignal) {
-      abortSignal.addEventListener('abort', () => controller.abort(), { once: true })
-    }
+  // 1. 优先以 HEAD 请求快速嗅探 HTTP 状态码
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), timeoutMs)
+  if (abortSignal) {
+    abortSignal.addEventListener('abort', () => controller.abort(), { once: true })
+  }
 
+  try {
     const response = await fetch(targetUrl, {
       method: 'HEAD',
       signal: controller.signal,
       redirect: 'follow',
-      cache: 'no-store',
-      headers: {
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
-      }
+      cache: 'no-store'
     })
     clearTimeout(timer)
     controller.abort() // 立即掐断底层 socket 连接
 
-    // 200 ~ 399: 正常存活
-    if (response.status >= 200 && response.status < 400) {
-      return { ok: true, statusCode: response.status }
+    const code = response.status
+    if (code >= 200 && code < 400) {
+      return { ok: true, statusCode: code, statusText: `HTTP ${code} 正常` }
     }
-    // 401, 403: 网站存活正常运行，仅需要登录或受到权限拦截
-    if (response.status === 401 || response.status === 403) {
-      return { ok: true, statusCode: response.status }
+    if (code === 401 || code === 403) {
+      return { ok: true, statusCode: code, statusText: `HTTP ${code} (需要登录/正常运行)` }
     }
-    // 明确的死链或服务器崩溃
-    if (response.status === 404) {
-      return { ok: false, statusCode: 404, reason: 'HTTP 404 页面不存在' }
+    if (code === 405 || code === 400) {
+      // 少数服务器不允许 HEAD 请求（405 Method Not Allowed），回退到轻量 GET
+      return await checkWithSimpleGet(targetUrl, timeoutMs, abortSignal)
     }
-    if (response.status === 410) {
-      return { ok: false, statusCode: 410, reason: 'HTTP 410 链接已永久下线' }
+    if (code === 404) {
+      return { ok: false, statusCode: 404, statusText: 'HTTP 404', reason: '页面不存在 (404死链)' }
     }
-    if (response.status >= 500 && response.status <= 504) {
-      return { ok: false, statusCode: response.status, reason: `HTTP ${response.status} 服务器不可用` }
+    if (code === 410) {
+      return { ok: false, statusCode: 410, statusText: 'HTTP 410', reason: '链接已永久下线' }
     }
-
-    // 针对 405 Method Not Allowed 或 400 等状态，进一步用超轻量 Range GET 验证
-    if (response.status === 405 || response.status === 400) {
-      return await checkWithGet(targetUrl, timeoutMs, abortSignal)
+    if (code >= 500) {
+      return { ok: false, statusCode: code, statusText: `HTTP ${code}`, reason: `服务器错误 (${code})` }
     }
 
-    return { ok: false, statusCode: response.status, reason: `HTTP ${response.status} 访问异常` }
+    return { ok: false, statusCode: code, statusText: `HTTP ${code}`, reason: `异常返回码 HTTP ${code}` }
   } catch (err: any) {
     if (abortSignal?.aborted) {
-      return { ok: false, reason: '已取消检查' }
+      return { ok: false, statusCode: 0, statusText: '已取消', reason: '已取消检查' }
     }
     if (err.name === 'AbortError' || err.message?.includes('timeout') || err.message?.includes('aborted')) {
-      return { ok: false, reason: '连接超时 (服务器未响应)' }
+      return { ok: false, statusCode: 0, statusText: '连接超时', reason: '服务器超时未响应 (5秒)' }
     }
 
-    // 尝试以轻量 GET 重试
-    return await checkWithGet(targetUrl, timeoutMs, abortSignal)
+    // 若 HEAD 请求发生网络拦截，进一步用轻量 GET 验证
+    return await checkWithSimpleGet(targetUrl, timeoutMs, abortSignal)
   }
 }
 
 /**
- * 以超轻量 GET (Range: bytes=0-0) 方式二次确认，杜绝全量网页与流媒体下载
+ * 以轻量 GET 获取状态码（只请求 1 字节 Header，拿到立即中止）
  */
-async function checkWithGet(
+async function checkWithSimpleGet(
   targetUrl: string,
   timeoutMs: number,
   abortSignal?: AbortSignal
 ): Promise<{
   ok: boolean
-  statusCode?: number
+  statusCode: number
+  statusText?: string
   reason?: string
 }> {
   if (abortSignal?.aborted) {
-    return { ok: false, reason: '已取消检查' }
+    return { ok: false, statusCode: 0, statusText: '已取消', reason: '已取消检查' }
+  }
+
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), timeoutMs)
+  if (abortSignal) {
+    abortSignal.addEventListener('abort', () => controller.abort(), { once: true })
   }
 
   try {
-    const controller = new AbortController()
-    const timer = setTimeout(() => controller.abort(), timeoutMs)
-    if (abortSignal) {
-      abortSignal.addEventListener('abort', () => controller.abort(), { once: true })
-    }
-
     const response = await fetch(targetUrl, {
       method: 'GET',
       signal: controller.signal,
       redirect: 'follow',
       cache: 'no-store',
       headers: {
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-        'Range': 'bytes=0-0' // 关键优化：只请求 1 个字节验证连通性，防止服务器下发 MB 级网页与媒体流
+        'Range': 'bytes=0-0' // 限制只接收第 1 个字节
       }
     })
     clearTimeout(timer)
-    controller.abort() // 立即掐断底层 socket 连接
+    controller.abort() // 立即掐断底层 socket
 
-    if ((response.status >= 200 && response.status < 400) || response.status === 206) {
-      return { ok: true, statusCode: response.status }
+    const code = response.status
+    if ((code >= 200 && code < 400) || code === 206) {
+      return { ok: true, statusCode: code, statusText: `HTTP ${code} 正常` }
     }
-    if (response.status === 401 || response.status === 403) {
-      return { ok: true, statusCode: response.status }
+    if (code === 401 || code === 403) {
+      return { ok: true, statusCode: code, statusText: `HTTP ${code} (需权限/正常运行)` }
     }
-    if (response.status === 404) {
-      return { ok: false, statusCode: 404, reason: 'HTTP 404 页面不存在' }
+    if (code === 404) {
+      return { ok: false, statusCode: 404, statusText: 'HTTP 404', reason: '页面不存在 (404死链)' }
     }
-    if (response.status >= 500 && response.status <= 504) {
-      return { ok: false, statusCode: response.status, reason: `HTTP ${response.status} 服务器不可用` }
+    if (code >= 500) {
+      return { ok: false, statusCode: code, statusText: `HTTP ${code}`, reason: `服务器错误 (${code})` }
     }
-
-    return { ok: false, statusCode: response.status, reason: `HTTP ${response.status} 访问异常` }
+    return { ok: false, statusCode: code, statusText: `HTTP ${code}`, reason: `异常返回码 HTTP ${code}` }
   } catch (err: any) {
     if (abortSignal?.aborted) {
-      return { ok: false, reason: '已取消检查' }
+      return { ok: false, statusCode: 0, statusText: '已取消', reason: '已取消检查' }
     }
     if (err.name === 'AbortError' || err.message?.includes('timeout') || err.message?.includes('aborted')) {
-      return { ok: false, reason: '连接超时 (服务器未响应)' }
+      return { ok: false, statusCode: 0, statusText: '连接超时', reason: '连接超时 (服务器未响应)' }
     }
-
-    // 在特殊网络环境下使用 no-cors 探测 TCP/TLS 是否存活
-    return await checkWithNoCors(targetUrl, Math.min(timeoutMs, 4000), abortSignal)
-  }
-}
-
-/**
- * 最终以 no-cors 探测底层 TCP/TLS 连通性，防止特殊跨域头阻断正常站点
- */
-async function checkWithNoCors(
-  targetUrl: string,
-  timeoutMs: number,
-  abortSignal?: AbortSignal
-): Promise<{
-  ok: boolean
-  statusCode?: number
-  reason?: string
-}> {
-  if (abortSignal?.aborted) {
-    return { ok: false, reason: '已取消检查' }
-  }
-
-  try {
-    const controller = new AbortController()
-    const timer = setTimeout(() => controller.abort(), timeoutMs)
-    if (abortSignal) {
-      abortSignal.addEventListener('abort', () => controller.abort(), { once: true })
-    }
-
-    await fetch(targetUrl, {
-      method: 'GET',
-      mode: 'no-cors',
-      cache: 'no-store',
-      signal: controller.signal,
-      headers: {
-        'Range': 'bytes=0-0'
-      }
-    })
-    clearTimeout(timer)
-    controller.abort() // 立即掐断连接
-
-    // 成功收到 opaque 响应，说明 DNS 与 TCP/TLS 握手均成功，网站可建立连接
-    return { ok: true }
-  } catch (err: any) {
-    if (abortSignal?.aborted) {
-      return { ok: false, reason: '已取消检查' }
-    }
-    if (err.name === 'AbortError' || err.message?.includes('timeout') || err.message?.includes('aborted')) {
-      return { ok: false, reason: '连接超时 (服务器未响应)' }
-    }
-    return { ok: false, reason: '无法访问此网站 (域名失效或连接被拒绝)' }
+    return { ok: false, statusCode: 0, statusText: '无法连接', reason: '无法连接 (域名失效或被拒绝)' }
   }
 }
 
 /**
  * 优先委托给后台 Service Worker 执行无头网络请求（GPU 占用 0% 且不受 CORS 拦截）
- * 若未在扩展环境（如单元测试或本地开发），平滑回退到本地探测
  */
 export async function checkUrlViaBackground(
   url: string,
   timeoutMs = 6000,
   abortSignal?: AbortSignal
-): Promise<{ ok: boolean; statusCode?: number; reason?: string }> {
+): Promise<{ ok: boolean; statusCode: number; statusText?: string; reason?: string }> {
   if (abortSignal?.aborted) {
-    return { ok: false, reason: '已取消检查' }
+    return { ok: false, statusCode: 0, statusText: '已取消', reason: '已取消检查' }
   }
 
   if (typeof chrome !== 'undefined' && chrome.runtime?.sendMessage) {
@@ -225,7 +169,7 @@ export async function checkUrlViaBackground(
         const timer = setTimeout(() => {
           if (!isDone) {
             isDone = true
-            resolve({ ok: false, reason: '检测超时 (服务器未响应)' })
+            resolve({ ok: false, statusCode: 0, statusText: '检测超时', reason: '检测超时 (服务器未响应)' })
           }
         }, timeoutMs + 1000)
 
@@ -234,7 +178,7 @@ export async function checkUrlViaBackground(
             if (!isDone) {
               isDone = true
               clearTimeout(timer)
-              resolve({ ok: false, reason: '已取消检查' })
+              resolve({ ok: false, statusCode: 0, statusText: '已取消', reason: '已取消检查' })
             }
           }, { once: true })
         }
@@ -245,7 +189,7 @@ export async function checkUrlViaBackground(
             if (!isDone) {
               isDone = true
               clearTimeout(timer)
-              if (chrome.runtime.lastError) {
+              if (chrome.runtime.lastError || !res) {
                 resolve(null) // trigger local fallback
               } else {
                 resolve(res)
@@ -271,7 +215,7 @@ export async function checkUrlViaBackground(
  */
 export async function checkBookmarkList(
   bookmarks: BookmarkItem[],
-  concurrency = 2, // 保持并发为 2：平稳流畅，彻底消除网络峰值与渲染压力
+  concurrency = 2,
   onProgress?: (progress: { checked: number; total: number; latestResult?: UrlCheckResult }) => void,
   abortSignal?: AbortSignal
 ): Promise<UrlCheckResult[]> {
@@ -292,12 +236,12 @@ export async function checkBookmarkList(
       const idx = currentIndex++
       const bm = bookmarks[idx]
 
-      let res: { ok: boolean; statusCode?: number; reason?: string }
+      let res: { ok: boolean; statusCode: number; statusText?: string; reason?: string }
       try {
         res = await checkUrlViaBackground(bm.url, 6000, abortSignal)
       } catch (e: any) {
         if (abortSignal?.aborted) break
-        res = { ok: false, reason: '检测失败: ' + (e?.message || '未知错误') }
+        res = { ok: false, statusCode: 0, statusText: '检测失败', reason: '检测失败: ' + (e?.message || '未知错误') }
       }
 
       if (abortSignal?.aborted) break
@@ -307,7 +251,8 @@ export async function checkBookmarkList(
         url: bm.url,
         title: bm.title,
         status: res.ok ? 'ok' : 'failed',
-        statusCode: res.statusCode,
+        statusCode: res.statusCode || 0,
+        statusText: res.statusText,
         reason: res.reason,
         checkedAt: Date.now()
       }
