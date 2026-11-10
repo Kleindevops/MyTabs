@@ -131,6 +131,51 @@
                   />
                 </div>
               </div>
+
+              <!-- D. 智能弹窗拦截与安全防护 开关 -->
+              <div class="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 hover:border-slate-700/80 transition-all space-y-3">
+                <div class="flex items-center justify-between">
+                  <div class="space-y-1 pr-4">
+                    <div class="font-medium text-slate-200 flex items-center gap-2">
+                      <ShieldCheck class="w-4 h-4 text-emerald-400 shrink-0" />
+                      <span class="text-sm">智能安全与弹窗拦截</span>
+                      <span
+                        class="text-[10px] px-2 py-0.5 rounded-full border font-normal"
+                        :class="popupConfig.enabled ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30' : 'bg-white/5 text-slate-400 border-white/10'"
+                      >
+                        {{ popupConfig.enabled ? '已开启防护 (阻断流氓轰炸)' : '已停用' }}
+                      </span>
+                    </div>
+                    <div class="text-[11px] text-slate-400 leading-relaxed">
+                      智能拦截后台暗中打开的广告标签（Pop-under）、粉碎全屏透明点击陷阱，并自动净化强制登录浮层与广告遮罩。
+                    </div>
+                  </div>
+
+                  <div class="flex items-center space-x-3 shrink-0">
+                    <button
+                      type="button"
+                      @click="activeTab = 'security'"
+                      class="text-[11px] text-blue-400 hover:text-blue-300 flex items-center space-x-1 px-2.5 py-1 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 transition-colors"
+                      title="进入详细安全设置"
+                    >
+                      <span>详细配置</span>
+                      <ArrowRight class="w-3 h-3" />
+                    </button>
+                    <!-- Toggle Switch -->
+                    <button
+                      type="button"
+                      @click="popupConfig.enabled = !popupConfig.enabled; saveChanges()"
+                      class="relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none"
+                      :class="popupConfig.enabled ? 'bg-emerald-500' : 'bg-slate-700'"
+                    >
+                      <span
+                        class="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"
+                        :class="popupConfig.enabled ? 'translate-x-5' : 'translate-x-0'"
+                      />
+                    </button>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -260,6 +305,226 @@
                   <span class="shrink-0 font-medium">💡 技巧提示：</span>
                   <span class="flex-1">{{ item.tips }}</span>
                 </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 4. 安全与弹窗拦截配置面板 -->
+          <div v-else-if="activeTab === 'security'" class="space-y-4">
+            <div>
+              <h3 class="text-sm font-semibold text-white flex items-center gap-1.5">
+                <ShieldCheck class="w-4 h-4 text-emerald-400" />
+                安全与弹窗拦截 (Smart Popup & Threat Blocker)
+              </h3>
+              <p class="text-xs text-slate-400 mt-1">
+                多层级主动防御体系：阻断流氓后台标签弹窗轰炸、粉碎全屏透明点击劫持、净化网页内强制登录与广告遮罩，全面支持无痕模式零痕迹防护。
+              </p>
+            </div>
+
+            <!-- 统计与安全状态卡片 -->
+            <div class="p-4 rounded-2xl bg-gradient-to-r from-emerald-500/10 to-teal-500/10 border border-emerald-500/20 flex items-center justify-between shadow-lg">
+              <div class="flex items-center space-x-3.5">
+                <div class="w-10 h-10 rounded-2xl bg-emerald-500/20 text-emerald-300 flex items-center justify-center font-bold text-lg border border-emerald-500/30">
+                  <ShieldCheck class="w-5 h-5 text-emerald-400" />
+                </div>
+                <div>
+                  <div class="text-xs font-semibold text-white flex items-center gap-2">
+                    <span>实时安全防护就绪</span>
+                    <span
+                      class="text-[10px] px-2 py-0.5 rounded-full border font-normal"
+                      :class="popupConfig.enabled ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' : 'bg-rose-500/20 text-rose-300 border-rose-500/30'"
+                    >
+                      {{ popupConfig.enabled ? '防护运行中' : '已暂停防护' }}
+                    </span>
+                  </div>
+                  <div class="text-[11px] text-slate-300 mt-1 flex items-center gap-4">
+                    <span>今日拦截: <b class="text-emerald-400 font-mono">{{ popupConfig.stats?.todayBlocked || 0 }}</b> 次</span>
+                    <span>累计拦截: <b class="text-teal-400 font-mono">{{ popupConfig.stats?.totalBlocked || 0 }}</b> 次</span>
+                  </div>
+                </div>
+              </div>
+              <button
+                @click="resetStats"
+                class="px-2.5 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white border border-white/10 text-[11px] transition-colors flex items-center gap-1.5"
+                title="清空拦截计数统计"
+              >
+                <RotateCcw class="w-3.5 h-3.5" />
+                <span>清零计数</span>
+              </button>
+            </div>
+
+            <!-- 无痕模式权限与提示卡片 -->
+            <div class="p-3.5 rounded-2xl bg-slate-900/80 border border-slate-800 flex items-center justify-between">
+              <div class="flex items-center space-x-3">
+                <div class="w-8 h-8 rounded-xl flex items-center justify-center shrink-0 border"
+                  :class="isIncognitoAllowed ? 'bg-indigo-500/15 border-indigo-500/30 text-indigo-300' : 'bg-amber-500/15 border-amber-500/30 text-amber-300'"
+                >
+                  <Lock class="w-4 h-4" />
+                </div>
+                <div>
+                  <div class="text-xs font-semibold text-white flex items-center gap-2">
+                    <span>无痕/隐私窗口协同防护</span>
+                    <span
+                      class="text-[10px] px-2 py-0.5 rounded-full border font-normal"
+                      :class="isIncognitoAllowed ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30' : 'bg-amber-500/15 text-amber-300 border-amber-500/30'"
+                    >
+                      {{ isIncognitoAllowed ? '已授权 · 零痕迹脱敏运行' : '未开启无痕模式权限' }}
+                    </span>
+                  </div>
+                  <div class="text-[11px] text-slate-400 mt-0.5">
+                    {{ isIncognitoAllowed
+                      ? '在无痕窗口中拦截弹窗时仅进行匿名计数，绝不保存敏感网址与浏览痕迹。'
+                      : '若想在隐私窗口中同样拦截流氓弹窗与广告遮罩，需在浏览器扩展设置中开启无痕权限。' }}
+                  </div>
+                </div>
+              </div>
+              <button
+                v-if="!isIncognitoAllowed"
+                @click="openExtensionsManager"
+                class="text-[11px] px-2.5 py-1.5 rounded-xl bg-amber-500/15 text-amber-300 hover:bg-amber-500/25 border border-amber-500/30 transition-colors shrink-0"
+              >
+                开启无痕权限
+              </button>
+            </div>
+
+            <!-- 防护开关选项列表 -->
+            <div class="space-y-3">
+              <!-- 1. 总开关 -->
+              <div class="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 flex items-center justify-between">
+                <div>
+                  <div class="text-xs font-semibold text-white flex items-center gap-2">
+                    <span>启用智能弹窗拦截防护体系</span>
+                    <span class="text-[10px] text-slate-400">（全局总控制）</span>
+                  </div>
+                  <div class="text-[11px] text-slate-400 mt-0.5">
+                    关闭后将完全停用所有后台标签拦截、点击劫持排查与页面遮罩清理功能。
+                  </div>
+                </div>
+                <input
+                  type="checkbox"
+                  v-model="popupConfig.enabled"
+                  @change="saveChanges"
+                  class="w-4 h-4 rounded text-blue-600 accent-blue-600 cursor-pointer"
+                />
+              </div>
+
+              <!-- 细分开关组 (在总开关开启时可用) -->
+              <div :class="{ 'opacity-50 pointer-events-none': !popupConfig.enabled }" class="space-y-3 transition-opacity">
+                <!-- 2. 后台标签页与弹窗轰炸拦截 -->
+                <div class="p-3.5 rounded-2xl bg-slate-900/60 border border-slate-800 flex items-center justify-between">
+                  <div class="pr-3">
+                    <div class="text-xs font-semibold text-white">拦截后台标签与广告弹窗 (Pop-ups & Pop-unders)</div>
+                    <div class="text-[11px] text-slate-400 mt-0.5">
+                      识别特征广告联盟域名直链，封杀 1200ms 内爆发式弹出多个标签页的流氓轰炸行为。
+                    </div>
+                  </div>
+                  <input
+                    type="checkbox"
+                    v-model="popupConfig.blockNewTabPopups"
+                    @change="saveChanges"
+                    class="w-4 h-4 rounded text-blue-600 accent-blue-600 cursor-pointer"
+                  />
+                </div>
+
+                <!-- 3. 全屏透明点击劫持防御 -->
+                <div class="p-3.5 rounded-2xl bg-slate-900/60 border border-slate-800 flex items-center justify-between">
+                  <div class="pr-3">
+                    <div class="text-xs font-semibold text-white">粉碎全屏透明点击陷阱 (Clickjacking Traps)</div>
+                    <div class="text-[11px] text-slate-400 mt-0.5">
+                      自动检测并粉碎页面上伪装成空白区域、覆盖视口的透明全屏跳转链接，防止误触被劫持到广告网址。
+                    </div>
+                  </div>
+                  <input
+                    type="checkbox"
+                    v-model="popupConfig.blockClickjacking"
+                    @change="saveChanges"
+                    class="w-4 h-4 rounded text-blue-600 accent-blue-600 cursor-pointer"
+                  />
+                </div>
+
+                <!-- 4. 网页内强推遮罩与诱导登录浮层清理 -->
+                <div class="p-3.5 rounded-2xl bg-slate-900/60 border border-slate-800 flex items-center justify-between">
+                  <div class="pr-3">
+                    <div class="text-xs font-semibold text-white">清理页面流氓强推遮罩 (In-Page Modal Overlays)</div>
+                    <div class="text-[11px] text-slate-400 mt-0.5">
+                      自动隐藏页面强制登录、诱导下载客户端或广告全屏覆盖层（可在扩展弹窗中点击「净化弹窗」手动触发）。
+                    </div>
+                  </div>
+                  <input
+                    type="checkbox"
+                    v-model="popupConfig.blockModalOverlays"
+                    @change="saveChanges"
+                    class="w-4 h-4 rounded text-blue-600 accent-blue-600 cursor-pointer"
+                  />
+                </div>
+
+                <!-- 5. 自动恢复网页滚动条 -->
+                <div class="p-3.5 rounded-2xl bg-slate-900/60 border border-slate-800 flex items-center justify-between">
+                  <div class="pr-3">
+                    <div class="text-xs font-semibold text-white">页面被冻结时自动恢复滚动条 (Restore Scrollbars)</div>
+                    <div class="text-[11px] text-slate-400 mt-0.5">
+                      清除弹窗遮罩后，强制将页面的滚动锁定解除，恢复正常的滑屏与浏览体验。
+                    </div>
+                  </div>
+                  <input
+                    type="checkbox"
+                    v-model="popupConfig.restoreScroll"
+                    @change="saveChanges"
+                    class="w-4 h-4 rounded text-blue-600 accent-blue-600 cursor-pointer"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <!-- 白名单管理卡片 -->
+            <div class="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 space-y-3">
+              <div class="flex items-center justify-between">
+                <div>
+                  <div class="text-xs font-semibold text-white">放行站点白名单 (Whitelist)</div>
+                  <div class="text-[11px] text-slate-400 mt-0.5">
+                    白名单内的域名将免受弹窗拦截和页面遮罩清理，确保第三方支付、网银或单点登录（OAuth）正常运作。
+                  </div>
+                </div>
+                <span class="text-[11px] text-slate-400 font-mono">{{ popupConfig.whitelist?.length || 0 }} 个站点</span>
+              </div>
+
+              <!-- 添加白名单输入框 -->
+              <div class="flex gap-2">
+                <input
+                  type="text"
+                  v-model="newWhitelistDomain"
+                  @keydown.enter.prevent="addWhitelistDomain"
+                  placeholder="例如: example.com 或 oauth.sso.cn"
+                  class="flex-1 bg-slate-950/60 border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
+                />
+                <button
+                  @click="addWhitelistDomain"
+                  class="px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-medium transition-colors flex items-center gap-1 shrink-0"
+                >
+                  <Plus class="w-3.5 h-3.5" />
+                  <span>添加放行</span>
+                </button>
+              </div>
+
+              <!-- 白名单域名列表 Pills -->
+              <div v-if="popupConfig.whitelist && popupConfig.whitelist.length > 0" class="flex flex-wrap gap-1.5 pt-1">
+                <span
+                  v-for="domain in popupConfig.whitelist"
+                  :key="domain"
+                  class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 text-[11px] text-slate-300 group hover:border-slate-700"
+                >
+                  <span>{{ domain }}</span>
+                  <button
+                    @click="removeWhitelistDomain(domain)"
+                    class="text-slate-500 hover:text-rose-400 transition-colors"
+                    title="从白名单移除"
+                  >
+                    <X class="w-3 h-3" />
+                  </button>
+                </span>
+              </div>
+              <div v-else class="text-[11px] text-slate-500 italic py-1">
+                暂未添加自定义白名单域名（已内置支持各大权威登录平台）
               </div>
             </div>
           </div>
@@ -1633,10 +1898,13 @@ async function checkSyncStatus() {
 watch(() => activeTab.value, (tab) => {
   if (tab === 'onedrive') {
     checkSyncStatus()
+  } else if (tab === 'security') {
+    checkIncognitoStatus()
   }
 })
 
 onMounted(() => {
+  checkIncognitoStatus()
   if (activeTab.value === 'onedrive' || props.settings.oneDrive?.hasDirectory) {
     checkSyncStatus()
   }
@@ -1723,16 +1991,21 @@ watch(() => props.currentCategoryId, () => {
 
 // Tab navigation list: vault settings is strictly exclusive to 个人空间
 const tabs = computed(() => {
-  return [
+  const allTabs = [
     { id: 'features', name: '功能开关', icon: Sliders },
     { id: 'guide', name: '使用手册', icon: BookOpen },
-    { id: 'vault', name: '个人空间锁', icon: Lock },
+    { id: 'security', name: '安全与弹窗', icon: ShieldCheck },
     { id: 'translate', name: '翻译设置', icon: Languages },
     { id: 'search', name: '搜索引擎', icon: Search },
     { id: 'onedrive', name: '数据备份同步', icon: Cloud },
+    { id: 'vault', name: '个人空间锁', icon: Lock },
     { id: 'ai', name: 'AI 助手模型', icon: Sparkles },
     { id: 'wallpaper', name: '壁纸个性化', icon: Palette }
   ]
+  if (!isVaultActive.value) {
+    return allTabs.filter(t => t.id !== 'vault')
+  }
+  return allTabs
 })
 
 // Guide State & Data
@@ -1740,6 +2013,7 @@ const selectedGuideCategory = ref('all')
 
 const guideCategories = [
   { id: 'all', name: '全部功能' },
+  { id: 'security', name: '安全与弹窗' },
   { id: 'translate', name: '翻译' },
   { id: 'search', name: '搜索引擎' },
   { id: 'desktop', name: '常用桌面' },
