@@ -890,12 +890,34 @@ function handleDeleteMultipleBookmarksFromChecker(ids: string[]) {
 }
 
 function onSettingsUpdated(newSettings: AppSettings) {
-  settings.value = { ...newSettings }
+  settings.value = JSON.parse(JSON.stringify(newSettings))
+  try {
+    const imCfg = settings.value.immersiveTranslate
+    const isTransEnabled = Boolean(imCfg?.enabled && (imCfg?.selectionTranslate ?? true))
+    const triggerMode = imCfg?.selectionTriggerMode || 'bubble'
+    const targetLang = imCfg?.targetLang || 'zh-Hans'
+    const adaptiveSize = imCfg?.selectionAdaptiveSize !== false
+    const resizable = imCfg?.selectionResizable !== false
+    updateSelectionConfig(isTransEnabled, targetLang, triggerMode, adaptiveSize, resizable)
+  } catch (err) {
+    console.warn('Update selection translator in newtab:', err)
+  }
 }
 
 function onSettingsUpdatedAndSaved(newSettings: AppSettings) {
-  settings.value = { ...newSettings }
+  settings.value = JSON.parse(JSON.stringify(newSettings))
   saveSettings(newSettings)
+  try {
+    const imCfg = settings.value.immersiveTranslate
+    const isTransEnabled = Boolean(imCfg?.enabled && (imCfg?.selectionTranslate ?? true))
+    const triggerMode = imCfg?.selectionTriggerMode || 'bubble'
+    const targetLang = imCfg?.targetLang || 'zh-Hans'
+    const adaptiveSize = imCfg?.selectionAdaptiveSize !== false
+    const resizable = imCfg?.selectionResizable !== false
+    updateSelectionConfig(isTransEnabled, targetLang, triggerMode, adaptiveSize, resizable)
+  } catch (err) {
+    console.warn('Update selection translator in newtab:', err)
+  }
 }
 
 function handleSetDefaultEngine(engineId: string) {

@@ -9,7 +9,7 @@ import {
 let hostElement: HTMLElement | null = null
 let shadowRoot: ShadowRoot | null = null
 let tooltipElement: HTMLElement | null = null
-let isSelectionBubbleEnabled = true
+let isSelectionBubbleEnabled = false
 let isGrammarEnabled = true
 let currentGrammarMode: GrammarDisplayMode = 'syntax'
 let currentSelectedText = ''
@@ -618,6 +618,7 @@ const SAFE_BOTTOM_GAP = 28 // 底部预留避让系统任务栏与浏览器边�
 const SAFE_TOP_GAP = 16 // 顶部预留安全边距
 
 function showBubbleTrigger(rect: DOMRect, text: string) {
+  if (!isSelectionBubbleEnabled) return;
   const root = ensureHost()
   hideSelectionUI()
 
@@ -663,6 +664,7 @@ function showBubbleTrigger(rect: DOMRect, text: string) {
 }
 
 function openTranslationCard(rect: DOMRect, text: string) {
+  if (!isSelectionBubbleEnabled) return;
   const root = ensureHost()
   hideSelectionUI()
 
@@ -1002,7 +1004,7 @@ function escapeHtml(str: string): string {
  * 监听全局选区事件
  */
 export function initSelectionTranslator(
-  enabled: boolean = true,
+  enabled: boolean = false,
   targetLang: string = 'zh-Hans',
   triggerMode: SelectionTriggerMode = 'bubble',
   adaptiveSize: boolean = true,

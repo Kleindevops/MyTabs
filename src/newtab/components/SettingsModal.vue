@@ -111,24 +111,45 @@
                 </div>
               </div>
 
-              <!-- C. 划词悬浮释义气泡 开关 -->
-              <div class="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 hover:border-slate-700/80 transition-all">
+              <!-- C. 智能网页翻译与划词释义 开关 (功能总开关) -->
+              <div class="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 hover:border-slate-700/80 transition-all space-y-3">
                 <div class="flex items-center justify-between">
                   <div class="space-y-1 pr-4">
                     <div class="font-medium text-slate-200 flex items-center gap-2">
                       <Languages class="w-4 h-4 text-sky-400 shrink-0" />
-                      <span class="text-sm">网页划词翻译与真人发音气泡</span>
+                      <span class="text-sm">智能网页翻译与划词释义</span>
+                      <span
+                        class="text-[10px] px-2 py-0.5 rounded-full border font-normal"
+                        :class="currentImmersiveConfig.enabled ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30' : 'bg-white/5 text-slate-400 border-white/10'"
+                      >
+                        {{ currentImmersiveConfig.enabled ? '已开启 (划词/连续空格/双语)' : '已彻底停用' }}
+                      </span>
                     </div>
-                    <div class="text-[11px] text-slate-400">
-                      选中文本时浮现翻译微标气泡，展示音标与地道译文。
+                    <div class="text-[11px] text-slate-400 leading-relaxed">
+                      包含全网页双语对照（Alt+W）、鼠标划词浮现释义气泡、以及在输入框连按 3 次空格极速互翻。关闭后将彻底禁用所有网页与桌面的划词、空格及双语翻译。
                     </div>
                   </div>
-                  <input
-                    type="checkbox"
-                    v-model="currentImmersiveConfig.selectionTranslate"
-                    @change="saveChanges"
-                    class="w-4 h-4 rounded text-blue-600 accent-blue-600 cursor-pointer shrink-0"
-                  />
+                  <button
+                    type="button"
+                    @click="toggleMasterTranslate"
+                    class="relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none"
+                    :class="currentImmersiveConfig.enabled ? 'bg-blue-600' : 'bg-slate-700'"
+                  >
+                    <span
+                      class="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"
+                      :class="currentImmersiveConfig.enabled ? 'translate-x-5' : 'translate-x-0'"
+                    />
+                  </button>
+                </div>
+                <div v-if="currentImmersiveConfig.enabled" class="pt-2 border-t border-slate-800/80 flex items-center justify-between text-[11px]">
+                  <span class="text-slate-400">如需微调触发方式、目标语言或词性语法分析：</span>
+                  <button
+                    type="button"
+                    @click="activeTab = 'translate'"
+                    class="text-sky-400 hover:text-sky-300 flex items-center gap-1 font-medium hover:underline"
+                  >
+                    前往详细翻译设置 <ArrowRight class="w-3 h-3" />
+                  </button>
                 </div>
               </div>
 
@@ -570,12 +591,17 @@
                   <div class="text-xs font-semibold text-white">启用翻译功能</div>
                   <div class="text-[11px] text-slate-400 mt-0.5">关闭后将彻底禁用所有网页与桌面的划词翻译、双语对照和输入框翻译</div>
                 </div>
-                <input
-                  type="checkbox"
-                  v-model="currentImmersiveConfig.enabled"
-                  @change="saveChanges"
-                  class="w-4 h-4 rounded text-blue-600 accent-blue-600 cursor-pointer"
-                />
+                <button
+                  type="button"
+                  @click="toggleMasterTranslate"
+                  class="relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none"
+                  :class="currentImmersiveConfig.enabled ? 'bg-blue-600' : 'bg-slate-700'"
+                >
+                  <span
+                    class="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"
+                    :class="currentImmersiveConfig.enabled ? 'translate-x-5' : 'translate-x-0'"
+                  />
+                </button>
               </div>
 
               <!-- 全局关闭警告提示 -->
@@ -2727,8 +2753,44 @@ function setGrammarDefaultMode(mode: 'syntax' | 'pos' | 'plain') {
   saveChanges()
 }
 
+function toggleMasterTranslate() {
+  const next = !currentImmersiveConfig.value.enabled
+  currentImmersiveConfig.value.enabled = next
+  if (!next) {
+    currentImmersiveConfig.value.selectionTranslate = false
+    currentImmersiveConfig.value.tripleSpaceTranslate = false
+  } else {
+    currentImmersiveConfig.value.selectionTranslate = true
+    currentImmersiveConfig.value.tripleSpaceTranslate = true
+  }
+  saveChanges()
+  emit('toast', next ? '已开启网页翻译全套功能' : '已彻底停用翻译功能 (划词/空格/双语均已关闭)')
+}
+
+function toggleHotNews() {
+  props.settings.showHotNews = props.settings.showHotNews === false ? true : false
+  saveChanges()
+  emit('toast', props.settings.showHotNews ? '已开启桌面实时热搜榜' : '已隐藏桌面实时热搜榜')
+}
+
 async function saveChanges() {
   await saveSettings(props.settings)
-  emit('update-settings', { ...props.settings })
+  emit('update-settings', JSON.parse(JSON.stringify(props.settings)))
+
+  // 实时向所有已打开的网页标签页广播最新配置，确保即时生效
+  try {
+    if (typeof chrome !== 'undefined' && chrome.tabs?.query) {
+      chrome.tabs.query({}, (tabs) => {
+        tabs.forEach((tab) => {
+          if (tab.id && tab.url && !tab.url.startsWith('chrome://') && !tab.url.startsWith('edge://')) {
+            chrome.tabs.sendMessage(tab.id, {
+              type: 'UPDATE_IMMERSIVE_CONFIG',
+              config: props.settings.immersiveTranslate
+            }).catch(() => {})
+          }
+        })
+      })
+    }
+  } catch {}
 }
 </script>

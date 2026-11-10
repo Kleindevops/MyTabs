@@ -8,13 +8,15 @@ let displayState: BilingualDisplayState = 'idle'
 let trackedBlocks: TranslatableNodeWrapper[] = []
 let viewportObserver: IntersectionObserver | null = null
 
+let isShortcutBound = false
+
 let activeConfig: ImmersiveConfig = {
-  enabled: true,
+  enabled: false,
   targetLang: 'zh-Hans',
   bilingualStyle: 'dashed',
-  selectionTranslate: true,
+  selectionTranslate: false,
   selectionTriggerMode: 'bubble',
-  tripleSpaceTranslate: true
+  tripleSpaceTranslate: false
 }
 
 // 收集待翻译队列并批处理
@@ -179,30 +181,37 @@ export function togglePageBilingualTranslation() {
  */
 export function initImmersiveTranslation(config?: Partial<ImmersiveConfig>) {
   if (config) {
-    activeConfig = { ...activeConfig, ...config }
+    activeConfig = {
+      ...activeConfig,
+      ...config,
+      enabled: config.enabled ?? false
+    }
   }
 
-  // 1. 初始化划词悬浮释义
-  const isSelectionEnabled = Boolean(activeConfig.enabled && activeConfig.selectionTranslate)
+  const isGloballyEnabled = Boolean(activeConfig.enabled)
+  const isSelectionEnabled = Boolean(isGloballyEnabled && activeConfig.selectionTranslate)
+  const isTripleSpaceEnabled = Boolean(isGloballyEnabled && activeConfig.tripleSpaceTranslate)
+
   const triggerMode = activeConfig.selectionTriggerMode || 'bubble'
   const adaptiveSize = activeConfig.selectionAdaptiveSize !== false
   const resizable = activeConfig.selectionResizable !== false
   const grammarHighlight = activeConfig.grammarHighlight !== false
   const grammarDefaultMode = activeConfig.grammarDisplayMode || 'syntax'
-  initSelectionTranslator(isSelectionEnabled, activeConfig.targetLang, triggerMode, adaptiveSize, resizable, grammarHighlight, grammarDefaultMode)
 
-  // 2. 初始化输入框 3 次空格翻译
-  const isTripleSpaceEnabled = Boolean(activeConfig.enabled && activeConfig.tripleSpaceTranslate)
+  initSelectionTranslator(isSelectionEnabled, activeConfig.targetLang, triggerMode, adaptiveSize, resizable, grammarHighlight, grammarDefaultMode)
   initTripleSpaceTranslator(isTripleSpaceEnabled)
 
   // 3. 注册全局快捷键监听 (Alt + W)
-  window.addEventListener('keydown', (e) => {
-    if (!activeConfig.enabled) return
-    if (e.altKey && (e.key === 'w' || e.key === 'W' || e.code === 'KeyW')) {
-      e.preventDefault()
-      togglePageBilingualTranslation()
-    }
-  })
+  if (!isShortcutBound) {
+    isShortcutBound = true
+    window.addEventListener('keydown', (e) => {
+      if (!activeConfig.enabled) return
+      if (e.altKey && (e.key === 'w' || e.key === 'W' || e.code === 'KeyW')) {
+        e.preventDefault()
+        togglePageBilingualTranslation()
+      }
+    })
+  }
 }
 
 export function updateImmersiveConfig(newConfig: Partial<ImmersiveConfig>) {
@@ -218,6 +227,7 @@ export function updateImmersiveConfig(newConfig: Partial<ImmersiveConfig>) {
       displayState = 'hidden'
     }
     hideSelectionUI()
+    updateTripleSpaceConfig(false)
   }
 
   const isSelectionEnabled = Boolean(isGloballyEnabled && activeConfig.selectionTranslate)

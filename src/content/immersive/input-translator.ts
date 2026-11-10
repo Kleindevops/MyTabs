@@ -4,11 +4,13 @@
  * 自动识别中英文互翻，完美触发 React/Vue 表单合成事件
  */
 
-let isTripleSpaceEnabled = true
+let isTripleSpaceEnabled = false
+let isInitialized = false
 const spaceTimestamps: number[] = []
 let activeToast: HTMLElement | null = null
 
 function showFloatingToast(targetEl: HTMLElement, message: string) {
+  if (!isTripleSpaceEnabled) return
   if (activeToast) activeToast.remove()
 
   const toast = document.createElement('div')
@@ -71,6 +73,8 @@ function setNativeValue(element: HTMLInputElement | HTMLTextAreaElement, value: 
 }
 
 async function handleTripleSpaceTrigger(target: HTMLElement) {
+  if (!isTripleSpaceEnabled) return
+
   let sourceText = ''
   const isInputOrTextarea = target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement
   const isContentEditable = target.isContentEditable
@@ -100,6 +104,8 @@ async function handleTripleSpaceTrigger(target: HTMLElement) {
       targetLang
     },
     (res) => {
+      if (!isTripleSpaceEnabled) return
+
       if (res?.success && res.translated) {
         if (isInputOrTextarea) {
           setNativeValue(target as HTMLInputElement | HTMLTextAreaElement, res.translated)
@@ -115,11 +121,17 @@ async function handleTripleSpaceTrigger(target: HTMLElement) {
   )
 }
 
-export function initTripleSpaceTranslator(enabled: boolean = true) {
+export function initTripleSpaceTranslator(enabled: boolean = false) {
   isTripleSpaceEnabled = enabled
 
+  if (isInitialized) return
+  isInitialized = true
+
   document.addEventListener('keydown', (e) => {
-    if (!isTripleSpaceEnabled) return
+    if (!isTripleSpaceEnabled) {
+      spaceTimestamps.length = 0
+      return
+    }
     if (e.key !== ' ' && e.code !== 'Space') return
 
     const target = e.target as HTMLElement
@@ -154,4 +166,11 @@ export function initTripleSpaceTranslator(enabled: boolean = true) {
 
 export function updateTripleSpaceConfig(enabled: boolean) {
   isTripleSpaceEnabled = enabled
+  spaceTimestamps.length = 0
+  if (!enabled && activeToast) {
+    try {
+      activeToast.remove()
+    } catch {}
+    activeToast = null
+  }
 }

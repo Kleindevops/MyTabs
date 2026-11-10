@@ -245,13 +245,22 @@ scanDOMMedia()
 runBlockerCycle()
 
 try {
-  chrome.storage.local.get(['mytabs_app_settings'], (res) => {
-    const settings = res?.mytabs_app_settings
-    initImmersiveTranslation(settings?.immersiveTranslate)
-  })
-} catch {
-  initImmersiveTranslation()
-}
+  if (typeof chrome !== 'undefined' && chrome.storage?.local) {
+    chrome.storage.local.get(['mytabs_app_settings'], (res) => {
+      if (chrome.runtime?.lastError) return
+      const settings = res?.mytabs_app_settings
+      if (settings?.immersiveTranslate) {
+        initImmersiveTranslation(settings.immersiveTranslate)
+      } else {
+        initImmersiveTranslation({
+          enabled: true,
+          selectionTranslate: true,
+          tripleSpaceTranslate: true
+        })
+      }
+    })
+  }
+} catch {}
 
 let debounceTimer: number | null = null
 const observer = new MutationObserver(() => {
@@ -287,6 +296,12 @@ chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
 
   if (request.type === 'TOGGLE_PAGE_BILINGUAL') {
     togglePageBilingualTranslation()
+    sendResponse({ success: true })
+    return true
+  }
+
+  if (request.type === 'UPDATE_IMMERSIVE_CONFIG' && request.config) {
+    updateImmersiveConfig(request.config)
     sendResponse({ success: true })
     return true
   }

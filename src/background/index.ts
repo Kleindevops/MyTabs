@@ -13,19 +13,27 @@ setupHistoryCleaner()
 setupContextMenus()
 setupPopupBlocker()
 
-// Load privacy rules into memory on launch
+let isTranslationEnabled = true
+
+// Load privacy rules and translation state into memory on launch
 loadSettings().then((settings) => {
   if (settings?.privacyRules) {
     updatePrivacyRules(settings.privacyRules)
   }
+  if (settings?.immersiveTranslate) {
+    isTranslationEnabled = settings.immersiveTranslate.enabled !== false
+  }
 })
 
-// Listen to storage changes to update cached privacy rules in real-time
+// Listen to storage changes to update cached rules and translation state in real-time
 chrome.storage.onChanged.addListener((changes, areaName) => {
   if (areaName === 'local' && changes.mytabs_app_settings?.newValue) {
     const newSettings = changes.mytabs_app_settings.newValue
     if (newSettings.privacyRules) {
       updatePrivacyRules(newSettings.privacyRules)
+    }
+    if (newSettings.immersiveTranslate) {
+      isTranslationEnabled = newSettings.immersiveTranslate.enabled !== false
     }
   }
 })
@@ -163,6 +171,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 
   if (message.type === 'TRANSLATE_BATCH_TEXTS' && Array.isArray(message.texts)) {
+    if (!isTranslationEnabled) {
+      sendResponse({ success: false, error: 'TRANSLATION_DISABLED' })
+      return true
+    }
     batchTranslateViaEdge(message.texts, message.targetLang || 'zh-Hans', message.fromLang)
       .then((results) => {
         sendResponse({ success: true, results })
@@ -174,6 +186,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 
   if (message.type === 'TRANSLATE_SINGLE_TEXT' && typeof message.text === 'string') {
+    if (!isTranslationEnabled) {
+      sendResponse({ success: false, error: 'TRANSLATION_DISABLED' })
+      return true
+    }
     translateSingleText(message.text, message.targetLang || 'zh-Hans', message.fromLang)
       .then((translated) => {
         sendResponse({ success: true, translated })
