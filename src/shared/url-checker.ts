@@ -12,12 +12,15 @@ export interface UrlCheckResult {
 
 /**
  * 真实检测单个网址是否能正常打开
- * 采用 HEAD -> GET -> no-cors 兜底递进探测机制，确保真实网络请求且不产生误判
- * 支持 AbortSignal 随时取消，并在获得状态后立刻释放流，防止 GPU 与网络负载过高
+ * 核心优化：
+ * 1. 优先以 HEAD 请求嗅探状态码，杜绝数据体（Body）下载
+ * 2. 遇到不支持 HEAD 的站点，采用带 Range: bytes=0-0 的超轻量 GET 探测，只接收 1 字节即掐断连接
+ * 3. 严格设置 cache: 'no-store'，防止触发浏览器 GPU 纹理与本地缓存分配
+ * 4. 收到响应头后立即 controller.abort()，坚决不让浏览器接收多余数据
  */
 export async function checkSingleUrl(
   url: string,
-  timeoutMs = 7000,
+  timeoutMs = 6000,
   abortSignal?: AbortSignal
 ): Promise<{
   ok: boolean
@@ -33,7 +36,7 @@ export async function checkSingleUrl(
     targetUrl = 'https://' + targetUrl
   }
 
-  // 1. 尝试以 HEAD 请求快速嗅探状态码
+  // 1. 尝试以轻量 HEAD 请求快速嗅探状态码（零 Body 传输）
   try {
     const controller = new AbortController()
     const timer = setTimeout(() => controller.abort(), timeoutMs)
@@ -45,20 +48,15 @@ export async function checkSingleUrl(
       method: 'HEAD',
       signal: controller.signal,
       redirect: 'follow',
+      cache: 'no-store',
       headers: {
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
       }
     })
     clearTimeout(timer)
+    controller.abort() // 立即掐断底层 socket 连接
 
-    // 关键优化：立即取消响应体流，避免无意义的后台数据接收与内存/GPU占用
-    try {
-      if (response.body) {
-        await response.body.cancel()
-      }
-    } catch {}
-
-    // 200 ~ 399: 正常
+    // 200 ~ 399: 正常存活
     if (response.status >= 200 && response.status < 400) {
       return { ok: true, statusCode: response.status }
     }
@@ -77,28 +75,27 @@ export async function checkSingleUrl(
       return { ok: false, statusCode: response.status, reason: `HTTP ${response.status} 服务器不可用` }
     }
 
-    // 针对 405 Method Not Allowed 或其它状态，进一步用 GET 验证
+    // 针对 405 Method Not Allowed 或 400 等状态，进一步用超轻量 Range GET 验证
     if (response.status === 405 || response.status === 400) {
       return await checkWithGet(targetUrl, timeoutMs, abortSignal)
     }
 
-    // 其它 4xx 状态码
     return { ok: false, statusCode: response.status, reason: `HTTP ${response.status} 访问异常` }
   } catch (err: any) {
     if (abortSignal?.aborted) {
       return { ok: false, reason: '已取消检查' }
     }
     if (err.name === 'AbortError' || err.message?.includes('timeout') || err.message?.includes('aborted')) {
-      return { ok: false, reason: '连接超时 (服务器未在限制时间内响应)' }
+      return { ok: false, reason: '连接超时 (服务器未响应)' }
     }
 
-    // 尝试以 GET 请求重试
+    // 尝试以轻量 GET 重试
     return await checkWithGet(targetUrl, timeoutMs, abortSignal)
   }
 }
 
 /**
- * 以 GET 方式二次确认
+ * 以超轻量 GET (Range: bytes=0-0) 方式二次确认，杜绝全量网页与流媒体下载
  */
 async function checkWithGet(
   targetUrl: string,
@@ -124,20 +121,16 @@ async function checkWithGet(
       method: 'GET',
       signal: controller.signal,
       redirect: 'follow',
+      cache: 'no-store',
       headers: {
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Range': 'bytes=0-0' // 关键优化：只请求 1 个字节验证连通性，防止服务器下发 MB 级网页与媒体流
       }
     })
     clearTimeout(timer)
+    controller.abort() // 立即掐断底层 socket 连接
 
-    // 关键优化：立即取消响应体流，避免无意义的后台数据接收与内存/GPU占用
-    try {
-      if (response.body) {
-        await response.body.cancel()
-      }
-    } catch {}
-
-    if (response.status >= 200 && response.status < 400) {
+    if ((response.status >= 200 && response.status < 400) || response.status === 206) {
       return { ok: true, statusCode: response.status }
     }
     if (response.status === 401 || response.status === 403) {
@@ -160,7 +153,7 @@ async function checkWithGet(
     }
 
     // 在特殊网络环境下使用 no-cors 探测 TCP/TLS 是否存活
-    return await checkWithNoCors(targetUrl, Math.min(timeoutMs, 5000), abortSignal)
+    return await checkWithNoCors(targetUrl, Math.min(timeoutMs, 4000), abortSignal)
   }
 }
 
@@ -187,18 +180,17 @@ async function checkWithNoCors(
       abortSignal.addEventListener('abort', () => controller.abort(), { once: true })
     }
 
-    const response = await fetch(targetUrl, {
+    await fetch(targetUrl, {
       method: 'GET',
       mode: 'no-cors',
-      signal: controller.signal
+      cache: 'no-store',
+      signal: controller.signal,
+      headers: {
+        'Range': 'bytes=0-0'
+      }
     })
     clearTimeout(timer)
-
-    try {
-      if (response.body) {
-        await response.body.cancel()
-      }
-    } catch {}
+    controller.abort() // 立即掐断连接
 
     // 成功收到 opaque 响应，说明 DNS 与 TCP/TLS 握手均成功，网站可建立连接
     return { ok: true }
@@ -214,11 +206,72 @@ async function checkWithNoCors(
 }
 
 /**
+ * 优先委托给后台 Service Worker 执行无头网络请求（GPU 占用 0% 且不受 CORS 拦截）
+ * 若未在扩展环境（如单元测试或本地开发），平滑回退到本地探测
+ */
+export async function checkUrlViaBackground(
+  url: string,
+  timeoutMs = 6000,
+  abortSignal?: AbortSignal
+): Promise<{ ok: boolean; statusCode?: number; reason?: string }> {
+  if (abortSignal?.aborted) {
+    return { ok: false, reason: '已取消检查' }
+  }
+
+  if (typeof chrome !== 'undefined' && chrome.runtime?.sendMessage) {
+    try {
+      const response = await new Promise<any>((resolve) => {
+        let isDone = false
+        const timer = setTimeout(() => {
+          if (!isDone) {
+            isDone = true
+            resolve({ ok: false, reason: '检测超时 (服务器未响应)' })
+          }
+        }, timeoutMs + 1000)
+
+        if (abortSignal) {
+          abortSignal.addEventListener('abort', () => {
+            if (!isDone) {
+              isDone = true
+              clearTimeout(timer)
+              resolve({ ok: false, reason: '已取消检查' })
+            }
+          }, { once: true })
+        }
+
+        chrome.runtime.sendMessage(
+          { type: 'CHECK_SINGLE_URL', url, timeoutMs },
+          (res) => {
+            if (!isDone) {
+              isDone = true
+              clearTimeout(timer)
+              if (chrome.runtime.lastError) {
+                resolve(null) // trigger local fallback
+              } else {
+                resolve(res)
+              }
+            }
+          }
+        )
+      })
+
+      if (response && typeof response.ok === 'boolean') {
+        return response
+      }
+    } catch {
+      // fallback to local check
+    }
+  }
+
+  return await checkSingleUrl(url, timeoutMs, abortSignal)
+}
+
+/**
  * 批量检查网址列表（支持并发控制与主动中止）
  */
 export async function checkBookmarkList(
   bookmarks: BookmarkItem[],
-  concurrency = 3,
+  concurrency = 2, // 保持并发为 2：平稳流畅，彻底消除网络峰值与渲染压力
   onProgress?: (progress: { checked: number; total: number; latestResult?: UrlCheckResult }) => void,
   abortSignal?: AbortSignal
 ): Promise<UrlCheckResult[]> {
@@ -241,7 +294,7 @@ export async function checkBookmarkList(
 
       let res: { ok: boolean; statusCode?: number; reason?: string }
       try {
-        res = await checkSingleUrl(bm.url, 7000, abortSignal)
+        res = await checkUrlViaBackground(bm.url, 6000, abortSignal)
       } catch (e: any) {
         if (abortSignal?.aborted) break
         res = { ok: false, reason: '检测失败: ' + (e?.message || '未知错误') }

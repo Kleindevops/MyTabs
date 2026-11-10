@@ -108,7 +108,7 @@
           <!-- Status text -->
           <div class="flex items-center space-x-2 min-w-0">
             <span v-if="isChecking" class="flex items-center text-amber-300 font-medium truncate">
-              <Loader2 class="w-3.5 h-3.5 animate-spin mr-1.5 shrink-0" />
+              <Loader2 class="w-3.5 h-3.5 animate-spin mr-1.5 shrink-0" style="transform: translateZ(0); will-change: transform;" />
               正在检查 ({{ progress.checked }} / {{ progress.total }})...
             </span>
             <span v-else-if="!hasChecked" class="text-slate-400 truncate">
@@ -157,11 +157,11 @@
           </div>
         </div>
 
-        <!-- Progress Track -->
+        <!-- Progress Track (Hardware-accelerated scaleX, 0 Layout Reflow) -->
         <div v-if="isChecking" class="w-full bg-slate-800 rounded-full h-1.5 mt-1 overflow-hidden">
           <div
-            class="bg-gradient-to-r from-amber-500 to-rose-500 h-1.5 rounded-full transition-[width] duration-200 ease-out"
-            :style="{ width: `${progressPercent}%` }"
+            class="bg-gradient-to-r from-amber-500 to-rose-500 h-1.5 rounded-full transition-transform duration-200 ease-out origin-left will-change-transform"
+            :style="{ transform: `scaleX(${progressPercent / 100})` }"
           ></div>
         </div>
       </div>
@@ -213,12 +213,24 @@
 
         <!-- 3. Checking Spinner (Initial connection state when no result ready yet) -->
         <div v-else-if="isChecking && checkResults.length === 0" class="flex flex-col items-center justify-center py-12 text-center space-y-3">
-          <Loader2 class="w-8 h-8 text-amber-400 animate-spin" />
-          <div class="text-xs text-slate-300 font-medium">正在建立网络连通性探测...</div>
-          <div class="text-[11px] text-slate-500">将实时排查 404 死链、服务器故障及连接超时</div>
+          <Loader2 class="w-8 h-8 text-amber-400 animate-spin" style="transform: translateZ(0); will-change: transform;" />
+          <div class="text-xs text-slate-300 font-medium">正在建立后台无头网络连通性探测...</div>
+          <div class="text-[11px] text-slate-500">超轻量 1 字节分片嗅探，实时排查 404 死链与故障</div>
         </div>
 
-        <!-- 4. All OK Prompt (No dead links found in failed filter) -->
+        <!-- 4. Checking in Failed filter, but no dead links found yet -->
+        <div
+          v-else-if="isChecking && activeFilter === 'failed' && failedResults.length === 0"
+          class="flex flex-col items-center justify-center py-12 text-center space-y-3"
+        >
+          <div class="w-10 h-10 rounded-2xl bg-emerald-500/15 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
+            <CheckCircle2 class="w-5 h-5" />
+          </div>
+          <div class="text-xs text-slate-300 font-medium">目前已检测 {{ progress.checked }} / {{ progress.total }} 项，暂未发现失效死链</div>
+          <div class="text-[11px] text-slate-500">若排查到无法打开的网址将实时显示在此处</div>
+        </div>
+
+        <!-- 5. All OK Prompt (Finished checking & no dead links found in failed filter) -->
         <div
           v-else-if="!isChecking && failedResults.length === 0 && activeFilter === 'failed'"
           class="flex flex-col items-center justify-center py-10 text-center space-y-3 p-6 rounded-2xl bg-emerald-500/5 border border-emerald-500/20"
@@ -240,7 +252,7 @@
           </button>
         </div>
 
-        <!-- 5. Result Items List -->
+        <!-- 6. Result Items List -->
         <div v-else class="space-y-2">
           <div
             v-for="item in displayedResults"
@@ -390,7 +402,7 @@ import {
   Globe
 } from 'lucide-vue-next'
 import type { BookmarkItem, CategoryItem } from '../../shared/types'
-import { checkBookmarkList, checkSingleUrl, type UrlCheckResult } from '../../shared/url-checker'
+import { checkBookmarkList, checkUrlViaBackground, type UrlCheckResult } from '../../shared/url-checker'
 
 const props = withDefaults(
   defineProps<{
@@ -548,7 +560,7 @@ async function startFullCheck() {
   try {
     const results = await checkBookmarkList(
       targetBookmarks.value,
-      3,
+      2,
       (p) => {
         if (signal.aborted) return
         progress.value.checked = p.checked
@@ -588,7 +600,7 @@ async function startFullCheck() {
 async function recheckSingle(item: UrlCheckResult) {
   checkingSingleId.value = item.bookmarkId
   try {
-    const res = await checkSingleUrl(item.url)
+    const res = await checkUrlViaBackground(item.url)
     const updated: UrlCheckResult = {
       ...item,
       status: res.ok ? 'ok' : 'failed',
@@ -645,13 +657,11 @@ function handleDeleteAllFailed() {
 }
 
 onMounted(() => {
-  // 初始化默认分类为当前激活分类（如果存在且有效），否则为全部
   if (props.activeCategoryId && availableCategories.value.some(c => c.id === props.activeCategoryId)) {
     selectedCategoryId.value = props.activeCategoryId
   } else {
     selectedCategoryId.value = 'all'
   }
-  // 遵循用户指令：打开弹窗时不自动开始检查，等待用户开启开关或点击开始按钮
 })
 
 onUnmounted(() => {

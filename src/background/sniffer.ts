@@ -45,6 +45,8 @@ export function setupSniffer(): void {
   chrome.webRequest.onResponseStarted.addListener(
     (details) => {
       if (details.tabId < 0) return
+      // Ignore requests initiated by our own extension (e.g. URL health checker, Edge translation, AI API)
+      if (details.initiator?.startsWith(`chrome-extension://${chrome.runtime.id}`)) return
 
       let mime = ''
       let contentLength = 0

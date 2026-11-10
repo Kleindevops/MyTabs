@@ -5,6 +5,7 @@ import { fetchSiteMetadata } from './site-meta'
 import { setupPopupBlocker } from './popup-blocker'
 import { loadSettings } from '../shared/storage'
 import { batchTranslateViaEdge, translateSingleText } from '../shared/translation'
+import { checkSingleUrl } from '../shared/url-checker'
 
 // Initialize core background modules
 setupSniffer()
@@ -144,6 +145,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
   if (message.type === 'OPEN_INCOGNITO' && message.url) {
     openInIncognito(message.url).then((res) => sendResponse(res))
+    return true
+  }
+
+  if (message.type === 'CHECK_SINGLE_URL' && message.url) {
+    checkSingleUrl(message.url, message.timeoutMs || 6000).then((res) => sendResponse(res))
     return true
   }
 

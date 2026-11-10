@@ -6,7 +6,7 @@
 > **为极致隐私与高效工作流而生。**  
 > 独创「桌面隐形暗门·密码锁个人空间」，外表是优雅极简的 iTab / Windows 风格高颜值新标签页，暗藏端到端加密个人空间；全网盘本地直存云同步、原生流媒体资源嗅探、侧边栏 AI 智能副驾驶一应俱全。
 
-[![Version](https://img.shields.io/badge/Version-v1.0.41-blue.svg)](package.json)
+[![Version](https://img.shields.io/badge/Version-v1.0.42-blue.svg)](package.json)
 [![Chrome Extension](https://img.shields.io/badge/Chrome-Extension-4285F4?style=flat&logo=googlechrome&logoColor=white)](https://developer.chrome.com/docs/extensions/)
 [![Edge Addon](https://img.shields.io/badge/Microsoft%20Edge-Supported-0078D7?style=flat&logo=microsoftedge&logoColor=white)](https://microsoftedge.microsoft.com/)
 [![Web Translate](https://img.shields.io/badge/Translate-Edge%20Official%20Direct-success?style=flat&logo=googletranslate&logoColor=white)](#全功能网页翻译与划词释义)
@@ -67,7 +67,7 @@
   * **主密码管理**：自由修改主密码、清除密码或手动一键立即锁闭。
   * **智能超时自动重新上锁**：离开电脑忘记关网页？支持自定义解锁后的回锁倒计时（预设 **1分钟、3分钟、5分钟、10分钟、15分钟、30分钟** 或手动输入任意分钟数）。倒计时归零后自动退出私人空间并加锁，退回常规分类，保护隐私万无一失。
 
-### 4. 网址可用性检查与失效链接清理 (v1.0.41)
+### 4. 网址可用性检查与失效链接清理 (v1.0.42)
 * **分类指定与启停开关**：在网址可用性检查弹窗中增设【指定分类】下拉选择器与【检查开关】，打开弹窗默认就绪且不再自动开始检测，支持用户自由选择任意分类或全部分类，自主控制何时开启或随时中止检查。
 * **低 GPU 与即时响应优化**：移除多层高重采样毛玻璃与不必要的动画，采用轻量高性能亚克力暗色面板；真实网络请求在嗅探到 HTTP 响应头后立即取消数据体流（Body Stream），避免无意义的后台下载与 GPU/CPU 渲染飙高。
 * **连通性真实排查**：在个人空间底部的搜索栏后面增设【网址检查】入口（在系统设置的「个人空间锁」中开启后动态呈现）。采用真实网络探测机制，精准排查 404 死链、50x 宕机、连接超时与域名解析失效。
