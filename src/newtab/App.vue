@@ -118,6 +118,7 @@
       :settings="settings"
       :initialTab="settingsInitialTab"
       :currentCategoryId="activeCategoryId"
+      :isVaultUnlocked="isVaultUnlocked"
       @close="showSettings = false"
       @update-settings="onSettingsUpdated"
       @toast="showToast"

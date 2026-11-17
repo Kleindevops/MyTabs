@@ -1268,8 +1268,8 @@
             </div>
           </div>
 
-          <!-- 2. 个人空间与加密锁 -->
-          <div v-else-if="activeTab === 'vault'" class="space-y-4">
+          <!-- 2. 个人空间与加密锁 (严格权限门禁隔离，普通/未解锁状态绝不渲染) -->
+          <div v-else-if="activeTab === 'vault' && isVaultActive" class="space-y-4">
             <div>
               <h3 class="text-sm font-semibold text-white flex items-center gap-1.5">
                 <Lock class="w-4 h-4 text-amber-400" />
@@ -1817,10 +1817,12 @@ const props = withDefaults(
     settings: AppSettings
     initialTab?: string
     currentCategoryId?: string
+    isVaultUnlocked?: boolean
   }>(),
   {
     initialTab: 'guide',
-    currentCategoryId: 'cat-common'
+    currentCategoryId: 'cat-common',
+    isVaultUnlocked: false
   }
 )
 
@@ -1834,11 +1836,16 @@ const emit = defineEmits<{
   (e: 'lock-vault'): void
 }>()
 
+// 严格权限门禁：只有在个人空间已解锁且当前处于个人空间分类时，才判定个人空间活动，否则日常/未授权状态一律彻底抹除
 const isVaultActive = computed(() => {
-  return props.currentCategoryId === 'cat-vault'
+  return props.isVaultUnlocked === true && props.currentCategoryId === 'cat-vault'
 })
 
-const activeTab = ref(props.initialTab || 'features')
+const activeTab = ref(
+  props.initialTab === 'vault' && !isVaultActive.value
+    ? 'guide'
+    : (props.initialTab || 'features')
+)
 const isIncognitoAllowed = ref(false)
 const newWhitelistDomain = ref('')
 
@@ -2009,13 +2016,19 @@ watch(() => props.initialTab, (newTab) => {
   if (newTab) activeTab.value = newTab
 })
 
-watch(() => props.currentCategoryId, () => {
+watch(() => [props.currentCategoryId, props.isVaultUnlocked], () => {
   if (!isVaultActive.value && activeTab.value === 'vault') {
-    activeTab.value = 'guide'
+    activeTab.value = 'features'
   }
 })
 
-// Tab navigation list: vault settings is strictly exclusive to 个人空间
+watch(activeTab, (tab) => {
+  if (tab === 'vault' && !isVaultActive.value) {
+    activeTab.value = 'features'
+  }
+})
+
+// Tab navigation list: vault settings is strictly exclusive to 个人空间 (门禁隔离，日常/未授权状态彻底从设置中抹除)
 const tabs = computed(() => {
   const allTabs = [
     { id: 'features', name: '功能开关', icon: Sliders },

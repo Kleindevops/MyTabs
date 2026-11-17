@@ -264,8 +264,9 @@ function setItemRef(el: any, index: number) {
   }
 }
 
-// Whether current view is in 个人空间 / Vault
+// Whether current view is in 个人空间 / Vault (严格校验解锁状态，未解锁绝不视为个人空间)
 const isInVault = computed(() => {
+  if (props.isVaultUnlocked !== true) return false
   if (props.activeCategoryId === 'cat-vault') return true
   const currentCat = (props.categories || []).find(c => c.id === props.activeCategoryId)
   return !!currentCat?.isPrivate
