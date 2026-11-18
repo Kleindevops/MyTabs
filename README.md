@@ -6,7 +6,7 @@
 > **为极致隐私与高效工作流而生。**  
 > 独创「桌面隐形暗门·密码锁个人空间」，外表是优雅极简的 iTab / Windows 风格高颜值新标签页，暗藏端到端加密个人空间；全网盘本地直存云同步、原生流媒体资源嗅探、侧边栏 AI 智能副驾驶一应俱全。
 
-[![Version](https://img.shields.io/badge/Version-v1.0.47-blue.svg)](package.json)
+[![Version](https://img.shields.io/badge/Version-v1.0.48-blue.svg)](package.json)
 [![Chrome Extension](https://img.shields.io/badge/Chrome-Extension-4285F4?style=flat&logo=googlechrome&logoColor=white)](https://developer.chrome.com/docs/extensions/)
 [![Edge Addon](https://img.shields.io/badge/Microsoft%20Edge-Supported-0078D7?style=flat&logo=microsoftedge&logoColor=white)](https://microsoftedge.microsoft.com/)
 [![Web Translate](https://img.shields.io/badge/Translate-Edge%20Official%20Direct-success?style=flat&logo=googletranslate&logoColor=white)](#全功能网页翻译与划词释义)
@@ -252,6 +252,14 @@ npm run build
 > 1. **权限前提**：Chromium 内核对隐私模式默认禁用所有扩展。您只需在浏览器 `chrome://extensions` 中找到 MyTabs 扩展，开启**【在无痕模式下允许】**开关即可。
 > 2. **运行机制**：MyTabs 采用 MV3 `spanning` 跨窗口架构，Background Service Worker 与页面内 Content Script 会同步监听无痕窗口中的导航与 DOM 事件，无痕模式下的恶意后置标签页（Pop-under）、全屏遮罩、透明点击劫持均会被毫秒级直接查杀。
 > 3. **零知识防痕保证**：普通模式下拦截器支持记录统计，而在无痕模式下拦截时，扩展**严格不记录任何无痕浏览 URL 明文**，只做匿名计数累加，杜绝通过插件记录产生隐私指纹。
+</details>
+
+<details>
+<summary><b>Q6: 个人空间打开的多个网址如何共用同一个隐藏/无痕浏览器窗口？</b></summary>
+
+> **A:** **已全面实现原子级排队复用！**
+> 1. **窗口自动复用**：当您在个人空间点击书签时，MyTabs 采用全局互斥队列与窗口生命周期感知机制，自动复用同一个专属隐私/无痕浏览器窗口并在其中追加新标签页，不再会为每一个网址单独弹出一个全新的独立窗口。
+> 2. **权限保障**：在 Chrome / Edge 中开启扩展设置中的**【在无痕模式下启用】**开关后，MyTabs 即可获得跨窗口操作无痕标签页的原生能力，实现多标签页丝滑合并共用同一个窗口！
 </details>
 
 ---

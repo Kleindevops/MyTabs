@@ -90,11 +90,26 @@ function injectWindowOpenHook() {
         window.__mytabs_open_guarded = true;
         const _origOpen = window.open;
         let _lastOpen = 0;
+        const _suspiciousPatterns = [
+          /popads/i, /popcash/i, /adsterra/i, /exoclick/i, /trafficjunky/i,
+          /propellerads/i, /trafficstars/i, /juicyads/i, /bet365/i, /1xbet/i,
+          /popunder/i, /[?&](pop|popunder|ad_id|aff_id|click_id)=/i
+        ];
+
         window.open = function(url, target, features) {
           const now = Date.now();
-          if (now - _lastOpen < 800) {
-            console.warn('[MyTabs 弹窗拦截] 阻止高频恶意弹窗:', url);
-            window.dispatchEvent(new CustomEvent('mytabs_blocked_popup', { detail: { url } }));
+          const urlStr = String(url || '');
+          const isKnownAd = urlStr && _suspiciousPatterns.some(p => p.test(urlStr));
+
+          if (isKnownAd) {
+            console.warn('[MyTabs 弹窗拦截] 阻止恶意广告网址外弹:', urlStr);
+            window.dispatchEvent(new CustomEvent('mytabs_blocked_popup', { detail: { url: urlStr } }));
+            return null;
+          }
+
+          if (now - _lastOpen < 1200) {
+            console.warn('[MyTabs 弹窗拦截] 阻止高频恶意弹窗炸弹:', urlStr);
+            window.dispatchEvent(new CustomEvent('mytabs_blocked_popup', { detail: { url: urlStr } }));
             return null;
           }
           _lastOpen = now;
@@ -112,7 +127,78 @@ window.addEventListener('mytabs_blocked_popup', (e: any) => {
     type: 'POPUP_INTERCEPTED_BY_CONTENT',
     url: e.detail?.url || 'window.open-spam'
   }).catch(() => {})
+  showBlockedToast()
 })
+
+// Listen to capture-phase clicks on links to prevent transparent clickjacking redirects
+document.addEventListener('click', (e) => {
+  if (!popupBlockerEnabled || isCurrentSiteWhitelisted) return
+  const target = e.target as HTMLElement
+  if (!target) return
+  const anchor = target.tagName?.toLowerCase() === 'a' ? (target as HTMLAnchorElement) : target.closest('a')
+  if (anchor) {
+    const href = anchor.href || ''
+    if (href && (/popads/i.test(href) || /popcash/i.test(href) || /adsterra/i.test(href) || /exoclick/i.test(href) || /trafficjunky/i.test(href))) {
+      e.preventDefault()
+      e.stopPropagation()
+      chrome.runtime.sendMessage({
+        type: 'POPUP_INTERCEPTED_BY_CONTENT',
+        url: href
+      }).catch(() => {})
+      showBlockedToast()
+    }
+  }
+}, true)
+
+function showBlockedToast(isIncognito?: boolean) {
+  try {
+    const existing = document.getElementById('mytabs-blocked-toast')
+    if (existing) existing.remove()
+
+    const toast = document.createElement('div')
+    toast.id = 'mytabs-blocked-toast'
+    toast.setAttribute('style', `
+      position: fixed;
+      top: 18px;
+      right: 18px;
+      z-index: 2147483647;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 14px;
+      background: rgba(15, 23, 42, 0.88);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(59, 130, 246, 0.4);
+      border-radius: 9999px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+      color: #ffffff;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-size: 12px;
+      font-weight: 500;
+      pointer-events: none;
+      opacity: 0;
+      transform: translateY(-8px);
+      transition: opacity 0.25s ease, transform 0.25s ease;
+    `)
+    toast.innerHTML = `
+      <span style="font-size: 14px;">🛡️</span>
+      <span>MyTabs 已为你拦截 1 个恶意${isIncognito ? '隐私' : ''}弹窗</span>
+    `
+    document.body.appendChild(toast)
+
+    requestAnimationFrame(() => {
+      toast.style.opacity = '1'
+      toast.style.transform = 'translateY(0)'
+    })
+
+    setTimeout(() => {
+      toast.style.opacity = '0'
+      toast.style.transform = 'translateY(-8px)'
+      setTimeout(() => toast.remove(), 300)
+    }, 2400)
+  } catch {}
+}
 
 function cleanClickjackingTraps() {
   if (!popupBlockerEnabled || !blockClickjacking || isCurrentSiteWhitelisted) return
@@ -296,6 +382,12 @@ chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
 
   if (request.type === 'TOGGLE_PAGE_BILINGUAL') {
     togglePageBilingualTranslation()
+    sendResponse({ success: true })
+    return true
+  }
+
+  if (request.type === 'POPUP_BLOCKED_NOTICE') {
+    showBlockedToast(request.isIncognito)
     sendResponse({ success: true })
     return true
   }

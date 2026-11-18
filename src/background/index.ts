@@ -38,79 +38,149 @@ chrome.storage.onChanged.addListener((changes, areaName) => {
   }
 })
 
-// Track the active incognito window to reuse it across multiple bookmark clicks
-chrome.windows.onRemoved.addListener((windowId) => {
-  try {
-    chrome.storage.session.get('activeIncognitoWindowId', (data) => {
-      if (data?.activeIncognitoWindowId === windowId) {
-        chrome.storage.session.remove('activeIncognitoWindowId')
+// Memory cache for active incognito window
+let currentIncognitoWindowId: number | null = null
+
+// Helper to persist/clean active incognito window ID across session and local storage
+async function setStoredIncognitoWindowId(id: number | null): Promise<void> {
+  currentIncognitoWindowId = id
+  if (id !== null) {
+    try {
+      if (chrome.storage?.local) {
+        await chrome.storage.local.set({ activeIncognitoWindowId: id })
       }
-    })
+      if (chrome.storage?.session) {
+        await chrome.storage.session.set({ activeIncognitoWindowId: id })
+      }
+    } catch {}
+  } else {
+    try {
+      if (chrome.storage?.local) {
+        await chrome.storage.local.remove('activeIncognitoWindowId')
+      }
+      if (chrome.storage?.session) {
+        await chrome.storage.session.remove('activeIncognitoWindowId')
+      }
+    } catch {}
+  }
+}
+
+async function getStoredIncognitoWindowId(): Promise<number | null> {
+  if (currentIncognitoWindowId !== null) {
+    return currentIncognitoWindowId
+  }
+  try {
+    if (chrome.storage?.local) {
+      const res = await chrome.storage.local.get('activeIncognitoWindowId')
+      if (res?.activeIncognitoWindowId && typeof res.activeIncognitoWindowId === 'number') {
+        currentIncognitoWindowId = res.activeIncognitoWindowId
+        return currentIncognitoWindowId
+      }
+    }
   } catch {}
+  try {
+    if (chrome.storage?.session) {
+      const res = await chrome.storage.session.get('activeIncognitoWindowId')
+      if (res?.activeIncognitoWindowId && typeof res.activeIncognitoWindowId === 'number') {
+        currentIncognitoWindowId = res.activeIncognitoWindowId
+        return currentIncognitoWindowId
+      }
+    }
+  } catch {}
+  return null
+}
+
+// Track the active incognito window to reuse it across multiple bookmark clicks
+chrome.windows.onRemoved.addListener(async (windowId) => {
+  const storedId = await getStoredIncognitoWindowId()
+  if (storedId === windowId || currentIncognitoWindowId === windowId) {
+    await setStoredIncognitoWindowId(null)
+  }
 })
 
-async function openInIncognito(url: string) {
-  // Check whether extension is granted incognito access by user in chrome://extensions
-  const isAllowed = await new Promise<boolean>((resolve) => {
+// Safely test whether extension is granted incognito access by user in chrome://extensions
+async function checkIncognitoAllowed(): Promise<boolean> {
+  return new Promise<boolean>((resolve) => {
     try {
-      chrome.extension.isAllowedIncognitoAccess((allowed) => resolve(allowed))
-    } catch {
-      resolve(false)
-    }
-  })
-
-  // 1. Try to find an existing open incognito window
-  let targetWindowId: number | null = null
-
-  // A. Check storage.session (persists across service worker sleep cycles)
-  try {
-    const data = await chrome.storage.session.get('activeIncognitoWindowId')
-    if (data?.activeIncognitoWindowId) {
-      const win = await chrome.windows.get(data.activeIncognitoWindowId)
-      if (win?.id) {
-        targetWindowId = win.id
+      if (typeof chrome !== 'undefined' && chrome.extension?.isAllowedIncognitoAccess) {
+        chrome.extension.isAllowedIncognitoAccess((allowed) => resolve(!!allowed))
+        return
       }
+    } catch {}
+    resolve(true)
+  })
+}
+
+// Mutex queue to prevent race condition when multiple bookmarks clicked rapidly
+let incognitoActionQueue: Promise<any> = Promise.resolve()
+
+async function openInIncognitoInternal(url: string): Promise<{ success: boolean; reused: boolean; isAllowed: boolean; error?: string }> {
+  const isAllowed = await checkIncognitoAllowed()
+
+  // 1. Check whether we have a recorded active incognito window ID
+  let targetWindowId = await getStoredIncognitoWindowId()
+
+  // Verify that the recorded window is actually alive
+  if (targetWindowId !== null) {
+    try {
+      const win = await chrome.windows.get(targetWindowId)
+      if (!win?.id) {
+        targetWindowId = null
+        await setStoredIncognitoWindowId(null)
+      }
+    } catch {
+      targetWindowId = null
+      await setStoredIncognitoWindowId(null)
     }
-  } catch {
-    await chrome.storage.session.remove('activeIncognitoWindowId')
   }
 
-  // B. If not in session storage, query all open windows across browser
-  if (!targetWindowId) {
+  // 2. If no window was recorded, query all open windows across browser
+  if (targetWindowId === null) {
     try {
-      const allWins = await chrome.windows.getAll()
+      const allWins = await chrome.windows.getAll({ windowTypes: ['normal'] })
       const found = allWins.find((w) => w.incognito && w.id)
       if (found?.id) {
         targetWindowId = found.id
-        await chrome.storage.session.set({ activeIncognitoWindowId: found.id })
+        await setStoredIncognitoWindowId(found.id)
       }
     } catch {}
   }
 
-  // 2. If an existing incognito window is found, create tab inside it
+  // 3. If targetWindowId is found, attempt to append a new tab into it
   if (targetWindowId !== null) {
     try {
       await chrome.tabs.create({ windowId: targetWindowId, url, active: true })
       await chrome.windows.update(targetWindowId, { focused: true })
       return { success: true, reused: true, isAllowed }
-    } catch (err) {
-      console.warn('Failed to append tab to existing incognito window:', err)
+    } catch (err: any) {
+      console.warn('Failed to append tab into existing incognito window:', err)
       targetWindowId = null
-      await chrome.storage.session.remove('activeIncognitoWindowId')
+      await setStoredIncognitoWindowId(null)
     }
   }
 
-  // 3. Otherwise, create a new incognito window
+  // 4. Otherwise, create a new incognito window
   try {
     const newWin = await chrome.windows.create({ url, incognito: true, focused: true })
     if (newWin?.id) {
-      await chrome.storage.session.set({ activeIncognitoWindowId: newWin.id })
+      await setStoredIncognitoWindowId(newWin.id)
     }
     return { success: true, reused: false, isAllowed }
-  } catch (err) {
+  } catch (err: any) {
     console.warn('Failed to create incognito window:', err)
-    return { success: false, error: String(err), isAllowed }
+    return { success: false, error: String(err), isAllowed, reused: false }
   }
+}
+
+function openInIncognito(url: string): Promise<{ success: boolean; reused: boolean; isAllowed: boolean; error?: string }> {
+  const task = incognitoActionQueue.then(() => openInIncognitoInternal(url)).catch((err) => ({
+    success: false,
+    error: String(err),
+    isAllowed: false,
+    reused: false
+  }))
+  incognitoActionQueue = task.then(() => {})
+  return task
 }
 
 // Handle runtime messages across components

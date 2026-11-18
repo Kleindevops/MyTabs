@@ -6,10 +6,30 @@ let cachedConfig: PopupBlockerConfig = { ...DEFAULT_POPUP_BLOCKER }
 // Rapid tab spawn tracker: openerTabId -> { count, lastTime }
 const tabSpawnTracker = new Map<number, { count: number; lastTime: number }>()
 
+// Pending spawned popup tabs tracking for async URL navigation inspection
+interface PendingPopupInfo {
+  tabId: number
+  sourceTabId: number
+  isIncognito: boolean
+  createdAt: number
+}
+const pendingPopupTabs = new Map<number, PendingPopupInfo>()
+
 // Clean up tracker for closed tabs
 chrome.tabs.onRemoved.addListener((tabId) => {
   tabSpawnTracker.delete(tabId)
+  pendingPopupTabs.delete(tabId)
 })
+
+// Auto sweep stale pending popup entries older than 30 seconds
+setInterval(() => {
+  const now = Date.now()
+  for (const [tabId, info] of pendingPopupTabs.entries()) {
+    if (now - info.createdAt > 30000) {
+      pendingPopupTabs.delete(tabId)
+    }
+  }
+}, 15000)
 
 export function updatePopupBlockerConfig(config: PopupBlockerConfig): void {
   cachedConfig = config || { ...DEFAULT_POPUP_BLOCKER }
@@ -38,7 +58,7 @@ function isWhitelisted(domain: string): boolean {
   })
 }
 
-// Suspicious URL patterns often used in ad networks, pop-unders, and clickjack redirects
+// Comprehensive Suspicious URL patterns often used in ad networks, pop-unders, clickjack redirects & casino/adult spams
 const SUSPICIOUS_PATTERNS = [
   /popads/i,
   /popcash/i,
@@ -46,19 +66,35 @@ const SUSPICIOUS_PATTERNS = [
   /exoclick/i,
   /propellerads/i,
   /trafficjunky/i,
+  /trafficstars/i,
+  /juicyads/i,
+  /plugrush/i,
   /doubleclick/i,
   /googleadservices/i,
   /adservice/i,
   /adclick/i,
   /adnxs/i,
+  /adroll/i,
+  /clickserve/i,
+  /zeroredirect/i,
   /bet365/i,
   /1xbet/i,
   /adcolony/i,
   /clickbank/i,
   /popunder/i,
   /syndication/i,
-  /[?&](pop|popunder|ad_id|aff_id|click_id)=/i,
-  /[?&]utm_(source|medium)=pop/i
+  /fastclick/i,
+  /revenuehits/i,
+  /hilltopads/i,
+  /clickadu/i,
+  /bidvertiser/i,
+  /yandex.*\/clck\//i,
+  /[?&](pop|popunder|ad_id|aff_id|click_id|sub_id|clickid)=/i,
+  /[?&]utm_(source|medium)=pop/i,
+  /\/pop-?up\//i,
+  /\/pop-?under\//i,
+  /\/click-?tracker\//i,
+  /\/affiliate-?redirect/i
 ]
 
 function isSuspiciousUrl(url: string): boolean {
@@ -80,6 +116,12 @@ async function recordBlock(sourceTabId: number, targetUrl: string, isIncognito: 
     if (sourceTabId > 0) {
       await chrome.action.setBadgeText({ tabId: sourceTabId, text: '🛡️' })
       await chrome.action.setBadgeBackgroundColor({ tabId: sourceTabId, color: '#3b82f6' })
+
+      // Dispatch real-time notification to content script on source page
+      chrome.tabs.sendMessage(sourceTabId, {
+        type: 'POPUP_BLOCKED_NOTICE',
+        isIncognito
+      }).catch(() => {})
     }
   } catch {}
 
@@ -148,11 +190,20 @@ export function setupPopupBlocker(): void {
       const targetUrl = details.url || ''
       const isSuspicious = isSuspiciousUrl(targetUrl)
 
-      // If suspicious, kill the popup tab immediately
+      // If already suspicious, kill the popup tab immediately
       if (isSuspicious) {
         await chrome.tabs.remove(details.tabId)
         await recordBlock(details.sourceTabId, targetUrl, sourceTab.incognito)
+        return
       }
+
+      // Otherwise, track this spawned tab for subsequent URL navigation changes (solves initial about:blank popup escape)
+      pendingPopupTabs.set(details.tabId, {
+        tabId: details.tabId,
+        sourceTabId: details.sourceTabId,
+        isIncognito: !!sourceTab.incognito,
+        createdAt: Date.now()
+      })
     } catch {}
   })
 
@@ -203,10 +254,61 @@ export function setupPopupBlocker(): void {
         await recordBlock(openerId, targetUrl, newTab.incognito)
         return
       }
+
+      // Track this new tab for subsequent url updates
+      pendingPopupTabs.set(newTab.id, {
+        tabId: newTab.id,
+        sourceTabId: openerId,
+        isIncognito: !!newTab.incognito,
+        createdAt: Date.now()
+      })
     } catch {}
   })
 
-  // 3. Handle messages from content script or settings UI
+  // 3. Tab update hook: Inspect URL changes for tracked popup tabs (Catches late-loading ad URLs)
+  chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
+    if (!cachedConfig.enabled || !cachedConfig.blockNewTabPopups) return
+    const tracked = pendingPopupTabs.get(tabId)
+    if (!tracked) return
+
+    const currentUrl = changeInfo.url || tab.url || ''
+    if (!currentUrl || currentUrl === 'about:blank') return
+
+    if (isSuspiciousUrl(currentUrl)) {
+      try {
+        await chrome.tabs.remove(tabId)
+        pendingPopupTabs.delete(tabId)
+        await recordBlock(tracked.sourceTabId, currentUrl, tracked.isIncognito || tab.incognito)
+      } catch {}
+      return
+    }
+
+    // If loaded into a normal safe URL for over 5 seconds, remove from pending watch pool
+    if (tab.status === 'complete') {
+      setTimeout(() => {
+        pendingPopupTabs.delete(tabId)
+      }, 5000)
+    }
+  })
+
+  // 4. Web navigation before-navigate hook: Catch suspicious redirects on tracked popup tabs before page even starts rendering
+  chrome.webNavigation.onBeforeNavigate.addListener(async (details) => {
+    if (!cachedConfig.enabled || !cachedConfig.blockNewTabPopups) return
+    if (details.frameId !== 0) return
+
+    const tracked = pendingPopupTabs.get(details.tabId)
+    if (!tracked) return
+
+    if (details.url && isSuspiciousUrl(details.url)) {
+      try {
+        await chrome.tabs.remove(details.tabId)
+        pendingPopupTabs.delete(details.tabId)
+        await recordBlock(tracked.sourceTabId, details.url, tracked.isIncognito)
+      } catch {}
+    }
+  })
+
+  // 5. Handle messages from content script or settings UI
   chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message.type === 'POPUP_INTERCEPTED_BY_CONTENT') {
       const sourceTabId = sender.tab?.id || 0

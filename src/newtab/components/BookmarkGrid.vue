@@ -407,9 +407,10 @@ function openBookmark(bm: BookmarkItem) {
   if (isPrivateBookmark(bm)) {
     if (typeof chrome !== 'undefined' && chrome.runtime?.sendMessage) {
       chrome.runtime.sendMessage({ type: 'OPEN_INCOGNITO', url: bm.url }, (res) => {
-        if (res && res.isAllowed === false) {
+        if (res && res.isAllowed === false && !sessionStorage.getItem('mytabs_incognito_guide_shown')) {
+          sessionStorage.setItem('mytabs_incognito_guide_shown', '1')
           const go = confirm(
-            '💡【多标签页合并提示】\n\n检测到您尚未在 Chrome 中开启「在无痕模式下启用」开关。\n\n受 Chrome 浏览器底层安全限制，只有开启该权限后，才允许在【同一个无痕窗口】中合并打开多个标签页。\n\n是否立即前往扩展设置页面开启？'
+            '💡【个人空间多标签页合并提示】\n\n为了让个人空间的所有网址能够【共用同一个隐藏/无痕浏览器窗口】（并在该窗口中打开多个标签页），需要您在 Chrome 扩展管理中开启一次「在无痕模式下启用」开关。\n\n开启后即可实现多标签自动合并共用窗口！\n\n是否立即前往扩展管理页面开启？'
           )
           if (go && chrome.tabs?.create) {
             chrome.tabs.create({ url: 'chrome://extensions/?id=' + chrome.runtime.id })
