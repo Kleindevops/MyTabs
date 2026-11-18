@@ -6,7 +6,7 @@
 > **为极致隐私与高效工作流而生。**  
 > 独创「桌面隐形暗门·密码锁个人空间」，外表是优雅极简的 iTab / Windows 风格高颜值新标签页，暗藏端到端加密个人空间；全网盘本地直存云同步、原生流媒体资源嗅探、侧边栏 AI 智能副驾驶一应俱全。
 
-[![Version](https://img.shields.io/badge/Version-v1.0.46-blue.svg)](package.json)
+[![Version](https://img.shields.io/badge/Version-v1.0.47-blue.svg)](package.json)
 [![Chrome Extension](https://img.shields.io/badge/Chrome-Extension-4285F4?style=flat&logo=googlechrome&logoColor=white)](https://developer.chrome.com/docs/extensions/)
 [![Edge Addon](https://img.shields.io/badge/Microsoft%20Edge-Supported-0078D7?style=flat&logo=microsoftedge&logoColor=white)](https://microsoftedge.microsoft.com/)
 [![Web Translate](https://img.shields.io/badge/Translate-Edge%20Official%20Direct-success?style=flat&logo=googletranslate&logoColor=white)](#全功能网页翻译与划词释义)
@@ -74,7 +74,13 @@
 * **连通性真实排查**：在个人空间底部的搜索栏后面增设【网址检查】入口（在系统设置的「个人空间锁」中开启后动态呈现）。采用真实网络探测机制，精准排查 404 死链、50x 宕机、连接超时与域名解析失效。
 * **弹窗可视化与一键清理**：检测弹窗直观列出所有无法打开的网址及详细失败原因。每个失效条目右侧配有醒目的「✕」按钮，支持即点即删；同时支持「一键清理全部失效」，让个人专属网址库始终清爽健康。
 
-### 5. 强制无痕隔离与物理零记录
+### 5. 个人空间私密记事本与备份独立分区 (v1.0.47)
+* **绝对门禁隔离**：个人记事本仅在解锁并进入个人空间后可见。在常规状态、普通分类浏览时，任务栏、桌面、设置等一切公共视图中绝无任何记事本入口、文字或痕迹。
+* **双通道优雅唤出**：在个人空间中，底部任务栏左侧常驻「记事本 (N)」快捷胶囊，同时桌面中央呈现实时操作胶囊，点击即可一键展开全功能私密记事本。退出或锁定个人空间时，记事本自动物理销毁清空，杜绝内存驻留。
+* **全功能沉浸式编辑**：支持创建多条便签、实时防抖自动保存、分类标签筛选、Morandi 毛玻璃主题色卡定制、便签置顶（📌）、全局关键词极速检索、一键复制全文与单条/全部便签文本导出。
+* **备份文件专属分区**：在 `mytabs_backup.json` 及全网盘同步数据流中，独立划分顶层专属数据存储区域 `vaultNotes`，与常规书签（`bookmarks`）及分类（`categories`）实现物理数据隔离，数据结构清晰独立，杜绝相互混淆。
+
+### 6. 强制无痕隔离与物理零记录
 * **脱离浏览器原生书签栏**：个人空间网址数据存放于独立沙盒中，在浏览器的书签栏、书签管理器（`Ctrl+Shift+O`）中绝无任何蛛丝马迹。
 * **强制无痕窗口打开**：在私人收藏夹内点击任意网站，扩展将强制在 Chrome / Edge 原生**【无痕隐私窗口 (Incognito)】**中拉起，**不留历史记录（`Ctrl+H` 绝无痕迹）**、关窗即刻物理销毁 Cookies 与缓存。
 

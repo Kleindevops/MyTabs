@@ -30,6 +30,37 @@
         />
       </div>
 
+      <!-- Vault Desktop Action Capsule (Only visible in Personal Space) -->
+      <div
+        v-if="isCurrentInVault"
+        class="mb-2 flex items-center space-x-2 px-3.5 py-1.5 rounded-2xl glass-panel-light border border-amber-500/30 bg-amber-500/10 text-amber-200 text-xs shadow-lg backdrop-blur-xl animate-in fade-in slide-in-from-top-1"
+      >
+        <div class="flex items-center space-x-1.5 font-medium">
+          <Lock class="w-3.5 h-3.5 text-amber-300" />
+          <span>绝密个人空间已解锁</span>
+        </div>
+        <span class="w-1 h-1 rounded-full bg-amber-400/50"></span>
+        <button
+          @click="handleOpenVaultNotes"
+          class="flex items-center space-x-1 px-2.5 py-1 rounded-xl bg-amber-400/20 hover:bg-amber-400/30 text-amber-100 font-semibold border border-amber-400/30 transition-all hover:scale-105 active:scale-95 shadow-sm"
+        >
+          <NotebookPen class="w-3.5 h-3.5 text-amber-300" />
+          <span>个人记事本</span>
+          <span v-if="vaultNoteCount > 0" class="text-[10px] px-1.5 py-0.2 rounded-full bg-amber-500/40 font-bold ml-0.5">
+            {{ vaultNoteCount }}
+          </span>
+        </button>
+        <span class="w-1 h-1 rounded-full bg-amber-400/50"></span>
+        <button
+          @click="handleLockVault"
+          class="flex items-center space-x-1 px-2 py-1 rounded-xl text-white/60 hover:text-red-300 hover:bg-red-500/20 transition-colors"
+          title="退出并锁定"
+        >
+          <ShieldAlert class="w-3.5 h-3.5" />
+          <span>锁闭退出</span>
+        </button>
+      </div>
+
       <!-- Desktop Bookmarks Grid (Interactive desktop icons with labels, matching iTab) -->
       <div class="w-full mt-2 max-w-5xl relative">
         <BookmarkGrid
@@ -56,6 +87,7 @@
       :isDragging="isDraggingBookmark"
       :draggedBookmark="draggedBookmarkItem"
       :isVaultUnlocked="isVaultUnlocked"
+      :vaultNoteCount="vaultNoteCount"
       @select-category="handleCategorySelect"
       @add-category="handleAddCategory"
       @delete-category="handleDeleteCategory"
@@ -70,6 +102,7 @@
       @pin-bookmark="handlePinBookmarkFromDrag"
       @exit-vault="handleLockVault"
       @open-url-checker="showUrlCheckerModal = true"
+      @open-vault-notes="handleOpenVaultNotes"
     />
 
     <!-- Floating Draggable & Collapsible Hot News Widget -->
@@ -126,6 +159,7 @@
       @open-change-password="handleOpenChangePassword"
       @clear-vault-password="handleClearVaultPassword"
       @lock-vault="handleLockVault"
+      @open-vault-notes="handleOpenVaultNotes"
     />
     <VaultLockModal
       ref="vaultModalRef"
@@ -183,12 +217,22 @@
       @delete-bookmark="handleDeleteBookmarkFromChecker"
       @delete-multiple-bookmarks="handleDeleteMultipleBookmarksFromChecker"
     />
+
+    <!-- 8. Vault Notes Modal (Strictly exclusive to Personal Space) -->
+    <VaultNotesModal
+      v-if="showVaultNotes && isCurrentInVault"
+      :notes="settings.vaultNotes || []"
+      @close="showVaultNotes = false"
+      @save-notes="handleSaveVaultNotes"
+      @toast="showToast"
+      @lock-vault="handleLockVault"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, nextTick, onMounted, onUnmounted, watch } from 'vue'
-import { FolderInput, CheckCircle2 } from 'lucide-vue-next'
+import { FolderInput, CheckCircle2, Lock, NotebookPen, ShieldAlert } from 'lucide-vue-next'
 import ClockWidget from './components/ClockWidget.vue'
 import HotNewsWidget from './components/HotNewsWidget.vue'
 import SearchBar from './components/SearchBar.vue'
@@ -202,11 +246,12 @@ import VaultLockModal from './components/VaultLockModal.vue'
 import ChangePasswordModal from './components/ChangePasswordModal.vue'
 import AddBookmarkModal from './components/AddBookmarkModal.vue'
 import VaultUrlCheckModal from './components/VaultUrlCheckModal.vue'
+import VaultNotesModal from './components/VaultNotesModal.vue'
 
 import { DEFAULT_SETTINGS, loadSettings, saveSettings, STORAGE_KEY } from '../shared/storage'
 import { generateSalt, createVaultVerifier, verifyVaultPassword } from '../shared/crypto'
 import { changeVaultPasswordService } from '../shared/vault-service'
-import type { AppSettings, CategoryItem, BookmarkItem } from '../shared/types'
+import type { AppSettings, CategoryItem, BookmarkItem, VaultNoteItem } from '../shared/types'
 import { initSelectionTranslator, updateSelectionConfig } from '../content/immersive/selection-bubble'
 
 // Handle bfcache back-navigation restoration: force clean refresh if restored from cache
@@ -232,6 +277,11 @@ const addBookmarkDefaultPinned = ref(false)
 const showEditIconModal = ref(false)
 const showEditBookmarkModal = ref(false)
 const showUrlCheckerModal = ref(false)
+const showVaultNotes = ref(false)
+
+const vaultNoteCount = computed(() => {
+  return Array.isArray(settings.value?.vaultNotes) ? settings.value.vaultNotes.length : 0
+})
 
 const hasActiveModal = computed(() => {
   return showSettings.value ||
@@ -240,7 +290,8 @@ const hasActiveModal = computed(() => {
     showAddBookmark.value ||
     showEditIconModal.value ||
     showEditBookmarkModal.value ||
-    showUrlCheckerModal.value
+    showUrlCheckerModal.value ||
+    showVaultNotes.value
 })
 
 const contextMenuVisible = ref(false)
@@ -597,6 +648,7 @@ function handleCategorySelect(cat: CategoryItem) {
   if (isCurrentInVault.value && !isTargetVault) {
     isVaultUnlocked.value = false
     stopVaultAutoLockTimer()
+    showVaultNotes.value = false
   }
   activeCategoryId.value = cat.id
 }
@@ -631,6 +683,7 @@ function handleClockDoubleClicked() {
   if (isCurrentInVault.value) {
     isVaultUnlocked.value = false
     stopVaultAutoLockTimer()
+    showVaultNotes.value = false
     const firstNormal = (settings.value.categories || []).find(c => !c.isPrivate && c.id !== 'cat-vault')
     if (firstNormal) {
       activeCategoryId.value = firstNormal.id
@@ -651,6 +704,7 @@ async function handleClearVaultPassword() {
     settings.value.salt = undefined
     isVaultUnlocked.value = false
     stopVaultAutoLockTimer()
+    showVaultNotes.value = false
     await saveSettings(settings.value)
     if (activeCategoryId.value === 'cat-vault' && settings.value.categories && settings.value.categories.length > 0) {
       activeCategoryId.value = settings.value.categories[0].id
@@ -748,6 +802,7 @@ async function handleChangePassword(payload: { oldPwd: string; newPwd: string })
 function handleLockVault() {
   stopVaultAutoLockTimer()
   isVaultUnlocked.value = false
+  showVaultNotes.value = false
   // If user is currently looking at personal space category, navigate back to first regular category
   if (isCurrentInVault.value) {
     const firstNormal = (settings.value.categories || []).find(c => !c.isPrivate && c.id !== 'cat-vault')
@@ -758,6 +813,19 @@ function handleLockVault() {
     }
   }
   showSettings.value = false
+}
+
+function handleOpenVaultNotes() {
+  if (!isCurrentInVault.value || !isVaultUnlocked.value) {
+    showToast('个人记事本仅在个人空间解锁后可见')
+    return
+  }
+  showVaultNotes.value = true
+}
+
+function handleSaveVaultNotes(updatedNotes: VaultNoteItem[]) {
+  settings.value.vaultNotes = updatedNotes
+  saveSettings(settings.value)
 }
 
 function handleAddCategory() {

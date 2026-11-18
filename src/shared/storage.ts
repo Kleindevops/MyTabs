@@ -1,4 +1,4 @@
-import type { AppSettings, SearchEngine, PopupBlockerConfig, PopupBlockerStats, ImmersiveTranslateConfig } from './types'
+import type { AppSettings, SearchEngine, PopupBlockerConfig, PopupBlockerStats, ImmersiveTranslateConfig, VaultNoteItem } from './types'
 import { writeBackupToOneDrive } from './onedrive'
 import { PRESET_SITE_ICONS, extractHostname, findPresetForDomain, getFaviconCandidates, suggestTitleFromUrl } from './favicon'
 
@@ -217,6 +217,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   showHotNews: true,
   vaultAutoLockMinutes: 5,
   enableVaultUrlChecker: false,
+  vaultNotes: [],
   searchEngines: DEFAULT_SEARCH_ENGINES,
   defaultSearchEngineId: 'bing'
 }
@@ -328,11 +329,27 @@ function mergeSettings(loaded: any): AppSettings {
     ? loaded.defaultSearchEngineId
     : (searchEngines[0]?.id || 'bing')
 
+  // 个人记事本独立数据区域解析与安全校验 (严格隔离于普通书签与分类)
+  let vaultNotes: VaultNoteItem[] = []
+  if (Array.isArray(loaded.vaultNotes)) {
+    vaultNotes = loaded.vaultNotes.map((n: any) => ({
+      id: typeof n.id === 'string' && n.id ? n.id : `vnote-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      title: typeof n.title === 'string' ? n.title : '',
+      content: typeof n.content === 'string' ? n.content : '',
+      category: typeof n.category === 'string' && n.category.trim() ? n.category.trim() : '便签',
+      color: typeof n.color === 'string' && n.color ? n.color : '#f59e0b',
+      isPinned: Boolean(n.isPinned),
+      createdAt: typeof n.createdAt === 'number' ? n.createdAt : Date.now(),
+      updatedAt: typeof n.updatedAt === 'number' ? n.updatedAt : Date.now()
+    }))
+  }
+
   return {
     ...DEFAULT_SETTINGS,
     ...loaded,
     categories,
     bookmarks,
+    vaultNotes,
     wallpaper,
     popupBlocker,
     searchEngines,
@@ -465,7 +482,12 @@ export async function resetPopupBlockerStats(): Promise<void> {
 }
 
 export function exportSettingsAsJSON(settings: AppSettings): void {
-  const blob = new Blob([JSON.stringify(settings, null, 2)], { type: 'application/json' })
+  // 确保个人记事本数据划分独立清晰的顶层存储区域，与书签数据完全物理隔离
+  const exportPayload: AppSettings = {
+    ...settings,
+    vaultNotes: Array.isArray(settings.vaultNotes) ? settings.vaultNotes : []
+  }
+  const blob = new Blob([JSON.stringify(exportPayload, null, 2)], { type: 'application/json' })
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = url

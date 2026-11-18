@@ -1401,6 +1401,33 @@
               </div>
             </div>
 
+            <!-- Personal Private Notes Setting Card -->
+            <div class="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 space-y-3.5 text-xs">
+              <div class="flex items-center justify-between">
+                <div>
+                  <div class="font-medium text-slate-200 flex items-center gap-1.5">
+                    <NotebookPen class="w-4 h-4 text-amber-400" />
+                    <span>个人私密记事本</span>
+                  </div>
+                  <div class="text-[11px] text-slate-400 mt-0.5">
+                    专属个人空间的私密记事本。仅在个人空间解锁后可见，在 mytabs_backup.json 中独立划分专属区域存储，与书签数据完全物理隔离。
+                  </div>
+                </div>
+                <div class="flex items-center space-x-2 shrink-0">
+                  <span class="text-xs font-mono text-amber-300 bg-amber-500/10 px-2 py-0.5 rounded-lg border border-amber-500/20">
+                    {{ (settings.vaultNotes || []).length }} 条记事
+                  </span>
+                  <button
+                    type="button"
+                    @click="$emit('open-vault-notes'); $emit('close')"
+                    class="px-3 py-1.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 border border-amber-400/30 text-xs font-medium transition-colors"
+                  >
+                    立即打开
+                  </button>
+                </div>
+              </div>
+            </div>
+
             <!-- Privacy Guarantee FAQ -->
             <div class="p-4 rounded-2xl bg-slate-900/50 border border-slate-800 text-xs space-y-2.5">
               <div class="font-semibold text-slate-200 flex items-center gap-1.5">
@@ -1787,7 +1814,7 @@ import {
   FolderSync, RefreshCw, Download, Upload, Trash2, Check, Pin,
   BookOpen, Compass, Video, LayoutGrid, Lightbulb, ArrowRight, Calendar, Clock, Flame,
   AlertCircle, CheckCircle2, Search, Plus, Edit2, RotateCcw, Globe, SearchCheck, Tv, Code,
-  MessageSquare, GraduationCap, Package, Languages, Activity, Sliders
+  MessageSquare, GraduationCap, Package, Languages, Activity, Sliders, NotebookPen
 } from 'lucide-vue-next'
 import { AI_PRESETS } from '../../shared/ai-client'
 import {
@@ -1834,6 +1861,7 @@ const emit = defineEmits<{
   (e: 'open-change-password'): void
   (e: 'clear-vault-password'): void
   (e: 'lock-vault'): void
+  (e: 'open-vault-notes'): void
 }>()
 
 // 严格权限门禁：只有在个人空间已解锁且当前处于个人空间分类时，才判定个人空间活动，否则日常/未授权状态一律彻底抹除

@@ -17,6 +17,7 @@ export interface BackupFileInfo {
   size?: number
   bookmarkCount?: number
   categoryCount?: number
+  vaultNoteCount?: number
   data?: AppSettings
   error?: string
 }
@@ -44,6 +45,7 @@ export async function inspectBackupFile(
       size: file.size,
       bookmarkCount: Array.isArray(data?.bookmarks) ? data.bookmarks.length : undefined,
       categoryCount: Array.isArray(data?.categories) ? data.categories.length : undefined,
+      vaultNoteCount: Array.isArray(data?.vaultNotes) ? data.vaultNotes.length : undefined,
       data
     }
   } catch (err: any) {
@@ -133,6 +135,7 @@ export async function writeBackupToOneDrive(
     // Stamp current sync time into the payload so backups carry metadata
     const payload = {
       ...settings,
+      vaultNotes: Array.isArray(settings.vaultNotes) ? settings.vaultNotes : [],
       oneDrive: {
         ...settings.oneDrive,
         lastSyncTime: Date.now()

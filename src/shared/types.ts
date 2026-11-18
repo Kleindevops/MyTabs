@@ -152,6 +152,17 @@ export interface ImmersiveTranslateConfig {
   grammarDisplayMode?: 'syntax' | 'pos' | 'plain' // 默认语法标记模式：'syntax'(句子主干成分) 或 'pos'(词性分类) 或 'plain'(纯文本)
 }
 
+export interface VaultNoteItem {
+  id: string
+  title: string
+  content: string
+  category?: string // 便签类别/标签，如 "备忘", "工作", "私密", "灵感", "凭据"
+  color?: string // 便签背景卡片主题色，Hex 格式，如 #f59e0b
+  isPinned?: boolean // 是否置顶便签
+  createdAt: number // 创建时间戳
+  updatedAt: number // 最后更新时间戳
+}
+
 export interface AppSettings {
   version: string
   categories: CategoryItem[]
@@ -167,6 +178,7 @@ export interface AppSettings {
   vaultVerifier?: string // Encrypted test string to verify unlock password
   vaultAutoLockMinutes?: number // 个人空间解开后再次自动锁上的时间限制 (分钟，0为不自动上锁)
   enableVaultUrlChecker?: boolean // 是否在个人空间底部显示网址可用性检查工具
+  vaultNotes?: VaultNoteItem[] // 个人空间专属私密记事本独立存储区 (备份文件独立划分区域)
   pet?: PetConfig
   schedules?: ScheduleItem[]
   fixedReminders?: FixedReminderItem[]

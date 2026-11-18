@@ -43,6 +43,23 @@
         <span v-if="isCurrentVaultCategory" class="text-[9px] px-1.5 py-0.2 rounded bg-amber-500/25 text-amber-200 hidden md:inline">个人空间</span>
       </button>
 
+      <!-- 仅在个人空间下专属显示的「个人记事本」快捷按钮 -->
+      <button
+        v-if="isCurrentVaultCategory"
+        @click="$emit('open-vault-notes')"
+        title="个人私密记事本 (仅在个人空间解锁时可见)"
+        class="group flex items-center space-x-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl transition-all duration-200 border text-xs font-medium glass-panel-light hover:bg-amber-500/25 text-amber-300 border-amber-500/40 shadow-sm hover:border-amber-400/70"
+      >
+        <NotebookPen class="w-3.5 h-3.5 text-amber-300 group-hover:scale-110 transition-transform" />
+        <span class="font-semibold">记事本</span>
+        <span
+          v-if="(vaultNoteCount ?? 0) > 0"
+          class="text-[10px] px-1.5 py-0.2 rounded-full bg-amber-500/30 text-amber-200 font-bold ml-0.5"
+        >
+          {{ vaultNoteCount }}
+        </span>
+      </button>
+
       <!-- Start Menu Popup -->
       <div
         v-if="showStartMenu"
@@ -105,11 +122,21 @@
             <span>新建分类</span>
           </button>
 
+          <!-- 仅在个人空间下显示打开记事本按钮 -->
+          <button
+            v-if="isCurrentVaultCategory"
+            @click="$emit('open-vault-notes'); showStartMenu = false"
+            class="w-full flex items-center space-x-2 px-3 py-1.5 rounded-xl text-xs text-amber-300 hover:text-amber-200 hover:bg-amber-500/20 transition-colors"
+          >
+            <NotebookPen class="w-3.5 h-3.5" />
+            <span>打开个人记事本{{ (vaultNoteCount ?? 0) > 0 ? ` (${vaultNoteCount})` : '' }}</span>
+          </button>
+
           <!-- 仅在个人空间下显示快速退出与上锁按钮，方便一键回到常规桌面 -->
           <button
             v-if="isCurrentVaultCategory"
             @click="handleExitVault"
-            class="w-full flex items-center space-x-2 px-3 py-1.5 rounded-xl text-xs text-amber-300 hover:text-amber-200 hover:bg-amber-500/20 transition-colors"
+            class="w-full flex items-center space-x-2 px-3 py-1.5 rounded-xl text-xs text-red-300 hover:text-red-200 hover:bg-red-500/20 transition-colors"
           >
             <Lock class="w-3.5 h-3.5" />
             <span>退出并锁定个人空间</span>
@@ -285,7 +312,7 @@
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import {
   LayoutGrid, ChevronLeft, ChevronRight, Plus, Minus, Check,
-  Cloud, Sparkles, Settings, Folder, Lock, Pin, Activity
+  Cloud, Sparkles, Settings, Folder, Lock, Pin, Activity, NotebookPen
 } from 'lucide-vue-next'
 import type { CategoryItem, BookmarkItem, AppSettings } from '../../shared/types'
 import { isSmallFavicon } from '../../shared/favicon'
@@ -299,6 +326,7 @@ const props = defineProps<{
   isDragging?: boolean
   draggedBookmark?: BookmarkItem | null
   isVaultUnlocked?: boolean
+  vaultNoteCount?: number
 }>()
 
 const emit = defineEmits<{
@@ -316,6 +344,7 @@ const emit = defineEmits<{
   (e: 'pin-bookmark', bookmarkId: string): void
   (e: 'exit-vault'): void
   (e: 'open-url-checker'): void
+  (e: 'open-vault-notes'): void
 }>()
 
 function handleExitVault() {
